@@ -1,2 +1,0 @@
-pretrained_path: '/home/chliu/workspace/mondi-image-gen/external_src/stylegan2-ada-pytorch/checkpoints/FFHQ_1024/ffhq.pkl'
-dataset: 'ffhq_1024'

@@ -8,7 +8,7 @@ ManifoldTopology
     ├── setup: Instructions for proper setup of environments?
     ├── src
     |   ├── configs
-    |   |   └── `${MODEL_NAME}/xxx.yaml`: config files for external models (1 folder per model)
+    |   |   └── `${MODEL_NAME}_config.yaml`: config files for external models (1 folder per model)
     |   ├── unit_test
     |   |   └── `test_run_${MODEL_NAME}.py`: scripts to check validity of `${MODEL_NAME}_model.py`.
     |   ├── `investigate.py`: centralized place for our contribution.
