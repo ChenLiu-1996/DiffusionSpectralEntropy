@@ -1,0 +1,15 @@
+.vscode
+data
+external_models
+pretrained_models
+**/__pycache__
+tools/_jupyter/.ipynb_checkpoints
+training
+validation
+testing
+
+# Models
+**/*.pt
+**/*.pkl
+**/*.pth
+**/*.pth.tar
