@@ -31,7 +31,7 @@ conda install -c anaconda matplotlib seaborn
 
 ### Preparing pretrained weights of external models.
 
-<details> <summary><h3>MoCo</h3></summary>
+<details> <summary><h4>MoCo</h4></summary>
 
 ```
 cd external_src/moco/
@@ -42,7 +42,7 @@ wget -O moco_v2_ep200.pth.tar https://dl.fbaipublicfiles.com/moco/moco_checkpoin
 wget -O moco_v2_ep800.pth.tar https://dl.fbaipublicfiles.com/moco/moco_checkpoints/moco_v2_800ep/moco_v2_800ep_pretrain.pth.tar
 ```
 </details>
-<details> <summary><h3>SimSiam</h3></summary>
+<details> <summary><h4>SimSiam</h4></summary>
 
 ```
 cd external_src/simsiam/
@@ -53,7 +53,7 @@ wget -O simsiam_bs256_ep100.pth.tar https://dl.fbaipublicfiles.com/simsiam/model
 ```
 </details>
 
-<details> <summary><h3>Swav</h3></summary>
+<details> <summary><h4>Swav</h4></summary>
 
 ```
 cd external_src/swav/
@@ -67,7 +67,7 @@ wget -O swav_bs256_ep200.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav
 wget -O swav_bs256_ep400.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_400ep_bs256_pretrain.pth.tar
 ```
 </details>
-<details> <summary><h3>Barlow Twins</h3></summary>
+<details> <summary><h4>Barlow Twins</h4></summary>
 
 ```
 cd external_src/barlowtwins/
