@@ -32,6 +32,7 @@ conda install -c anaconda matplotlib seaborn
 ### Preparing pretrained weights of external models.
 
 <details> <summary><h3>MoCo</h3></summary>
+
     ```
     cd external_src/moco/
     mkdir checkpoints && cd checkpoints
@@ -41,8 +42,8 @@ conda install -c anaconda matplotlib seaborn
     wget -O moco_v2_ep800.pth.tar https://dl.fbaipublicfiles.com/moco/moco_checkpoints/moco_v2_800ep/moco_v2_800ep_pretrain.pth.tar
     ```
 </details>
-
 <details> <summary><h3>SimSiam</h3></summary>
+
     ```
     cd external_src/simsiam/
     mkdir checkpoints && cd checkpoints
@@ -51,8 +52,8 @@ conda install -c anaconda matplotlib seaborn
     wget -O simsiam_bs256_ep100.pth.tar https://dl.fbaipublicfiles.com/simsiam/models/100ep-256bs/pretrain/checkpoint_0099.pth.tar
     ```
 </details>
-
 <details> <summary><h3>Swav</h3></summary>
+
     ```
     cd external_src/swav/
     mkdir checkpoints && cd checkpoints
@@ -65,8 +66,8 @@ conda install -c anaconda matplotlib seaborn
     wget -O swav_bs256_ep400.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_400ep_bs256_pretrain.pth.tar
     ```
 </details>
-
 <details> <summary><h3>Barlow Twins</h3></summary>
+
     ```
     cd external_src/barlowtwins/
     mkdir checkpoints && cd checkpoints
