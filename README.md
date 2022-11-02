@@ -28,7 +28,7 @@ conda install -c anaconda matplotlib seaborn tqdm
 ```
 
 ### Usage.
-<details> <summary><h4>Unit Test. Run the pretrained models.</h4></summary>
+<details> <summary>Unit Test. Run the pretrained models.</summary>
 
 ```
 $OUR_CONDA_ENV
@@ -41,7 +41,7 @@ python test_run_model.py --model swav
 </details>
 
 ### Preparing pretrained weights of external models.
-<details> <summary><h4>Barlow Twins</h4></summary>
+<details> <summary>Barlow Twins</summary>
 
 ```
 cd external_src/barlowtwins/
@@ -51,7 +51,7 @@ wget -O barlowtwins_bs2048_ep1000.pth.tar https://dl.fbaipublicfiles.com/barlowt
 ```
 </details>
 
-<details> <summary><h4>MoCo</h4></summary>
+<details> <summary>MoCo</summary>
 
 ```
 cd external_src/moco/
@@ -63,7 +63,7 @@ wget -O moco_v2_ep800.pth.tar https://dl.fbaipublicfiles.com/moco/moco_checkpoin
 ```
 </details>
 
-<details> <summary><h4>SimSiam</h4></summary>
+<details> <summary>SimSiam</summary>
 
 ```
 cd external_src/simsiam/
@@ -74,7 +74,7 @@ wget -O simsiam_bs256_ep100.pth.tar https://dl.fbaipublicfiles.com/simsiam/model
 ```
 </details>
 
-<details> <summary><h4>Swav</h4></summary>
+<details> <summary>Swav</summary>
 
 ```
 cd external_src/swav/
