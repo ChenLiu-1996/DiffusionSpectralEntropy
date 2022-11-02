@@ -6,14 +6,13 @@ ManifoldTopology
     ├── external_src
     |   └── `${MODEL_NAME}/...`: git repos for external models
     ├── setup: Instructions for proper setup of environments?
-    ├── src
-    |   ├── configs
-    |   |   └── `${MODEL_NAME}_config.yaml`: config files for external models (1 folder per model)
-    |   ├── unit_test
-    |   |   └── `test_run_${MODEL_NAME}.py`: scripts to check validity of `${MODEL_NAME}_model.py`.
-    |   ├── `investigate.py`: centralized place for our contribution.
-    |   └── `${MODEL_NAME}_model.py`: wrapper code to interface with external models.
-    └── utils: folder of utility functions.
+    └── src
+        ├── `investigate.py`: centralized place for our contribution.
+        ├── `${MODEL_NAME}_model.py`: wrapper code to interface with external models.
+        ├── `base.py`: a class with common methods to be inherited by `${MODEL_NAME}_model.py`.
+        ├── unit_test
+        |   └── `test_run_${MODEL_NAME}.py`: scripts to check validity of `${MODEL_NAME}_model.py`.
+        └── utils: folder of utility functions.
 ```
 
 ### Environment
@@ -25,11 +24,20 @@ conda create --name $OUR_CONDA_ENV pytorch torchvision torchaudio cudatoolkit=11
 conda activate $OUR_CONDA_ENV
 conda install -c anaconda scikit-image pillow
 python -m pip install -U giotto-tda
-conda install -c anaconda matplotlib seaborn
+conda install -c anaconda matplotlib seaborn tqdm
 ```
 
 
 ### Preparing pretrained weights of external models.
+<details> <summary><h4>Barlow Twins</h4></summary>
+
+```
+cd external_src/barlowtwins/
+mkdir checkpoints && cd checkpoints
+mkdir ImageNet && cd ImageNet
+wget -O barlowtwins_bs2048_ep1000.pth.tar https://dl.fbaipublicfiles.com/barlowtwins/ljng/resnet50.pth
+```
+</details>
 
 <details> <summary><h4>MoCo</h4></summary>
 
@@ -42,6 +50,7 @@ wget -O moco_v2_ep200.pth.tar https://dl.fbaipublicfiles.com/moco/moco_checkpoin
 wget -O moco_v2_ep800.pth.tar https://dl.fbaipublicfiles.com/moco/moco_checkpoints/moco_v2_800ep/moco_v2_800ep_pretrain.pth.tar
 ```
 </details>
+
 <details> <summary><h4>SimSiam</h4></summary>
 
 ```
@@ -65,14 +74,5 @@ wget -O swav_bs4096_ep200.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swa
 wget -O swav_bs4096_ep100.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_100ep_pretrain.pth.tar
 wget -O swav_bs256_ep200.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_200ep_bs256_pretrain.pth.tar
 wget -O swav_bs256_ep400.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_400ep_bs256_pretrain.pth.tar
-```
-</details>
-<details> <summary><h4>Barlow Twins</h4></summary>
-
-```
-cd external_src/barlowtwins/
-mkdir checkpoints && cd checkpoints
-mkdir ImageNet && cd ImageNet
-wget -O barlowtwins_bs2048_ep1000.pth.tar https://dl.fbaipublicfiles.com/barlowtwins/ljng/checkpoint.pth
 ```
 </details>
