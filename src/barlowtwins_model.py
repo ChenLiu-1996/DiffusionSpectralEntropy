@@ -40,27 +40,8 @@ class BarlowTwinsModel(BaseModel):
             restore_path : str
                 Path to model weights.
                 If not provided, will be inferred.
-
-        NOTE: For Barlow Twins, weights are saved differently. Hence a custom `restore_model` method.
         '''
-        if restore_path is None:
-            restore_path = self.pretrained
 
-        if os.path.isfile(restore_path):
-            log('`%s.restore_model()`: loading checkpoint %s' % (
-                self.model_class_name, restore_path), to_console=True)
-            checkpoint = torch.load(
-                restore_path, map_location='cpu')
-            state_dict = checkpoint
-
-            msg = self.model.load_state_dict(state_dict, strict=False)
-            assert set(msg.missing_keys) == {"fc.weight", "fc.bias"}
-
-            log(
-                '`%s.restore_model()`: loaded pre-trained model %s' % (self.model_class_name, restore_path), to_console=True)
-        else:
-            log('`%s.restore_model()`: no checkpoint found at %s' %
-                (self.model_class_name, restore_path), to_console=True)
-
-        # Need to re-track latent after redefining model.
-        self.track_latent()
+        super(BarlowTwinsModel, self).restore_model(restore_path=restore_path,
+                                                    state_dict_key=None,
+                                                    rename_key=None)

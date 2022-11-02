@@ -202,7 +202,7 @@ class BaseModel(object):
 
         torch.save(self.model.state_dict(), save_path)
 
-    def restore_model(self, restore_path: str = None) -> None:
+    def restore_model(self, restore_path: str = None, state_dict_key: str = 'state_dict', rename_key: str = None) -> None:
         '''
         Loads weights from checkpoint.
 
@@ -210,6 +210,11 @@ class BaseModel(object):
             restore_path : str
                 Path to model weights.
                 If not provided, will be inferred.
+            state_dict_key: str
+                Name of key in checkpoint, used to fetch the weights dict.
+                If not provided, the entire checkpoint will be used as the weights dict.
+            rename_key: str
+                Which key phrases in the state dict to rename.
         '''
         if restore_path is None:
             restore_path = self.pretrained
@@ -220,15 +225,20 @@ class BaseModel(object):
             checkpoint = torch.load(
                 restore_path, map_location='cpu')
 
+            if state_dict_key is not None:
+                state_dict = checkpoint[state_dict_key]
+            else:
+                state_dict = checkpoint
+
             # Rename pre-trained keys.
-            state_dict = checkpoint['state_dict']
-            for k in list(state_dict.keys()):
-                # Retain only encoder_q up to before the embedding layer
-                if k.startswith('module.encoder_q') and not k.startswith('module.encoder_q.fc'):
-                    # Remove prefix
-                    state_dict[k[len("module.encoder_q."):]] = state_dict[k]
-                # Delete renamed or unused k
-                del state_dict[k]
+            if rename_key is not None:
+                for k in list(state_dict.keys()):
+                    # Retain only encoder_q up to before the embedding layer
+                    if k.startswith(rename_key) and not k.startswith('%s.fc' % rename_key):
+                        # Remove prefix
+                        state_dict[k[len('%s.' % rename_key):]] = state_dict[k]
+                    # Delete renamed or unused k
+                    del state_dict[k]
 
             msg = self.model.load_state_dict(state_dict, strict=False)
             assert set(msg.missing_keys) == {"fc.weight", "fc.bias"}

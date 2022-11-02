@@ -24,3 +24,17 @@ class SimSiamModel(BaseModel):
                                            model_name='simsiam',
                                            version=version,
                                            versions=['simsiam_bs256_ep100', 'simsiam_bs512_ep100'])
+
+    def restore_model(self, restore_path: str = None) -> None:
+        '''
+        Loads weights from checkpoint.
+
+        Arg(s):
+            restore_path : str
+                Path to model weights.
+                If not provided, will be inferred.
+        '''
+
+        super(SimSiamModel, self).restore_model(restore_path=restore_path,
+                                                state_dict_key='state_dict',
+                                                rename_key='module.encoder')

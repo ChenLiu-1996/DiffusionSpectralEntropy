@@ -8,6 +8,8 @@ import torch
 sys.path.insert(0, os.path.abspath('../'))
 from barlowtwins_model import BarlowTwinsModel
 from moco_model import MoCoModel
+from simsiam_model import SimSiamModel
+from swav_model import SwavModel
 
 
 def run_model(
@@ -19,6 +21,8 @@ def run_model(
     base_version = {
         'barlowtwins': 'barlowtwins_bs2048_ep1000',
         'moco': 'moco_v1_ep200',
+        'simsiam': 'simsiam_bs256_ep100',
+        'swav': 'swav_bs256_ep200',
     }
     if version is None:
         version = base_version[model_name]
@@ -27,6 +31,12 @@ def run_model(
         model = BarlowTwinsModel(device=device, version=version)
     elif model_name == 'moco':
         model = MoCoModel(device=device, version=version)
+    elif model_name == 'simsiam':
+        model = SimSiamModel(device=device, version=version)
+    elif model_name == 'swav':
+        model = SwavModel(device=device, version=version)
+    else:
+        raise ValueError('model_name: %s not supported.' % model_name)
 
     model.restore_model()
     model.eval()

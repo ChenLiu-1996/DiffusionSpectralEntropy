@@ -24,3 +24,17 @@ class MoCoModel(BaseModel):
                                         model_name='moco',
                                         version=version,
                                         versions=['moco_v1_ep200', 'moco_v2_ep200', 'moco_v2_ep800'])
+
+    def restore_model(self, restore_path: str = None) -> None:
+        '''
+        Loads weights from checkpoint.
+
+        Arg(s):
+            restore_path : str
+                Path to model weights.
+                If not provided, will be inferred.
+        '''
+
+        super(MoCoModel, self).restore_model(restore_path=restore_path,
+                                             state_dict_key='state_dict',
+                                             rename_key='module.encoder_q')

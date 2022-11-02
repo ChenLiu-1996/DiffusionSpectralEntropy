@@ -32,3 +32,17 @@ class SwavModel(BaseModel):
                                             'swav_bs4096_ep100', 'swav_bs4096_ep200',
                                             'swav_bs4096_ep400', 'swav_bs4096_ep800',
                                         ])
+
+    def restore_model(self, restore_path: str = None) -> None:
+        '''
+        Loads weights from checkpoint.
+
+        Arg(s):
+            restore_path : str
+                Path to model weights.
+                If not provided, will be inferred.
+        '''
+
+        super(SwavModel, self).restore_model(restore_path=restore_path,
+                                             state_dict_key=None,
+                                             rename_key='module')
