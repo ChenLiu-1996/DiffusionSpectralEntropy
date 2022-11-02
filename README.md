@@ -28,8 +28,9 @@ conda install -c anaconda matplotlib seaborn tqdm
 ```
 
 ### Usage.
+<details> <summary><h4>Unit Test. Run the pretrained models.</h4></summary>
+
 ```
-# Unit Test. Test running of all models.
 $OUR_CONDA_ENV
 cd src/unit_test/
 python test_run_model.py --model barlowtwins
@@ -37,6 +38,7 @@ python test_run_model.py --model moco
 python test_run_model.py --model simsiam
 python test_run_model.py --model swav
 ```
+</details>
 
 ### Preparing pretrained weights of external models.
 <details> <summary><h4>Barlow Twins</h4></summary>
