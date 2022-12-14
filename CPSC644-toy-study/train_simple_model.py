@@ -7,7 +7,7 @@ import torch
 import torchvision
 import yaml
 from models import FlexibleResNet50
-from simclr import SingleInstanceTwoView
+from simclr import NTXentLoss, SingleInstanceTwoView
 from tqdm import tqdm
 
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
@@ -140,6 +140,7 @@ def train(config: AttributeHashmap) -> None:
     train_loader, val_loader = dataloaders
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
+    loss_fn_simclr = NTXentLoss()
 
     is_model_saved = {
         'val_acc_50%': False,
@@ -156,12 +157,14 @@ def train(config: AttributeHashmap) -> None:
             'val_acc': 0,
         }
 
-        model.train()
         correct, total = 0, 0
-        for x, y_true in train_loader:
+        simclr_stage1_initialized, simclr_stage2_initialized = False, False
+        model.train()
+        for batch_idx, (x, y_true) in enumerate(train_loader):
 
             if config.contrastive == 'NA':
                 # Not using contrastive learning.
+
                 B = x.shape[0]
                 assert config.in_channels in [1, 3]
                 if config.in_channels == 1:
@@ -181,12 +184,55 @@ def train(config: AttributeHashmap) -> None:
                 opt.step()
 
             elif config.contrastive == 'simclr':
-                import pdb
-                pdb.set_trace()
                 # Using SimCLR.
-                # x_aug1 = augment(x, random_seed=config.random_seed)
-                # x_aug2 = augment(x, random_seed=config.random_seed)
-                raise NotImplementedError
+
+                x_aug1, x_aug2 = x
+                B = x_aug1.shape[0]
+                assert config.in_channels in [1, 3]
+                if config.in_channels == 1:
+                    # Repeat the channel dimension: 1 channel -> 3 channels.
+                    x_aug1 = x_aug1.repeat(1, 3, 1, 1)
+                    x_aug2 = x_aug2.repeat(1, 3, 1, 1)
+                x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug1.to(
+                    device), y_true.to(device)
+
+                if batch_idx < 0.8 * len(train_loader):
+                    # Freeze linear classifier, train encoder.
+                    if not simclr_stage1_initialized:
+                        model.freeze_linear()
+                        model.unfreeze_encoder()
+                        simclr_stage1_initialized = True
+
+                    z1 = model.encode(x_aug1)
+                    z2 = model.encode(x_aug2)
+
+                    loss = loss_fn_simclr(z1, z2)
+                    state_dict['train_loss'] += loss.item() * B
+
+                    opt.zero_grad()
+                    loss.backward()
+                    opt.step()
+
+                else:
+                    # Freeze encoder, train linear classifier.
+                    if not simclr_stage2_initialized:
+                        model.init_linear()
+                        model.unfreeze_linear()
+                        model.freeze_encoder()
+                        simclr_stage2_initialized = True
+
+                    y_pred = model(x_aug1)
+                    correct += torch.sum(
+                        torch.argmax(y_pred, dim=-1) == y_true).item()
+                    total += B
+
+                y_pred = model(x_aug1)
+                correct += torch.sum(
+                    torch.argmax(y_pred, dim=-1) == y_true).item()
+                total += B
+
+                loss = loss_fn_classification(y_pred, y_true)
+
 
         state_dict['train_loss'] /= total
         state_dict['train_acc'] = correct / total * 100
@@ -194,7 +240,6 @@ def train(config: AttributeHashmap) -> None:
         model.eval()
         for x, y_true in val_loader:
             if config.contrastive == 'NA':
-                # Not using contrastive learning.
                 B = x.shape[0]
                 assert config.in_channels in [1, 3]
                 if config.in_channels == 1:
@@ -210,8 +255,20 @@ def train(config: AttributeHashmap) -> None:
                 total += B
 
             elif config.contrastive == 'simclr':
-                # Using SimCLR.
-                raise NotImplementedError
+                B = x.shape[0]
+                assert config.in_channels in [1, 3]
+                if config.in_channels == 1:
+                    # Repeat the channel dimension: 1 channel -> 3 channels.
+                    x = x.repeat(1, 3, 1, 1)
+                x, y_true = x.to(device), y_true.to(device)
+
+                y_pred = model(x)
+
+                # Contrastive loss not computing during validation. Hence putting NaN.
+                state_dict['val_loss'] = torch.nan
+                correct += torch.sum(
+                    torch.argmax(y_pred, dim=-1) == y_true).item()
+                total += B
 
         state_dict['val_loss'] /= total
         state_dict['val_acc'] = correct / total * 100

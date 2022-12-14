@@ -16,11 +16,12 @@ class FlexibleResNet50(torch.nn.Module):
         else:
             self.encoder = torchvision.models.resnet50(
                 num_classes=self.num_classes)
-            in_features = self.encoder.fc.in_features
-            out_features = self.encoder.fc.out_features
-            del self.encoder.fc
-            self.linear = torch.nn.Linear(in_features=in_features,
-                                          out_features=out_features)
+            self.linear_in_features = self.encoder.fc.in_features
+            self.linear_out_features = self.encoder.fc.out_features
+            self.encoder.fc = torch.nn.Identity()
+            self.linear = torch.nn.Linear(
+                in_features=self.linear_in_features,
+                out_features=self.linear_out_features)
 
     def encode(self, x):
         if not self.contrastive:
@@ -34,3 +35,23 @@ class FlexibleResNet50(torch.nn.Module):
             return self.model(x)
         else:
             return self.linear(self.encoder(x))
+
+    def freeze_encoder(self):
+        for _, param in self.encoder.named_parameters():
+            param.requires_grad = False
+
+    def unfreeze_encoder(self):
+        for _, param in self.encoder.named_parameters():
+            param.requires_grad = True
+
+    def freeze_linear(self):
+        for _, param in self.linear.named_parameters():
+            param.requires_grad = False
+
+    def unfreeze_linear(self):
+        for _, param in self.linear.named_parameters():
+            param.requires_grad = True
+
+    def init_linear(self):
+        self.linear.weight.data.fill_(0.01)
+        self.linear.bias.data.fill_(0.01)
