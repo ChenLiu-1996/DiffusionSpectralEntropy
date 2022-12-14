@@ -2,15 +2,30 @@ import argparse
 from typing import List
 
 import numpy as np
+import ripserplusplus as rpp_py
 import torch
 from barlowtwins_model import BarlowTwinsModel
-from gtda.diagrams import PersistenceEntropy
+from gtda.diagrams import BettiCurve, PersistenceEntropy
 from gtda.homology import VietorisRipsPersistence
 from matplotlib import pyplot as plt
 from moco_model import MoCoModel
 from simsiam_model import SimSiamModel
 from swav_model import SwavModel
 from tqdm import tqdm
+
+
+def ripser2gtda(dgm, max_dim):
+    diags = []
+    for dim in range(max_dim + 1):
+        num_pts = len(dgm[dim])
+        pers_diag = np.zeros((num_pts, 3))
+        for idx in range(num_pts):
+            pers_diag[idx, 0] = dgm[dim][idx][0]
+            pers_diag[idx, 1] = dgm[dim][idx][1]
+            pers_diag[idx, 2] = dim
+        diags.append(pers_diag)
+
+    return np.vstack(diags)
 
 
 def extract_features(load_weights: bool = True,
@@ -69,13 +84,31 @@ def extract_features(load_weights: bool = True,
 
             embeddings = embeddings.squeeze()
 
-            VR = VietorisRipsPersistence(homology_dimensions=[0, 1])
-            point_clouds = embeddings[None, ...]
-            diagrams = VR.fit_transform(point_clouds)
-            PE = PersistenceEntropy()
-            features = PE.fit_transform(diagrams)
+            VR = VietorisRipsPersistence(homology_dimensions=[0, 1, 2])
+            # point_clouds = embeddings[None, ...]
+            print(embeddings.shape)
+            # diagrams = VR.fit_transform(point_clouds)
+            # PE = PersistenceEntropy()
+            # features = PE.fit_transform(diagrams)
 
-            summary[version]['manifold_features'] = features
+            # BT = BettiCurve()
+            # betti = BT.fit_transform(diagrams)
+            max_dim = 2
+            vrp = rpp_py.run("--dim %s --format point-cloud" %
+                             max_dim, embeddings)
+            diagram = ripser2gtda(vrp, max_dim=max_dim)
+
+            # TODO:
+            # Implement the following
+            # 1. Real ImageNet data as input.
+            # 2. How to calculate (high) curvature towards class center and (low) curvature outside?
+            # 3. How to calculate (high) density/volume towards class center and (low) density/volume outside?
+            # 4. How to extract the [0, 1, 2, 3] homology features of manifolds?
+
+            import pdb
+            pdb.set_trace()
+
+            # summary[version]['manifold_features'] = features
 
     return summary
 
@@ -111,7 +144,8 @@ if __name__ == '__main__':
     points = points.squeeze(1)
 
     fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    sc = ax.scatter(points[:, 0], points[:, 1], c=colors, alpha=0.8)
+    ax = fig.add_subplot(1, 1, 1, projection='3d')
+    sc = ax.scatter(points[:, 0], points[:, 1],
+                    points[:, 2], c=colors, alpha=0.8)
     plt.colorbar(sc)
     fig.savefig('manifold_features.png')

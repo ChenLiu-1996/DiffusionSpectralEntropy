@@ -20,11 +20,10 @@ We developed the codebase in a miniconda environment.
 Tested on Python 3.9.13 + PyTorch 1.12.1.
 How we created the conda environment:
 ```
-conda create --name $OUR_CONDA_ENV pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+conda create --name $OUR_CONDA_ENV pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
 conda activate $OUR_CONDA_ENV
-conda install -c anaconda scikit-image pillow
+conda install -c anaconda scikit-image pillow matplotlib seaborn tqdm
 python -m pip install -U giotto-tda
-conda install -c anaconda matplotlib seaborn tqdm
 ```
 
 ### Usage.
