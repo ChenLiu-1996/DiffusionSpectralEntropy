@@ -1,5 +1,6 @@
 checkpoint_dir: '$ROOT_DIR/CPSC644-toy-study/checkpoints/'
 log_dir: '$ROOT_DIR/CPSC644-toy-study/logs/'
+output_save_path: '$ROOT_DIR/CPSC644-toy-study/results/'
 dataset_dir: '$ROOT_DIR/data/mnist/'
 max_epoch: 100
 batch_size: 512

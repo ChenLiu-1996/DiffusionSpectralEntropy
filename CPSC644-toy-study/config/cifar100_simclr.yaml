@@ -1,6 +1,7 @@
 checkpoint_dir: '$ROOT_DIR/CPSC644-toy-study/checkpoints/'
 log_dir: '$ROOT_DIR/CPSC644-toy-study/logs/'
 dataset_dir: '$ROOT_DIR/data/cifar100/'
+output_save_path: '$ROOT_DIR/CPSC644-toy-study/results/'
 max_epoch: 100
 batch_size: 512
 learning_rate: 1e-3

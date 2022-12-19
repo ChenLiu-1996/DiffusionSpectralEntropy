@@ -1,12 +1,14 @@
 import argparse
 import os
 import sys
+from glob import glob
 from typing import Tuple
 
+import numpy as np
 import torch
 import torchvision
 import yaml
-from models import FlexibleResNet50
+from models import ResNet50
 from simclr import NTXentLoss, SingleInstanceTwoView
 from tqdm import tqdm
 
@@ -112,12 +114,13 @@ def get_dataloaders(
 
 def train(config: AttributeHashmap) -> None:
     '''
-    Trains our simple model and record the checkpoints along the training process.
+    Train our simple model and record the checkpoints along the training process.
     '''
     device = torch.device(
         'cuda:%d' % config.gpu_id if torch.cuda.is_available() else 'cpu')
 
     dataloaders, config = get_dataloaders(config=config)
+    train_loader, val_loader = dataloaders
 
     os.makedirs(config.checkpoint_dir, exist_ok=True)
     os.makedirs(config.log_dir, exist_ok=True)
@@ -131,13 +134,10 @@ def train(config: AttributeHashmap) -> None:
     config_str += '\nTraining History:'
     log(config_str, filepath=log_path, to_console=False)
 
-    model = FlexibleResNet50(contrastive=config.contrastive != 'NA',
-                             num_classes=config.num_classes).to(device)
+    model = ResNet50(num_classes=config.num_classes).to(device)
     opt = torch.optim.AdamW(model.parameters(),
                             lr=float(config.learning_rate),
                             weight_decay=float(config.weight_decay))
-
-    train_loader, val_loader = dataloaders
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -233,42 +233,43 @@ def train(config: AttributeHashmap) -> None:
 
                 loss = loss_fn_classification(y_pred, y_true)
 
-
         state_dict['train_loss'] /= total
         state_dict['train_acc'] = correct / total * 100
 
+        correct, total = 0, 0
         model.eval()
-        for x, y_true in val_loader:
-            if config.contrastive == 'NA':
-                B = x.shape[0]
-                assert config.in_channels in [1, 3]
-                if config.in_channels == 1:
-                    # Repeat the channel dimension: 1 channel -> 3 channels.
-                    x = x.repeat(1, 3, 1, 1)
-                x, y_true = x.to(device), y_true.to(device)
+        with torch.no_grad():
+            for x, y_true in val_loader:
+                if config.contrastive == 'NA':
+                    B = x.shape[0]
+                    assert config.in_channels in [1, 3]
+                    if config.in_channels == 1:
+                        # Repeat the channel dimension: 1 channel -> 3 channels.
+                        x = x.repeat(1, 3, 1, 1)
+                    x, y_true = x.to(device), y_true.to(device)
 
-                y_pred = model(x)
-                loss = loss_fn_classification(y_pred, y_true)
-                state_dict['val_loss'] += loss.item() * B
-                correct += torch.sum(
-                    torch.argmax(y_pred, dim=-1) == y_true).item()
-                total += B
+                    y_pred = model(x)
+                    loss = loss_fn_classification(y_pred, y_true)
+                    state_dict['val_loss'] += loss.item() * B
+                    correct += torch.sum(
+                        torch.argmax(y_pred, dim=-1) == y_true).item()
+                    total += B
 
-            elif config.contrastive == 'simclr':
-                B = x.shape[0]
-                assert config.in_channels in [1, 3]
-                if config.in_channels == 1:
-                    # Repeat the channel dimension: 1 channel -> 3 channels.
-                    x = x.repeat(1, 3, 1, 1)
-                x, y_true = x.to(device), y_true.to(device)
+                elif config.contrastive == 'simclr':
+                    B = x.shape[0]
+                    assert config.in_channels in [1, 3]
+                    if config.in_channels == 1:
+                        # Repeat the channel dimension: 1 channel -> 3 channels.
+                        x = x.repeat(1, 3, 1, 1)
+                    x, y_true = x.to(device), y_true.to(device)
 
-                y_pred = model(x)
+                    y_pred = model(x)
 
-                # Contrastive loss not computing during validation. Hence putting NaN.
-                state_dict['val_loss'] = torch.nan
-                correct += torch.sum(
-                    torch.argmax(y_pred, dim=-1) == y_true).item()
-                total += B
+                    # Contrastive loss not computing during validation. Hence putting NaN.
+                    state_dict['val_loss'] = torch.nan
+                    correct += torch.sum(
+                        torch.argmax(y_pred, dim=-1) == y_true).item()
+                    total += B
 
         state_dict['val_loss'] /= total
         state_dict['val_acc'] = correct / total * 100
@@ -299,11 +300,85 @@ def train(config: AttributeHashmap) -> None:
                 is_model_saved['val_acc_70%'] = True
 
 
+def infer(config: AttributeHashmap) -> None:
+    '''
+    Run the model's encoder on the validation set and save the embeddings.
+    '''
+
+    device = torch.device(
+        'cuda:%d' % config.gpu_id if torch.cuda.is_available() else 'cpu')
+
+    dataloaders, config = get_dataloaders(config=config)
+    _, val_loader = dataloaders
+
+    model = ResNet50(num_classes=config.num_classes).to(device)
+
+    checkpoint_paths = glob('%s/%s-%s*.pth' % (config.checkpoint_dir, config.dataset, config.contrastive))
+
+    for checkpoint in checkpoint_paths:
+        checkpoint_name = checkpoint.split('/')[-1].replace('.pth', '')
+        model.load_state_dict(torch.load(checkpoint))
+        model.eval()
+
+        with torch.no_grad():
+            instance_idx = 0
+            for x, y_true in val_loader:
+                B = x.shape[0]
+                assert config.in_channels in [1, 3]
+                if config.in_channels == 1:
+                    # Repeat the channel dimension: 1 channel -> 3 channels.
+                    x = x.repeat(1, 3, 1, 1)
+                x, y_true = x.to(device), y_true.to(device)
+
+                z = model.encode(x)
+
+                save_numpy(config=config,
+                        instance_idx=instance_idx,
+                        checkpoint_name=checkpoint_name,
+                        image_batch=x,
+                        label_true_batch=y_true,
+                        embedding_batch=z)
+
+                instance_idx += B
+
+    return
+
+
+def save_numpy(config: AttributeHashmap, instance_idx: int,
+               checkpoint_name: str, image_batch: torch.Tensor,
+               label_true_batch: torch.Tensor, embedding_batch: torch.Tensor):
+
+    image_batch = image_batch.cpu().detach().numpy()
+    label_true_batch = label_true_batch.cpu().detach().numpy()
+    embedding_batch = embedding_batch.cpu().detach().numpy()
+    # channel-first to channel-last
+    image_batch = np.moveaxis(image_batch, 1, -1)
+
+    B = image_batch.shape[0]
+
+    # Save the images, labels, and predictions as numpy files for future reference.
+    save_path_numpy = '%s/%s/' % (config.output_save_path, 'embeddings/%s/' %
+                                  (checkpoint_name))
+    os.makedirs(save_path_numpy, exist_ok=True)
+
+    for image_idx in tqdm(range(B)):
+        with open(
+                '%s/%s' % (save_path_numpy, 'sample_%s.npz' %
+                           str(image_idx + instance_idx).zfill(5)),
+                'wb+') as f:
+            np.savez(f,
+                     image=image_batch[image_idx, ...],
+                     label_true=label_true_batch[image_idx, ...],
+                     embedding=embedding_batch[image_idx, ...])
+    return
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
+    parser.add_argument('--mode', help='Train or infer?', required=True)
     parser.add_argument('--gpu-id',
                         help='Available GPU index.',
                         type=int,
@@ -317,4 +392,10 @@ if __name__ == '__main__':
     config = update_config_dirs(AttributeHashmap(config))
 
     seed_everything(config.random_seed)
-    train(config=config)
+
+    assert args.mode in ['train', 'infer']
+    if args.mode == 'train':
+        train(config=config)
+        infer(config=config)
+    elif args.mode == 'infer':
+        infer(config=config)
