@@ -313,16 +313,17 @@ def infer(config: AttributeHashmap) -> None:
 
     model = ResNet50(num_classes=config.num_classes).to(device)
 
-    checkpoint_paths = glob('%s/%s-%s*.pth' % (config.checkpoint_dir, config.dataset, config.contrastive))
+    checkpoint_paths = glob(
+        '%s/%s-%s*.pth' %
+        (config.checkpoint_dir, config.dataset, config.contrastive))
 
-    for checkpoint in checkpoint_paths:
+    for checkpoint in tqdm(checkpoint_paths):
         checkpoint_name = checkpoint.split('/')[-1].replace('.pth', '')
         model.load_state_dict(torch.load(checkpoint))
         model.eval()
 
         with torch.no_grad():
-            instance_idx = 0
-            for x, y_true in val_loader:
+            for batch_idx, (x, y_true) in enumerate(val_loader):
                 B = x.shape[0]
                 assert config.in_channels in [1, 3]
                 if config.in_channels == 1:
@@ -333,20 +334,18 @@ def infer(config: AttributeHashmap) -> None:
                 z = model.encode(x)
 
                 save_numpy(config=config,
-                        instance_idx=instance_idx,
-                        checkpoint_name=checkpoint_name,
-                        image_batch=x,
-                        label_true_batch=y_true,
-                        embedding_batch=z)
-
-                instance_idx += B
+                           batch_idx=batch_idx,
+                           checkpoint_name=checkpoint_name,
+                           image_batch=x,
+                           label_true_batch=y_true,
+                           embedding_batch=z)
 
     return
 
 
-def save_numpy(config: AttributeHashmap, instance_idx: int,
-               checkpoint_name: str, image_batch: torch.Tensor,
-               label_true_batch: torch.Tensor, embedding_batch: torch.Tensor):
+def save_numpy(config: AttributeHashmap, batch_idx: int, checkpoint_name: str,
+               image_batch: torch.Tensor, label_true_batch: torch.Tensor,
+               embedding_batch: torch.Tensor):
 
     image_batch = image_batch.cpu().detach().numpy()
     label_true_batch = label_true_batch.cpu().detach().numpy()
@@ -354,22 +353,19 @@ def save_numpy(config: AttributeHashmap, instance_idx: int,
     # channel-first to channel-last
     image_batch = np.moveaxis(image_batch, 1, -1)
 
-    B = image_batch.shape[0]
-
     # Save the images, labels, and predictions as numpy files for future reference.
     save_path_numpy = '%s/%s/' % (config.output_save_path, 'embeddings/%s/' %
                                   (checkpoint_name))
     os.makedirs(save_path_numpy, exist_ok=True)
 
-    for image_idx in tqdm(range(B)):
-        with open(
-                '%s/%s' % (save_path_numpy, 'sample_%s.npz' %
-                           str(image_idx + instance_idx).zfill(5)),
-                'wb+') as f:
-            np.savez(f,
-                     image=image_batch[image_idx, ...],
-                     label_true=label_true_batch[image_idx, ...],
-                     embedding=embedding_batch[image_idx, ...])
+    with open(
+            '%s/%s' %
+        (save_path_numpy, 'batch_%s.npz' % str(batch_idx).zfill(5)),
+            'wb+') as f:
+        np.savez(f,
+                 image=image_batch,
+                 label_true=label_true_batch,
+                 embedding=embedding_batch)
     return
 
 
