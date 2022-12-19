@@ -15,6 +15,7 @@ from tqdm import tqdm
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/src/utils/')
 from attribute_hashmap import AttributeHashmap
+from early_stop import EarlyStopping
 from log_utils import log
 from seed import seed_everything
 
@@ -135,12 +136,15 @@ def train(config: AttributeHashmap) -> None:
     log(config_str, filepath=log_path, to_console=False)
 
     model = ResNet50(num_classes=config.num_classes).to(device)
-    opt = torch.optim.AdamW(model.parameters(),
+    opt = torch.optim.Adam(model.parameters(),
                             lr=float(config.learning_rate),
                             weight_decay=float(config.weight_decay))
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
+    early_stopper = EarlyStopping(mode='max',
+                                  patience=config.patience,
+                                  percentage=False)
 
     is_model_saved = {
         'val_acc_50%': False,
@@ -279,11 +283,15 @@ def train(config: AttributeHashmap) -> None:
             to_console=False)
 
         if state_dict['val_acc'] > best_val_acc:
+            best_val_acc = state_dict['val_acc']
             best_model = model.state_dict()
             model_save_path = '%s/%s-%s-%s' % (
                 config.checkpoint_dir, config.dataset, config.contrastive,
                 'best_val_acc.pth')
             torch.save(best_model, model_save_path)
+            log('Best model (so far) successfully saved.',
+                filepath=log_path,
+                to_console=False)
 
             if state_dict['val_acc'] > 50 and not is_model_saved['val_acc_50%']:
                 model_save_path = '%s/%s-%s-%s' % (
@@ -291,6 +299,9 @@ def train(config: AttributeHashmap) -> None:
                     'val_acc_50%.pth')
                 torch.save(best_model, model_save_path)
                 is_model_saved['val_acc_50%'] = True
+                log('50% accuracy model successfully saved.',
+                    filepath=log_path,
+                    to_console=False)
 
             if state_dict['val_acc'] > 70 and not is_model_saved['val_acc_70%']:
                 model_save_path = '%s/%s-%s-%s' % (
@@ -298,7 +309,16 @@ def train(config: AttributeHashmap) -> None:
                     'val_acc_70%.pth')
                 torch.save(best_model, model_save_path)
                 is_model_saved['val_acc_70%'] = True
+                log('70% accuracy model successfully saved.',
+                    filepath=log_path,
+                    to_console=False)
 
+        if early_stopper.step(state_dict['val_acc']):
+            log('Early stopping criterion met. Ending training.',
+                filepath=log_path,
+                to_console=True)
+            break
+    return
 
 def infer(config: AttributeHashmap) -> None:
     '''
