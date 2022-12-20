@@ -22,6 +22,7 @@ from attribute_hashmap import AttributeHashmap
 
 def comp_curvature(X, n_classes, data_df, k=20, diffusion_powers=8):
     class_stats_list = []
+    global_stats = [0,0] # global mean, global std
 
     # Diffusion Matrix
     P = DiffusionMatrix(X, kernel_type="adaptive anisotropic", k=k)
@@ -37,7 +38,10 @@ def comp_curvature(X, n_classes, data_df, k=20, diffusion_powers=8):
 
         # Append class stats
         class_stats_list.append([np.mean(curvs), np.std(curvs), ci])
+        global_stats[0] = global_stats[0] + np.mean(curvs)
+        global_stats[1] = global_stats[1] + np.std(curvs)
 
+    class_stats_list.append([global_stats[0]/n_classes, global_stats[1]/n_classes, global_stats[1]]) # global stats
     class_stats_df = pd.DataFrame(class_stats_list,
                                   columns=['mean', 'std', 'class'])
     return class_stats_df
