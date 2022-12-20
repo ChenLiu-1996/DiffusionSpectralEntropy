@@ -7,8 +7,19 @@ import pandas as pd
 import scipy
 import networkx as nx
 import ot
-from glob import glob
 
+from glob import glob
+import yaml
+import argparse
+import os
+import sys
+
+from tqdm import tqdm
+from train_infer import update_config_dirs
+
+import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
+sys.path.insert(0, import_dir + '/src/utils/')
+from attribute_hashmap import AttributeHashmap
 
 def comp_geodesic(X, k=20):
     '''
@@ -74,18 +85,41 @@ def comp_opcost(X, labels, n_classes, geodesic):
     return opc
 
 if __name__ == '__main__':
-    files = sorted(glob('./results/embeddings/mnist-NA-val_acc_70%/*'))
-    batch_0_file = np.load(files[0])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config',
+                        help='Path to config yaml file.',
+                        required=True)
+    args = vars(parser.parse_args())
+    args = AttributeHashmap(args)
 
-    image = batch_0_file['image']
-    label = batch_0_file['label_true']
-    embeddings = batch_0_file['embedding']
+    args = AttributeHashmap(args)
+    config = AttributeHashmap(yaml.safe_load(open(args.config)))
+    config = update_config_dirs(AttributeHashmap(config))
 
-    print(image.shape)
-    print(label.shape)
-    print(embeddings.shape)
+    embedding_root = '%s/embeddings/%s-%s-' % (
+        config.output_save_path, config.dataset, config.contrastive)
 
-    geodesic = comp_geodesic(embeddings, k=20)
-    opc = comp_opcost(embeddings, label, n_classes=np.max(label)+1, geodesic=geodesic)
+    for acc_level in ['val_acc_50%', 'val_acc_70%', 'best_val_acc']:
+        embedding_folder = embedding_root + acc_level
+        files = sorted(glob(embedding_folder + '/*'))
 
-    print(opc.shape)
+        labels, embeddings = None, None
+
+        for file in tqdm(files):
+            np_file = np.load(file)
+            curr_label = np_file['label_true']
+            curr_embedding = np_file['embedding']
+
+            if labels is None:
+                labels = curr_label[:, None]  # expand dim to [B, 1]
+                embeddings = curr_embedding
+            else:
+                labels = np.vstack((labels, curr_label[:, None]))
+                embeddings = np.vstack((embeddings, curr_embedding))
+
+        geodesic = comp_geodesic(embeddings, k=20)
+        opc = comp_opcost(embeddings, labels, n_classes=np.max(labels)+1, geodesic=geodesic)
+        print(opc.shape)
+
+        csv_path = '%s_op.npy' % (embedding_folder)
+        np.save(csv_path, opc)
