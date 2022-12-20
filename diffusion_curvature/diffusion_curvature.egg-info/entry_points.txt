@@ -1,0 +1,2 @@
+[nbdev]
+diffusion_curvature = diffusion_curvature._modidx:d

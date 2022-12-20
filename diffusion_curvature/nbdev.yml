@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "diffusion_curvature"
+  site-url: "https://professorwug.github.io/diffusion_curvature"
+  description: "Fast graph curvature"
+  repo-branch: master
+  repo-url: "https://github.com/professorwug/diffusion_curvature"
