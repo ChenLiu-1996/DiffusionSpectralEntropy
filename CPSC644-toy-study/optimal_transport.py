@@ -2,18 +2,16 @@
 Compute optimal transport for input embeddings, using manifold distance (Geodesic)
 
 '''
-import numpy as np
-import pandas as pd
-import scipy
-import networkx as nx
-import ot
-
-from glob import glob
-import yaml
 import argparse
 import os
 import sys
+from glob import glob
 
+import networkx as nx
+import numpy as np
+import ot
+import scipy
+import yaml
 from tqdm import tqdm
 from train_infer import update_config_dirs
 
@@ -21,30 +19,31 @@ import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/src/utils/')
 from attribute_hashmap import AttributeHashmap
 
+
 def comp_geodesic(X, k=20):
     '''
         X: (N, D)
         geodesic: (N, N)
     '''
     # Compute Geodesic
-    N,D = X.shape
+    N, D = X.shape
 
-    # Compute Euclidean Distance (N , N) between pts (N, D)
+    # Compute Euclidean Distance (N, N) between pts (N, D)
     dist = scipy.spatial.distance_matrix(X, X)
     print('Compute Euclidean Distance... ', dist.shape)
-    
+
     # Create binary Adj Matrix
-    topk = np.sort(dist, axis=1)[:, k].reshape(N, 1) # (N, 1)
-    filter_m = np.tile(topk, (1, N)) # (n, n)
-    adj_mat = (dist <= filter_m) * 1 # zero out non-neighbors
+    topk = np.sort(dist, axis=1)[:, k].reshape(N, 1)  # (N, 1)
+    filter_m = np.tile(topk, (1, N))  # (N, N)
+    adj_mat = (dist <= filter_m) * 1  # zero out non-neighbors
     print('Create binary Adj Matrix... ', np.mean(np.sum(adj_mat, axis=1)))
-    
+
     # Create Graph and compute shortest path
     graph = nx.from_numpy_matrix(adj_mat)
     path_lens = dict(nx.shortest_path_length(graph))
     print('Compute shortest path... ')
     # print(graph[0])
-    
+
     # geodesci mat from path lengths dict
     geodesic = np.zeros((N, N))
     for i in range(0, N):
@@ -54,6 +53,7 @@ def comp_geodesic(X, k=20):
 
     return geodesic
 
+
 def comp_op(a, b, geodesic):
     '''
     geodesic: (N,n) cost matrix
@@ -61,28 +61,33 @@ def comp_op(a, b, geodesic):
     # a and b are 1D histograms (sum to 1 and positive)
     # M is the ground cost matrix
     T = ot.emd(a, b, geodesic)  # exact linear program
-    total_cost = np.sum(T*geodesic)
+    total_cost = np.sum(T * geodesic)
 
     return total_cost
 
 
 def comp_opcost(X, labels, n_classes, geodesic):
-    N,D = X.shape
-    opc = np.zeros((N,N))
+    N, D = X.shape
+    opc = np.zeros((N, N))
 
     # Compute op cost marix
     for si in range(n_classes):
-        sindex = list(np.squeeze(np.argwhere(labels==si)))
+        # NOTE: I modified the following line!
+        # ORIGINAL: sindex = list(np.squeeze(np.argwhere(labels == si)))
+        sindex = list(np.argwhere(labels == si)[:, 0])
         for ti in range(n_classes):
-            tindex = list(np.squeeze(np.argwhere(labels==ti)))
-            cost_mat = geodesic[sindex,:][:, tindex]
-            a = np.array([1/len(sindex)] * len(sindex))
-            b = np.array([1/len(tindex)] * len(tindex))
+            # NOTE: I modified the following line!
+            # ORIGINAL: tindex = list(np.squeeze(np.argwhere(labels == ti)))
+            tindex = list(np.argwhere(labels == ti)[:, 0])
+            cost_mat = geodesic[sindex, :][:, tindex]
+            a = np.array([1 / len(sindex)] * len(sindex))
+            b = np.array([1 / len(tindex)] * len(tindex))
             cost = comp_op(a, b, cost_mat)
 
-            opc[si,ti] = cost
+            opc[si, ti] = cost
 
     return opc
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -105,7 +110,9 @@ if __name__ == '__main__':
 
         labels, embeddings = None, None
 
-        for file in tqdm(files):
+        # NOTE: only loading first 2 batches right now.
+        # for file in tqdm(files):
+        for file in tqdm(files[0:2]):
             np_file = np.load(file)
             curr_label = np_file['label_true']
             curr_embedding = np_file['embedding']
@@ -118,8 +125,12 @@ if __name__ == '__main__':
                 embeddings = np.vstack((embeddings, curr_embedding))
 
         geodesic = comp_geodesic(embeddings, k=20)
-        opc = comp_opcost(embeddings, labels, n_classes=np.max(labels)+1, geodesic=geodesic)
+
+        opc = comp_opcost(embeddings,
+                          labels,
+                          n_classes=np.max(labels) + 1,
+                          geodesic=geodesic)
         print(opc.shape)
 
-        csv_path = '%s_op.npy' % (embedding_folder)
-        np.save(csv_path, opc)
+        np_save_path = '%s_op.npy' % (embedding_folder)
+        np.save(np_save_path, opc)
