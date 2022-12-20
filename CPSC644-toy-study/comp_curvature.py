@@ -2,17 +2,26 @@
 Compute local curvature using diffusion curvature for input embeddings
 
 '''
-import numpy as np
-import pandas as pd
+import argparse
+import os
+import sys
 from glob import glob
 
+import numpy as np
+import pandas as pd
+import yaml
 from diffusion_curvature.core import DiffusionMatrix
 from diffusion_curvature.laziness import curvature
+from tqdm import tqdm
+from train_infer import update_config_dirs
+
+import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
+sys.path.insert(0, import_dir + '/src/utils/')
+from attribute_hashmap import AttributeHashmap
 
 
-
-def comp_curvature(X, labels, n_classes, data_df, k=20, diffusion_powers=8):
-    class_stats = pd.DataFrame(columns = ['mean', 'std', 'class']) # mean, std, 
+def comp_curvature(X, n_classes, data_df, k=20, diffusion_powers=8):
+    class_stats_list = []
 
     # Diffusion Matrix
     P = DiffusionMatrix(X, kernel_type="adaptive anisotropic", k=k)
@@ -26,31 +35,54 @@ def comp_curvature(X, labels, n_classes, data_df, k=20, diffusion_powers=8):
         c_rows = data_df.loc[data_df['class'] == ci]
         curvs = c_rows['curvature']
 
-        # Append class stats row
-        #class_stats.loc[len(class_stats.index)] = [np.mean(curvs), np.std(curvs), ci]
-        class_stats = class_stats.append({'mean':np.mean(curvs), 'std':np.std(curvs), 'class': ci}, ignore_index=True)
+        # Append class stats
+        class_stats_list.append([np.mean(curvs), np.std(curvs), ci])
 
-
-    return diffusion_curvatures, class_stats
+    class_stats_df = pd.DataFrame(class_stats_list,
+                                  columns=['mean', 'std', 'class'])
+    return class_stats_df
 
 
 if __name__ == '__main__':
-    #X = np.random.rand(100,50) # N x dim
-    files = sorted(glob('./results/embeddings/mnist-NA-val_acc_70%/*'))
-    batch_0_file = np.load(files[0])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config',
+                        help='Path to config yaml file.',
+                        required=True)
+    args = vars(parser.parse_args())
+    args = AttributeHashmap(args)
 
-    image = batch_0_file['image']
-    label = batch_0_file['label_true']
-    embeddings = batch_0_file['embedding']
+    args = AttributeHashmap(args)
+    config = AttributeHashmap(yaml.safe_load(open(args.config)))
+    config = update_config_dirs(AttributeHashmap(config))
 
-    print(image.shape)
-    print(label.shape)
-    print(embeddings.shape)
+    embedding_root = '%s/embeddings/%s-%s-' % (
+        config.output_save_path, config.dataset, config.contrastive)
 
-    N,D = embeddings.shape
-    df = pd.DataFrame(embeddings, columns=[f'd{i}' for i in range(0, D)])
-    df['class'] = label
+    for acc_level in ['val_acc_50%', 'val_acc_70%', 'best_val_acc']:
+        embedding_folder = embedding_root + acc_level
+        files = sorted(glob(embedding_folder + '/*'))
 
-    curvature, class_stats = comp_curvature(embeddings, label, n_classes=np.max(label)+1, data_df=df)
+        labels, embeddings = None, None
 
-    print(np.mean(curvature))
+        for file in tqdm(files):
+            np_file = np.load(file)
+            curr_label = np_file['label_true']
+            curr_embedding = np_file['embedding']
+
+            if labels is None:
+                labels = curr_label[:, None]  # expand dim to [B, 1]
+                embeddings = curr_embedding
+            else:
+                labels = np.vstack((labels, curr_label[:, None]))
+                embeddings = np.vstack((embeddings, curr_embedding))
+
+        N, D = embeddings.shape
+        df = pd.DataFrame(embeddings, columns=[f'd{i}' for i in range(0, D)])
+        df['class'] = labels
+
+        class_stats_df = comp_curvature(embeddings,
+                                        n_classes=np.max(labels) + 1,
+                                        data_df=df)
+
+        csv_path = '%s_curvature_stats.csv' % (embedding_folder)
+        class_stats_df.to_csv(csv_path, index=False)
