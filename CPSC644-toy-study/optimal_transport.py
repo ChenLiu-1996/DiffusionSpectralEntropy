@@ -140,3 +140,15 @@ if __name__ == '__main__':
 
         plt.matshow(opc)
         plt.savefig('%s_op_mat.png' % (embedding_folder))
+
+        # Per class OP Cost and global OP cost
+        opc_per_class = np.sum(opc, axis=1) # Per class cost
+        opc_per_class_std = np.std(opc_per_class)
+        opc_per_class_mean = np.sum(opc)/(opc.shape[0])
+        np.append(opc_per_class, opc_per_class_mean)
+        np.append(opc_per_class, opc_per_class_std)
+
+        global_df = pd.DataFrame(opc_per_class)
+        csv_path = '%s_global_optimal_cost.csv' % (embedding_folder)
+        global_df.to_csv(csv_path, index=False)
+
