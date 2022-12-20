@@ -68,7 +68,7 @@ def comp_op(a, b, geodesic):
 
 def comp_opcost(X, labels, n_classes, geodesic):
     N, D = X.shape
-    opc = np.zeros((N, N))
+    opc = np.zeros((n_classes, n_classes))
 
     # Compute op cost marix
     for si in range(n_classes):
@@ -134,3 +134,6 @@ if __name__ == '__main__':
 
         np_save_path = '%s_op.npy' % (embedding_folder)
         np.save(np_save_path, opc)
+
+        plt.matshow(v_adj)
+        plt.savefig('%s_op_mat.png' % (embedding_folder))
