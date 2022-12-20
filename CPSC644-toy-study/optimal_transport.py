@@ -8,7 +8,7 @@ import sys
 from glob import glob
 import matplotlib.pyplot as plt
 
-
+import pandas as pd
 import networkx as nx
 import numpy as np
 import ot
@@ -134,8 +134,9 @@ if __name__ == '__main__':
                           geodesic=geodesic)
         print(opc.shape)
 
-        np_save_path = '%s_op.npy' % (embedding_folder)
-        np.save(np_save_path, opc)
+        df = pd.DataFrame(opc)
+        csv_path = '%s_op.csv' % (embedding_folder)
+        df.to_csv(csv_path, index=False)
 
         plt.matshow(opc)
         plt.savefig('%s_op_mat.png' % (embedding_folder))
