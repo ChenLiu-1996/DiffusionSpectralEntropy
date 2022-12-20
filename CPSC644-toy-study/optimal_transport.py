@@ -8,9 +8,23 @@ import scipy
 import networkx as nx
 import ot
 
-def comp_geodesic(X, labels, n_classes, data_df, k=20, diffusion_powers=8):
+from glob import glob
+import yaml
+import argparse
+import os
+import sys
+
+from tqdm import tqdm
+from train_infer import update_config_dirs
+
+import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
+sys.path.insert(0, import_dir + '/src/utils/')
+from attribute_hashmap import AttributeHashmap
+
+def comp_geodesic(X, k=20):
     '''
         X: (N, D)
+        geodesic: (N, N)
     '''
     # Compute Geodesic
     N,D = X.shape
@@ -38,24 +52,74 @@ def comp_geodesic(X, labels, n_classes, data_df, k=20, diffusion_powers=8):
             geodesic[i, j] = int(path_lens[i][j])
     print('Geodesci finished ... ', geodesic.shape)
 
-    #
-
     return geodesic
 
-def comp_op(geodesic):
+def comp_op(a, b, geodesic):
     '''
-    geodesic: (N,N) cost matrix
+    geodesic: (N,n) cost matrix
     '''
     # a and b are 1D histograms (sum to 1 and positive)
     # M is the ground cost matrix
     T = ot.emd(a, b, geodesic)  # exact linear program
     total_cost = np.sum(T*geodesic)
 
+    return total_cost
+
+
+def comp_opcost(X, labels, n_classes, geodesic):
+    N,D = X.shape
+    opc = np.zeros((N,N))
+
+    # Compute op cost marix
+    for si in range(n_classes):
+        sindex = list(np.squeeze(np.argwhere(labels==si)))
+        for ti in range(n_classes):
+            tindex = list(np.squeeze(np.argwhere(labels==ti)))
+            cost_mat = geodesic[sindex,:][:, tindex]
+            a = np.array([1/len(sindex)] * len(sindex))
+            b = np.array([1/len(tindex)] * len(tindex))
+            cost = comp_op(a, b, cost_mat)
+
+            opc[si,ti] = cost
+
+    return opc
 
 if __name__ == '__main__':
-    X = np.random.rand(100,50) # N x dim
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config',
+                        help='Path to config yaml file.',
+                        required=True)
+    args = vars(parser.parse_args())
+    args = AttributeHashmap(args)
 
-    curvature, class_stats = comp_geodesic(X, [], [], [])
+    args = AttributeHashmap(args)
+    config = AttributeHashmap(yaml.safe_load(open(args.config)))
+    config = update_config_dirs(AttributeHashmap(config))
 
-    data_df['curvature'] = curvature
-    print(np.mean(curvature))
+    embedding_root = '%s/embeddings/%s-%s-' % (
+        config.output_save_path, config.dataset, config.contrastive)
+
+    for acc_level in ['val_acc_50%', 'val_acc_70%', 'best_val_acc']:
+        embedding_folder = embedding_root + acc_level
+        files = sorted(glob(embedding_folder + '/*'))
+
+        labels, embeddings = None, None
+
+        for file in tqdm(files):
+            np_file = np.load(file)
+            curr_label = np_file['label_true']
+            curr_embedding = np_file['embedding']
+
+            if labels is None:
+                labels = curr_label[:, None]  # expand dim to [B, 1]
+                embeddings = curr_embedding
+            else:
+                labels = np.vstack((labels, curr_label[:, None]))
+                embeddings = np.vstack((embeddings, curr_embedding))
+
+        geodesic = comp_geodesic(embeddings, k=20)
+        opc = comp_opcost(embeddings, labels, n_classes=np.max(labels)+1, geodesic=geodesic)
+        print(opc.shape)
+
+        csv_path = '%s_op.npy' % (embedding_folder)
+        np.save(csv_path, opc)
