@@ -9,4 +9,5 @@ In this study, we will look into a simple model on simple datasets (MNIST/CIFAR-
 ## Usage
 ```
 python train_simple_model.py --config ./config/$CONFIG.yaml --gpu-id $AVAILABLE_GPU_ID
+python comp_curvature.py --config ./config/$CONFIG.yaml
 ```

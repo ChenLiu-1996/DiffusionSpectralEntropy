@@ -24,6 +24,7 @@ conda create --name $OUR_CONDA_ENV pytorch==1.12.1 torchvision==0.13.1 torchaudi
 conda activate $OUR_CONDA_ENV
 conda install -c anaconda scikit-image pillow matplotlib seaborn tqdm
 python -m pip install -U giotto-tda
+python -m pip install POT
 cd diffusion_curvature
 python -m pip install .
 ```
