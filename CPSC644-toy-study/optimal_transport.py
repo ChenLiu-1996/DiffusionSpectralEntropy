@@ -65,7 +65,9 @@ def comp_opcost(X, labels, n_classes, geodesic):
         for ti in range(n_classes):
             tindex = list(np.squeeze(np.argwhere(labels==ti)))
             cost_mat = geodesic[sindex,:][:, tindex]
-            cost = comp_op(1/len(sindex), 1/len(tindex), cost_mat)
+            a = np.array([1/len(sindex)] * len(sindex))
+            b = np.array([1/len(tindex)] * len(tindex))
+            cost = comp_op(a, b, cost_mat)
 
             opc[si,ti] = cost
 
