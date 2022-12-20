@@ -6,6 +6,8 @@ import argparse
 import os
 import sys
 from glob import glob
+import matplotlib.pyplot as plt
+
 
 import networkx as nx
 import numpy as np
@@ -135,5 +137,5 @@ if __name__ == '__main__':
         np_save_path = '%s_op.npy' % (embedding_folder)
         np.save(np_save_path, opc)
 
-        plt.matshow(v_adj)
+        plt.matshow(opc)
         plt.savefig('%s_op_mat.png' % (embedding_folder))
