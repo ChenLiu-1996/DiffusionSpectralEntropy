@@ -145,8 +145,8 @@ if __name__ == '__main__':
         opc_per_class = np.sum(opc, axis=1) # Per class cost
         opc_per_class_std = np.std(opc_per_class)
         opc_per_class_mean = np.sum(opc)/(opc.shape[0])
-        np.append(opc_per_class, opc_per_class_mean)
-        np.append(opc_per_class, opc_per_class_std)
+        opc_per_class = np.append(opc_per_class, opc_per_class_mean)
+        opc_per_class = np.append(opc_per_class, opc_per_class_std)
         print('perclass: ', opc_per_class.shape)
         global_df = pd.DataFrame(opc_per_class)
         csv_path = '%s_global_optimal_cost.csv' % (embedding_folder)
