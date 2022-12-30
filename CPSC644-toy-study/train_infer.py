@@ -197,7 +197,7 @@ def train(config: AttributeHashmap) -> None:
                     # Repeat the channel dimension: 1 channel -> 3 channels.
                     x_aug1 = x_aug1.repeat(1, 3, 1, 1)
                     x_aug2 = x_aug2.repeat(1, 3, 1, 1)
-                x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug1.to(
+                x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug2.to(
                     device), y_true.to(device)
 
                 if batch_idx < 0.8 * len(train_loader):
@@ -217,6 +217,11 @@ def train(config: AttributeHashmap) -> None:
                     loss.backward()
                     opt.step()
 
+                    y_pred = model(x_aug1)
+                    correct += torch.sum(
+                        torch.argmax(y_pred, dim=-1) == y_true).item()
+                    total += B
+
                 else:
                     # Freeze encoder, train linear classifier.
                     if not simclr_stage2_initialized:
@@ -226,16 +231,14 @@ def train(config: AttributeHashmap) -> None:
                         simclr_stage2_initialized = True
 
                     y_pred = model(x_aug1)
+                    loss = loss_fn_classification(y_pred, y_true)
                     correct += torch.sum(
                         torch.argmax(y_pred, dim=-1) == y_true).item()
                     total += B
 
-                y_pred = model(x_aug1)
-                correct += torch.sum(
-                    torch.argmax(y_pred, dim=-1) == y_true).item()
-                total += B
-
-                loss = loss_fn_classification(y_pred, y_true)
+                    opt.zero_grad()
+                    loss.backward()
+                    opt.step()
 
         state_dict['train_loss'] /= total
         state_dict['train_acc'] = correct / total * 100
@@ -268,8 +271,7 @@ def train(config: AttributeHashmap) -> None:
                     x, y_true = x.to(device), y_true.to(device)
 
                     y_pred = model(x)
-
-                    # Contrastive loss not computing during validation. Hence putting NaN.
+                    # Contrastive loss not computed during validation. Hence putting NaN.
                     state_dict['val_loss'] = torch.nan
                     correct += torch.sum(
                         torch.argmax(y_pred, dim=-1) == y_true).item()
