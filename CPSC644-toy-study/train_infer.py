@@ -137,8 +137,13 @@ def train(config: AttributeHashmap) -> None:
 
     model = ResNet50(num_classes=config.num_classes).to(device)
     opt = torch.optim.Adam(model.parameters(),
-                            lr=float(config.learning_rate),
-                            weight_decay=float(config.weight_decay))
+                           lr=float(config.learning_rate),
+                           weight_decay=float(config.weight_decay))
+    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opt,
+                                                              mode='max',
+                                                              factor=1 / 5,
+                                                              patience=5,
+                                                              verbose=True)
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -146,10 +151,10 @@ def train(config: AttributeHashmap) -> None:
                                   patience=config.patience,
                                   percentage=False)
 
-    is_model_saved = {
-        'val_acc_50%': False,
-        'val_acc_70%': False,
-    }
+    val_acc_pct_list = [30, 40, 50, 60, 70, 80]
+    is_model_saved = {}
+    for val_acc_percentage in val_acc_pct_list:
+        is_model_saved['val_acc_%s%%' % val_acc_percentage] = False
     best_val_acc = 0
     best_model = None
 
@@ -280,6 +285,8 @@ def train(config: AttributeHashmap) -> None:
         state_dict['val_loss'] /= total
         state_dict['val_acc'] = correct / total * 100
 
+        lr_scheduler.step(state_dict['val_acc'])
+
         log('Epoch: %d. %s' % (epoch_idx, print_state_dict(state_dict)),
             filepath=log_path,
             to_console=False)
@@ -295,25 +302,20 @@ def train(config: AttributeHashmap) -> None:
                 filepath=log_path,
                 to_console=False)
 
-            if state_dict['val_acc'] > 50 and not is_model_saved['val_acc_50%']:
-                model_save_path = '%s/%s-%s-%s' % (
-                    config.checkpoint_dir, config.dataset, config.contrastive,
-                    'val_acc_50%.pth')
-                torch.save(best_model, model_save_path)
-                is_model_saved['val_acc_50%'] = True
-                log('50% accuracy model successfully saved.',
-                    filepath=log_path,
-                    to_console=False)
-
-            if state_dict['val_acc'] > 70 and not is_model_saved['val_acc_70%']:
-                model_save_path = '%s/%s-%s-%s' % (
-                    config.checkpoint_dir, config.dataset, config.contrastive,
-                    'val_acc_70%.pth')
-                torch.save(best_model, model_save_path)
-                is_model_saved['val_acc_70%'] = True
-                log('70% accuracy model successfully saved.',
-                    filepath=log_path,
-                    to_console=False)
+            for val_acc_percentage in val_acc_pct_list:
+                if state_dict[
+                        'val_acc'] > val_acc_percentage and not is_model_saved[
+                            'val_acc_%s%%' % val_acc_percentage]:
+                    model_save_path = '%s/%s-%s-%s' % (
+                        config.checkpoint_dir, config.dataset,
+                        config.contrastive,
+                        'val_acc_%s%%.pth' % val_acc_percentage)
+                    torch.save(best_model, model_save_path)
+                    is_model_saved['val_acc_%s%%' % val_acc_percentage] = True
+                    log('%s%% accuracy model successfully saved.' %
+                        val_acc_percentage,
+                        filepath=log_path,
+                        to_console=False)
 
         if early_stopper.step(state_dict['val_acc']):
             log('Early stopping criterion met. Ending training.',
@@ -321,6 +323,7 @@ def train(config: AttributeHashmap) -> None:
                 to_console=True)
             break
     return
+
 
 def infer(config: AttributeHashmap) -> None:
     '''

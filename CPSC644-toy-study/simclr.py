@@ -46,8 +46,6 @@ class NTXentLoss(torch.nn.Module):
         loss += -torch.log(numerator /
                            (denominator + self.epsilon) + self.epsilon)
 
-        loss = loss * B  # rescale it by batch size.
-
         return loss
 
 

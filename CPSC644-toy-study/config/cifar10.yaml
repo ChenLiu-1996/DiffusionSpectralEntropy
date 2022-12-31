@@ -4,9 +4,9 @@ dataset_dir: '$ROOT_DIR/data/cifar10/'
 output_save_path: '$ROOT_DIR/CPSC644-toy-study/results/'
 max_epoch: 200
 patience: 10
-batch_size: 512
-learning_rate: 1e-3
-weight_decay: 1e-4
+batch_size: 128
+learning_rate: 1e-2
+weight_decay: 5e-4
 num_workers: 4
 dataset: 'cifar10'
 contrastive: 'NA'
