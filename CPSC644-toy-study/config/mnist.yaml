@@ -5,7 +5,7 @@ dataset_dir: '$ROOT_DIR/data/mnist/'
 max_epoch: 200
 patience: 10
 batch_size: 128
-learning_rate: 3e-5
+learning_rate: 2e-5
 weight_decay: 5e-4
 num_workers: 4
 dataset: 'mnist'

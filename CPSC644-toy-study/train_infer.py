@@ -140,7 +140,7 @@ def train(config: AttributeHashmap) -> None:
                             lr=float(config.learning_rate),
                             weight_decay=float(config.weight_decay))
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt, T_max=config.max_epoch // 10, verbose=True)
+        optimizer=opt, T_max=config.max_epoch // 10)
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -202,7 +202,7 @@ def train(config: AttributeHashmap) -> None:
                 x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug2.to(
                     device), y_true.to(device)
 
-                if batch_idx < 0.95 * len(train_loader):
+                if batch_idx < 0.5 * len(train_loader):
                     # Freeze linear classifier, train encoder.
                     if not simclr_stage1_initialized:
                         model.unfreeze_encoder()
