@@ -5,7 +5,7 @@ output_save_path: '$ROOT_DIR/CPSC644-toy-study/results/'
 max_epoch: 200
 patience: 20
 batch_size: 128
-learning_rate: 1e-3
+learning_rate: 1e-4
 weight_decay: 5e-4
 num_workers: 4
 dataset: 'cifar10'

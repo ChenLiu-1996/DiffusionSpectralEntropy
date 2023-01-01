@@ -139,13 +139,8 @@ def train(config: AttributeHashmap) -> None:
     opt = torch.optim.AdamW(model.parameters(),
                             lr=float(config.learning_rate),
                             weight_decay=float(config.weight_decay))
-    # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=opt,
-    #                                                           mode='max',
-    #                                                           factor=1 / 5,
-    #                                                           patience=5,
-    #                                                           verbose=True)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt, T_max=config.max_epoch)
+        optimizer=opt, T_max=config.max_epoch // 10, verbose=True)
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -291,7 +286,7 @@ def train(config: AttributeHashmap) -> None:
         state_dict['val_loss'] /= total
         state_dict['val_acc'] = correct / total * 100
 
-        lr_scheduler.step(state_dict['val_acc'])
+        lr_scheduler.step()
 
         log('Epoch: %d. %s' % (epoch_idx, print_state_dict(state_dict)),
             filepath=log_path,
