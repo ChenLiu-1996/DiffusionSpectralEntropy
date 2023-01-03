@@ -140,7 +140,9 @@ def train(config: AttributeHashmap) -> None:
                             lr=float(config.learning_rate),
                             weight_decay=float(config.weight_decay))
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt, T_max=config.max_epoch // 10)
+        optimizer=opt,
+        T_max=config.max_epoch // 10,
+        eta_min=float(config.learning_rate) * 1e-3)
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -218,11 +220,6 @@ def train(config: AttributeHashmap) -> None:
                     opt.zero_grad()
                     loss.backward()
                     opt.step()
-
-                    y_pred = model(x_aug1)
-                    correct += torch.sum(
-                        torch.argmax(y_pred, dim=-1) == y_true).item()
-                    total += B
 
                 else:
                     # Freeze encoder, train linear classifier.
