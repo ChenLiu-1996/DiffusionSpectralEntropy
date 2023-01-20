@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torchvision
 import yaml
-from models import ResNet50
+from models import ResNet34
 from simclr import NTXentLoss, SingleInstanceTwoView
 from tqdm import tqdm
 
@@ -135,13 +135,18 @@ def train(config: AttributeHashmap) -> None:
     config_str += '\nTraining History:'
     log(config_str, filepath=log_path, to_console=False)
 
-    model = ResNet50(num_classes=config.num_classes).to(device)
-    opt = torch.optim.AdamW(model.parameters(),
-                            lr=float(config.learning_rate),
-                            weight_decay=float(config.weight_decay))
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+    model = ResNet34(num_classes=config.num_classes).to(device)
+    opt = torch.optim.Adam(model.parameters(),
+                           lr=float(config.learning_rate),
+                           weight_decay=float(config.weight_decay))
+    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+    #     optimizer=opt,
+    #     T_max=config.max_epoch // 25,
+    #     eta_min=float(config.learning_rate) * 1e-3)
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer=opt,
-        T_max=config.max_epoch // 10,
+        T_0=5,
+        T_mult=1,
         eta_min=float(config.learning_rate) * 1e-3)
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
@@ -156,6 +161,7 @@ def train(config: AttributeHashmap) -> None:
         is_model_saved['val_acc_%s%%' % val_acc_percentage] = False
     best_val_acc = 0
     best_model = None
+    simclr_train_ratio = 0.8
 
     for epoch_idx in tqdm(range(config.max_epoch)):
         state_dict = {
@@ -204,15 +210,14 @@ def train(config: AttributeHashmap) -> None:
                 x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug2.to(
                     device), y_true.to(device)
 
-                if batch_idx < 0.5 * len(train_loader):
-                    # Freeze linear classifier, train encoder.
+                if batch_idx < simclr_train_ratio * len(train_loader):
+                    # Train encoder.
                     if not simclr_stage1_initialized:
                         model.unfreeze_encoder()
-                        model.freeze_linear()
                         simclr_stage1_initialized = True
 
-                    z1 = model.encode(x_aug1)
-                    z2 = model.encode(x_aug2)
+                    z1 = model.project(x_aug1)
+                    z2 = model.project(x_aug2)
 
                     loss = loss_fn_simclr(z1, z2)
                     state_dict['train_loss'] += loss.item() * B
@@ -226,7 +231,6 @@ def train(config: AttributeHashmap) -> None:
                     if not simclr_stage2_initialized:
                         model.init_linear()
                         model.freeze_encoder()
-                        model.unfreeze_linear()
                         simclr_stage2_initialized = True
 
                     y_pred_aug1, y_pred_aug2 = model(x_aug1), model(x_aug2)
@@ -242,6 +246,8 @@ def train(config: AttributeHashmap) -> None:
                     opt.zero_grad()
                     loss.backward()
                     opt.step()
+
+            lr_scheduler.step(epoch_idx + batch_idx / len(train_loader))
 
         state_dict['train_loss'] /= total
         state_dict['train_acc'] = correct / total * 100
@@ -283,7 +289,7 @@ def train(config: AttributeHashmap) -> None:
         state_dict['val_loss'] /= total
         state_dict['val_acc'] = correct / total * 100
 
-        lr_scheduler.step()
+        # lr_scheduler.step()
 
         log('Epoch: %d. %s' % (epoch_idx, print_state_dict(state_dict)),
             filepath=log_path,
@@ -334,7 +340,7 @@ def infer(config: AttributeHashmap) -> None:
     dataloaders, config = get_dataloaders(config=config)
     _, val_loader = dataloaders
 
-    model = ResNet50(num_classes=config.num_classes).to(device)
+    model = ResNet34(num_classes=config.num_classes).to(device)
 
     checkpoint_paths = sorted(
         glob('%s/%s-%s*.pth' %
