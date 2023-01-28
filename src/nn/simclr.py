@@ -60,8 +60,6 @@ class SingleInstanceTwoView:
             ],
                                    p=0.8),
             transforms.RandomGrayscale(p=0.1),
-            # GaussianBlur(p=1.0),
-            # Solarization(p=0.0),
             transforms.ToTensor(),
             transforms.Normalize(mean=mean, std=std)
         ])

@@ -8,21 +8,22 @@ import numpy as np
 import torch
 import torchvision
 import yaml
-from models import ResNet34
-from simclr import NTXentLoss, SingleInstanceTwoView
 from tqdm import tqdm
 
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
-sys.path.insert(0, import_dir + '/src/utils/')
+sys.path.insert(0, import_dir + '/nn/')
+sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
 from early_stop import EarlyStopping
 from log_utils import log
+from models import ResNet34
 from seed import seed_everything
+from simclr import NTXentLoss, SingleInstanceTwoView
 
 
 def update_config_dirs(config: AttributeHashmap) -> AttributeHashmap:
     root_dir = '/'.join(
-        os.path.dirname(os.path.abspath(__file__)).split('/')[:-1])
+        os.path.dirname(os.path.abspath(__file__)).split('/')[:-2])
     for key in config.keys():
         if type(config[key]) is str and '$ROOT_DIR' in config[key]:
             config[key] = config[key].replace('$ROOT_DIR', root_dir)
@@ -66,6 +67,14 @@ def get_dataloaders(
         dataset_std = (0.2023, 0.1994, 0.2010)
         torchvision_dataset_loader = torchvision.datasets.CIFAR100
 
+    elif config.dataset == 'stl10':
+        config.in_channels = 3
+        config.num_classes = 10
+        imsize = 96
+        dataset_mean = (0.4469, 0.4400, 0.4069)
+        dataset_std = (0.2603, 0.2566, 0.2713)
+        torchvision_dataset_loader = torchvision.datasets.STL10
+
     else:
         raise ValueError(
             '`config.dataset` value not supported. Value provided: %s.' %
@@ -73,8 +82,8 @@ def get_dataloaders(
 
     if config.contrastive == 'NA':
         transform_train = torchvision.transforms.Compose([
-            torchvision.transforms.RandomCrop(imsize, padding=4),
-            torchvision.transforms.RandomHorizontalFlip(),
+            torchvision.transforms.RandomCrop(imsize, padding=imsize // 8),
+            torchvision.transforms.RandomHorizontalFlip(p=0.5),
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(mean=dataset_mean,
                                              std=dataset_std)
@@ -95,20 +104,36 @@ def get_dataloaders(
                                              std=dataset_std)
         ])
 
-    train_loader = torch.utils.data.DataLoader(torchvision_dataset_loader(
-        config.dataset_dir,
-        train=True,
-        download=True,
-        transform=transform_train),
-                                               batch_size=config.batch_size,
-                                               shuffle=True)
-    val_loader = torch.utils.data.DataLoader(torchvision_dataset_loader(
-        config.dataset_dir,
-        train=False,
-        download=True,
-        transform=transform_val),
-                                             batch_size=config.batch_size,
-                                             shuffle=False)
+    if config.dataset in ['mnist', 'cifar10', 'cifar100']:
+        train_loader = torch.utils.data.DataLoader(
+            torchvision_dataset_loader(config.dataset_dir,
+                                       train=True,
+                                       download=True,
+                                       transform=transform_train),
+            batch_size=config.batch_size,
+            shuffle=True)
+        val_loader = torch.utils.data.DataLoader(torchvision_dataset_loader(
+            config.dataset_dir,
+            train=False,
+            download=True,
+            transform=transform_val),
+                                                 batch_size=config.batch_size,
+                                                 shuffle=False)
+    elif config.dataset in ['stl10']:
+        train_loader = torch.utils.data.DataLoader(
+            torchvision_dataset_loader(config.dataset_dir,
+                                       split='train',
+                                       download=True,
+                                       transform=transform_train),
+            batch_size=config.batch_size,
+            shuffle=True)
+        val_loader = torch.utils.data.DataLoader(torchvision_dataset_loader(
+            config.dataset_dir,
+            split='test',
+            download=True,
+            transform=transform_val),
+                                                 batch_size=config.batch_size,
+                                                 shuffle=False)
 
     return (train_loader, val_loader), config
 
@@ -143,7 +168,7 @@ def train(config: AttributeHashmap) -> None:
         optimizer=opt,
         T_0=10,
         T_mult=1,
-        eta_min=float(config.learning_rate) * 1e-3)
+        eta_min=float(config.learning_rate) * 1e-4)
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()

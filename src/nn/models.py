@@ -6,7 +6,7 @@ class ResNet34(torch.nn.Module):
 
     def __init__(self,
                  num_classes: int = 10,
-                 hidden_dim: int = 1024,
+                 hidden_dim: int = 2048,
                  z_dim: int = 128) -> None:
         super(ResNet34, self).__init__()
         self.num_classes = num_classes
@@ -14,7 +14,7 @@ class ResNet34(torch.nn.Module):
         # Isolate the classification model
         # into an encoder and a linear classifier.
         self.encoder = torchvision.models.resnet34(
-            num_classes=self.num_classes, weights=None)
+            num_classes=self.num_classes)
         self.linear_in_features = self.encoder.fc.in_features
         self.linear_out_features = self.encoder.fc.out_features
         self.encoder.fc = torch.nn.Identity()
@@ -26,11 +26,8 @@ class ResNet34(torch.nn.Module):
         # This is the projection head g(.) for SimCLR training.
         self.projection_head = torch.nn.Sequential(
             torch.nn.Linear(in_features=self.linear_in_features,
-                            out_features=hidden_dim,
-                            bias=False), torch.nn.ReLU(),
-            torch.nn.Linear(in_features=hidden_dim,
-                            out_features=z_dim,
-                            bias=False))
+                            out_features=hidden_dim), torch.nn.ReLU(),
+            torch.nn.Linear(in_features=hidden_dim, out_features=z_dim))
 
     def encode(self, x):
         return self.encoder(x)
