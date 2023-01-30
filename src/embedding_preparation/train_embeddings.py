@@ -16,7 +16,7 @@ sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
 from early_stop import EarlyStopping
 from log_utils import log
-from models import ResNet34
+from models import ResNet50
 from seed import seed_everything
 from simclr import NTXentLoss, SingleInstanceTwoView
 
@@ -71,7 +71,7 @@ def get_dataloaders(
         config.in_channels = 3
         config.num_classes = 10
         imsize = 96
-        dataset_mean = (0.4469, 0.4400, 0.4069)
+        dataset_mean = (0.4467, 0.4398, 0.4066)
         dataset_std = (0.2603, 0.2566, 0.2713)
         torchvision_dataset_loader = torchvision.datasets.STL10
 
@@ -160,15 +160,18 @@ def train(config: AttributeHashmap) -> None:
     config_str += '\nTraining History:'
     log(config_str, filepath=log_path, to_console=False)
 
-    model = ResNet34(num_classes=config.num_classes).to(device)
+    model = ResNet50(num_classes=config.num_classes).to(device)
+    model.init_params()
+
     opt = torch.optim.AdamW(model.parameters(),
-                            lr=float(config.learning_rate),
-                            weight_decay=float(config.weight_decay))
+                              lr=float(config.learning_rate),
+                              weight_decay=float(config.weight_decay))
+
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer=opt,
         T_0=10,
         T_mult=1,
-        eta_min=float(config.learning_rate) * 1e-4)
+        eta_min=float(config.learning_rate) * 1e-3)
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -182,7 +185,7 @@ def train(config: AttributeHashmap) -> None:
         is_model_saved['val_acc_%s%%' % val_acc_percentage] = False
     best_val_acc = 0
     best_model = None
-    simclr_train_ratio = 0.8
+    simclr_train_ratio = 0.9
 
     for epoch_idx in tqdm(range(config.max_epoch)):
         state_dict = {
@@ -366,7 +369,7 @@ def infer(config: AttributeHashmap) -> None:
     dataloaders, config = get_dataloaders(config=config)
     _, val_loader = dataloaders
 
-    model = ResNet34(num_classes=config.num_classes).to(device)
+    model = ResNet50(num_classes=config.num_classes).to(device)
 
     checkpoint_paths = sorted(
         glob('%s/%s-%s*.pth' %

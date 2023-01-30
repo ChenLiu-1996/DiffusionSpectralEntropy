@@ -3,10 +3,10 @@ log_dir: '$ROOT_DIR/src/embedding_preparation/logs/'
 output_save_path: '$ROOT_DIR/src/embedding_preparation/results/'
 dataset_dir: '$ROOT_DIR/data/stl10/'
 max_epoch: 500
-patience: 20
+patience: 50
 batch_size: 128
-learning_rate: 2e-5
-weight_decay: 5e-4
+learning_rate: 1e-3
+weight_decay: 1e-4
 num_workers: 4
 dataset: 'stl10'
 contrastive: 'NA'
