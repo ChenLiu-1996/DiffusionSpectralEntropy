@@ -84,6 +84,11 @@ def get_dataloaders(
         transform_train = torchvision.transforms.Compose([
             torchvision.transforms.RandomCrop(imsize, padding=imsize // 8),
             torchvision.transforms.RandomHorizontalFlip(p=0.5),
+            torchvision.transforms.RandomApply([
+                torchvision.transforms.ColorJitter(
+                    brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)
+            ],
+                                               p=0.8),
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(mean=dataset_mean,
                                              std=dataset_std)
@@ -164,8 +169,8 @@ def train(config: AttributeHashmap) -> None:
     model.init_params()
 
     opt = torch.optim.AdamW(model.parameters(),
-                              lr=float(config.learning_rate),
-                              weight_decay=float(config.weight_decay))
+                            lr=float(config.learning_rate),
+                            weight_decay=float(config.weight_decay))
 
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer=opt,
@@ -185,7 +190,6 @@ def train(config: AttributeHashmap) -> None:
         is_model_saved['val_acc_%s%%' % val_acc_percentage] = False
     best_val_acc = 0
     best_model = None
-    simclr_train_ratio = 0.9
 
     for epoch_idx in tqdm(range(config.max_epoch)):
         state_dict = {
@@ -235,7 +239,7 @@ def train(config: AttributeHashmap) -> None:
                 x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug2.to(
                     device), y_true.to(device)
 
-                if batch_idx < simclr_train_ratio * len(train_loader):
+                if batch_idx < config.simclr_train_ratio * len(train_loader):
                     # Train encoder.
                     if not simclr_stage1_initialized:
                         model.unfreeze_encoder()
