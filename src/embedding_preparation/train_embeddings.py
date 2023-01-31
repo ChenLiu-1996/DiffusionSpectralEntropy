@@ -172,28 +172,27 @@ def train(config: AttributeHashmap) -> None:
     model = ResNet50(num_classes=config.num_classes).to(device)
     model.init_params()
 
-    opt = torch.optim.SGD(list(model.parameters()),
-                          nesterov=True,
-                          lr=float(config.learning_rate),
-                          momentum=float(config.momentum),
-                          weight_decay=float(config.weight_decay))
-    if config.contrastive == 'simclr':
-        # Note: Need to do this separately because the model will keep updating even
-        # after freezing with `requires_grad = False` due to the momentum in `opt`.
-        opt_linear = torch.optim.SGD(list(model.linear.parameters()),
-                                     nesterov=True,
-                                     lr=float(config.learning_rate),
-                                     momentum=float(config.momentum),
-                                     weight_decay=float(config.weight_decay))
+    if config.contrastive == 'NA':
+        opt = torch.optim.SGD(list(model.encoder.parameters()) +
+                              list(model.linear.parameters()),
+                              nesterov=True,
+                              lr=float(config.learning_rate),
+                              momentum=float(config.momentum),
+                              weight_decay=float(config.weight_decay))
+    elif config.contrastive == 'simclr':
+        opt = torch.optim.SGD(list(model.encoder.parameters()) +
+                              list(model.projection_head.parameters()),
+                              nesterov=True,
+                              lr=float(config.learning_rate),
+                              momentum=float(config.momentum),
+                              weight_decay=float(config.weight_decay))
 
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer=opt, T_0=config.max_epoch // 10, T_mult=1, eta_min=0)
     if config.contrastive == 'simclr':
-        lr_scheduler_linear = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            optimizer=opt_linear,
-            T_0=config.max_epoch // 10,
-            T_mult=1,
-            eta_min=0)
+        simclr_train_batches = int(config.simclr_train_ratio *
+                                   len(train_loader))
+        simclr_probe_batches = len(train_loader) - simclr_train_batches
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -219,8 +218,21 @@ def train(config: AttributeHashmap) -> None:
         correct, total_count_loss, total_count_acc = 0, 0, 0
         if config.contrastive == 'simclr':
             simclr_stage1_initialized, simclr_stage2_initialized = False, False
-            simclr_train_batches = int(config.simclr_train_ratio *
-                                       len(train_loader))
+            # Note: Need to create another optimizer because the model will keep updating
+            # even after freezing with `requires_grad = False` due to the momentum in `opt`.
+            opt_linear = torch.optim.SGD(list(model.linear.parameters()),
+                                         nesterov=True,
+                                         lr=float(config.learning_rate),
+                                         momentum=float(config.momentum),
+                                         weight_decay=float(
+                                             config.weight_decay))
+            # Full decay for each linear probing epoch.
+            lr_scheduler_linear = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                optimizer=opt_linear,
+                T_0=simclr_probe_batches,
+                T_mult=1,
+                eta_min=0)
+
         model.train()
         for batch_idx, (x, y_true) in enumerate(train_loader):
 
@@ -302,9 +314,8 @@ def train(config: AttributeHashmap) -> None:
                     loss.backward()
                     opt_linear.step()
 
-                    lr_scheduler_linear.step(
-                        epoch_idx + (batch_idx - simclr_train_batches) /
-                        (len(train_loader) - simclr_train_batches))
+                    # Full decay for each linear probing epoch.
+                    lr_scheduler_linear.step(batch_idx - simclr_train_batches)
 
         state_dict['train_loss'] /= total_count_loss
         state_dict['train_acc'] = correct / total_count_acc * 100
