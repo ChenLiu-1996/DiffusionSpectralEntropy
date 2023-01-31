@@ -6,7 +6,7 @@ class ResNet50(torch.nn.Module):
 
     def __init__(self,
                  num_classes: int = 10,
-                 hidden_dim: int = 2048,
+                 hidden_dim: int = 512,
                  z_dim: int = 128) -> None:
         super(ResNet50, self).__init__()
         self.num_classes = num_classes
@@ -19,7 +19,7 @@ class ResNet50(torch.nn.Module):
         self.linear_out_features = self.encoder.fc.out_features
         self.encoder.fc = torch.nn.Identity()
 
-        # This is the linear layer for fine-tuning and inference.
+        # This is the linear classifier for fine-tuning and inference.
         self.linear = torch.nn.Linear(in_features=self.linear_in_features,
                                       out_features=self.linear_out_features)
 

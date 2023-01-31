@@ -52,9 +52,8 @@ class SingleInstanceTwoView:
         self.augmentation = transforms.Compose([
             transforms.RandomResizedCrop(
                 imsize,
-                scale=(0.5, 2.0),
+                scale=(0.2, 1.0),
                 interpolation=transforms.InterpolationMode.BICUBIC),
-            transforms.RandomHorizontalFlip(p=0.5),
             transforms.RandomApply([
                 transforms.ColorJitter(
                     brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)
@@ -62,6 +61,7 @@ class SingleInstanceTwoView:
                                    p=0.8),
             transforms.RandomGrayscale(p=0.2),
             transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=mean, std=std)
         ])

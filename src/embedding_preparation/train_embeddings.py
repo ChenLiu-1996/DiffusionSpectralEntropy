@@ -82,7 +82,11 @@ def get_dataloaders(
 
     if config.contrastive == 'NA':
         transform_train = torchvision.transforms.Compose([
-            torchvision.transforms.RandomCrop(imsize, padding=imsize // 8),
+            torchvision.transforms.RandomResizedCrop(
+                imsize,
+                scale=(0.2, 1.0),
+                interpolation=torchvision.transforms.InterpolationMode.BICUBIC
+            ),
             torchvision.transforms.RandomHorizontalFlip(p=0.5),
             torchvision.transforms.RandomApply([
                 torchvision.transforms.ColorJitter(
@@ -168,15 +172,28 @@ def train(config: AttributeHashmap) -> None:
     model = ResNet50(num_classes=config.num_classes).to(device)
     model.init_params()
 
-    opt = torch.optim.AdamW(model.parameters(),
-                            lr=float(config.learning_rate),
-                            weight_decay=float(config.weight_decay))
+    opt = torch.optim.SGD(list(model.parameters()),
+                          nesterov=True,
+                          lr=float(config.learning_rate),
+                          momentum=float(config.momentum),
+                          weight_decay=float(config.weight_decay))
+    if config.contrastive == 'simclr':
+        # Note: Need to do this separately because the model will keep updating even
+        # after freezing with `requires_grad = False` due to the momentum in `opt`.
+        opt_linear = torch.optim.SGD(list(model.linear.parameters()),
+                                     nesterov=True,
+                                     lr=float(config.learning_rate),
+                                     momentum=float(config.momentum),
+                                     weight_decay=float(config.weight_decay))
 
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        optimizer=opt,
-        T_0=10,
-        T_mult=1,
-        eta_min=float(config.learning_rate) * 1e-3)
+        optimizer=opt, T_0=config.max_epoch // 10, T_mult=1, eta_min=0)
+    if config.contrastive == 'simclr':
+        lr_scheduler_linear = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer=opt_linear,
+            T_0=config.max_epoch // 10,
+            T_mult=1,
+            eta_min=0)
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -200,7 +217,10 @@ def train(config: AttributeHashmap) -> None:
         }
 
         correct, total_count_loss, total_count_acc = 0, 0, 0
-        simclr_stage1_initialized, simclr_stage2_initialized = False, False
+        if config.contrastive == 'simclr':
+            simclr_stage1_initialized, simclr_stage2_initialized = False, False
+            simclr_train_batches = int(config.simclr_train_ratio *
+                                       len(train_loader))
         model.train()
         for batch_idx, (x, y_true) in enumerate(train_loader):
 
@@ -226,6 +246,8 @@ def train(config: AttributeHashmap) -> None:
                 loss.backward()
                 opt.step()
 
+                lr_scheduler.step(epoch_idx + batch_idx / len(train_loader))
+
             elif config.contrastive == 'simclr':
                 # Using SimCLR.
 
@@ -239,7 +261,7 @@ def train(config: AttributeHashmap) -> None:
                 x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug2.to(
                     device), y_true.to(device)
 
-                if batch_idx < config.simclr_train_ratio * len(train_loader):
+                if batch_idx < simclr_train_batches:
                     # Train encoder.
                     if not simclr_stage1_initialized:
                         model.unfreeze_encoder()
@@ -255,6 +277,9 @@ def train(config: AttributeHashmap) -> None:
                     opt.zero_grad()
                     loss.backward()
                     opt.step()
+
+                    lr_scheduler.step(epoch_idx +
+                                      batch_idx / simclr_train_batches)
 
                 else:
                     # Freeze encoder, train linear classifier.
@@ -273,11 +298,13 @@ def train(config: AttributeHashmap) -> None:
                         torch.argmax(y_pred_aug2, dim=-1) == y_true).item()
                     total_count_acc += 2 * B
 
-                    opt.zero_grad()
+                    opt_linear.zero_grad()
                     loss.backward()
-                    opt.step()
+                    opt_linear.step()
 
-            lr_scheduler.step(epoch_idx + batch_idx / len(train_loader))
+                    lr_scheduler_linear.step(
+                        epoch_idx + (batch_idx - simclr_train_batches) /
+                        (len(train_loader) - simclr_train_batches))
 
         state_dict['train_loss'] /= total_count_loss
         state_dict['train_acc'] = correct / total_count_acc * 100
@@ -321,8 +348,6 @@ def train(config: AttributeHashmap) -> None:
         else:
             state_dict['val_loss'] = torch.nan
         state_dict['val_acc'] = correct / total_count_acc * 100
-
-        # lr_scheduler.step()
 
         log('Epoch: %d. %s' % (epoch_idx, print_state_dict(state_dict)),
             filepath=log_path,
