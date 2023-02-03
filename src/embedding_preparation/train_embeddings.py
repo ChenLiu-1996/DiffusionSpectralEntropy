@@ -81,37 +81,41 @@ def get_dataloaders(
             config.dataset)
 
     if config.contrastive == 'NA':
-        transform_train = torchvision.transforms.Compose([
-            torchvision.transforms.RandomResizedCrop(
-                imsize,
-                scale=(0.2, 1.0),
-                interpolation=torchvision.transforms.InterpolationMode.BICUBIC
-            ),
-            torchvision.transforms.RandomHorizontalFlip(p=0.5),
-            torchvision.transforms.RandomApply([
-                torchvision.transforms.ColorJitter(
-                    brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)
-            ],
-                                               p=0.8),
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(mean=dataset_mean,
-                                             std=dataset_std)
-        ])
-        transform_val = torchvision.transforms.Compose([
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(mean=dataset_mean,
-                                             std=dataset_std)
-        ])
+        if config.in_channels == 3:
+            transform_train = torchvision.transforms.Compose([
+                torchvision.transforms.RandomResizedCrop(
+                    imsize,
+                    scale=(0.2, 2.0),
+                    interpolation=torchvision.transforms.InterpolationMode.
+                    BICUBIC),
+                torchvision.transforms.RandomHorizontalFlip(p=0.5),
+                torchvision.transforms.RandomRotation(30),
+                torchvision.transforms.RandomApply([
+                    torchvision.transforms.ColorJitter(
+                        brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)
+                ],
+                                                   p=0.8),
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.Normalize(mean=dataset_mean,
+                                                 std=dataset_std)
+            ])
+        else:
+            transform_train = torchvision.transforms.Compose([
+                torchvision.transforms.RandomHorizontalFlip(p=0.5),
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.Normalize(mean=dataset_mean,
+                                                 std=dataset_std)
+            ])
 
     elif config.contrastive == 'simclr':
         transform_train = SingleInstanceTwoView(imsize=imsize,
                                                 mean=dataset_mean,
                                                 std=dataset_std)
-        transform_val = torchvision.transforms.Compose([
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(mean=dataset_mean,
-                                             std=dataset_std)
-        ])
+
+    transform_val = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(mean=dataset_mean, std=dataset_std)
+    ])
 
     if config.dataset in ['mnist', 'cifar10', 'cifar100']:
         train_loader = torch.utils.data.DataLoader(
@@ -173,26 +177,39 @@ def train(config: AttributeHashmap) -> None:
     model.init_params()
 
     if config.contrastive == 'NA':
-        opt = torch.optim.SGD(list(model.encoder.parameters()) +
-                              list(model.linear.parameters()),
-                              nesterov=True,
-                              lr=float(config.learning_rate),
-                              momentum=float(config.momentum),
-                              weight_decay=float(config.weight_decay))
+        # opt = torch.optim.SGD(list(model.encoder.parameters()) +
+        #                       list(model.linear.parameters()),
+        #                       nesterov=True,
+        #                       lr=float(config.learning_rate),
+        #                       momentum=float(config.momentum),
+        #                       weight_decay=float(config.weight_decay))
+        opt = torch.optim.AdamW(list(model.encoder.parameters()) +
+                                list(model.linear.parameters()),
+                                lr=float(config.learning_rate),
+                                weight_decay=float(config.weight_decay))
     elif config.contrastive == 'simclr':
-        opt = torch.optim.SGD(list(model.encoder.parameters()) +
-                              list(model.projection_head.parameters()),
-                              nesterov=True,
-                              lr=float(config.learning_rate),
-                              momentum=float(config.momentum),
-                              weight_decay=float(config.weight_decay))
+        # opt = torch.optim.SGD(list(model.encoder.parameters()) +
+        #                       list(model.projection_head.parameters()),
+        #                       nesterov=True,
+        #                       lr=float(config.learning_rate),
+        #                       momentum=float(config.momentum),
+        #                       weight_decay=float(config.weight_decay))
+        opt = torch.optim.AdamW(list(model.encoder.parameters()) +
+                                list(model.projection_head.parameters()),
+                                lr=float(config.learning_rate),
+                                weight_decay=float(config.weight_decay))
 
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        optimizer=opt, T_0=config.max_epoch // 10, T_mult=1, eta_min=0)
+        optimizer=opt,
+        T_0=20,
+        T_mult=1,
+        eta_min=float(config.learning_rate) * 1e-3)
+    # lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+    #     optimizer=opt, gamma=(1e-3)**(1 / float(config.max_epoch)))
     if config.contrastive == 'simclr':
         simclr_train_batches = int(config.simclr_train_ratio *
                                    len(train_loader))
-        simclr_probe_batches = len(train_loader) - simclr_train_batches
+        # simclr_probe_batches = len(train_loader) - simclr_train_batches
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -214,28 +231,32 @@ def train(config: AttributeHashmap) -> None:
             'val_loss': 0,
             'val_acc': 0,
         }
+        if config.contrastive == 'simclr':
+            state_dict['train_simclr_pseudoAcc'] = 0
 
+        model.train()
         correct, total_count_loss, total_count_acc = 0, 0, 0
         if config.contrastive == 'simclr':
             simclr_stage1_initialized, simclr_stage2_initialized = False, False
             # Note: Need to create another optimizer because the model will keep updating
-            # even after freezing with `requires_grad = False` due to the momentum in `opt`.
+            # even after freezing with `requires_grad = False` when `opt` has `momentum`.
             opt_linear = torch.optim.SGD(list(model.linear.parameters()),
                                          nesterov=True,
-                                         lr=float(config.learning_rate),
-                                         momentum=float(config.momentum),
+                                         lr=float(config.learning_rate_linear),
+                                         momentum=0.9,
                                          weight_decay=float(
                                              config.weight_decay))
+            # opt_linear = torch.optim.AdamW(
+            #     list(model.linear.parameters()),
+            #     lr=float(config.learning_rate_linear),
+            #     weight_decay=float(config.weight_decay))
             # Full decay for each linear probing epoch.
-            lr_scheduler_linear = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                optimizer=opt_linear,
-                T_0=simclr_probe_batches,
-                T_mult=1,
-                eta_min=0)
+            # lr_scheduler_linear = torch.optim.lr_scheduler.ExponentialLR(
+            #     optimizer=opt, gamma=(1e-3) ** (1 / simclr_probe_batches))
+            # lr_scheduler_linear = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            #     optimizer=opt_linear, T_0=10, T_mult=1, eta_min=0)
 
-        model.train()
         for batch_idx, (x, y_true) in enumerate(train_loader):
-
             if config.contrastive == 'NA':
                 # Not using contrastive learning.
 
@@ -277,13 +298,16 @@ def train(config: AttributeHashmap) -> None:
                     # Train encoder.
                     if not simclr_stage1_initialized:
                         model.unfreeze_encoder()
+                        model.unfreeze_projection_head()
+                        model.freeze_linear()
                         simclr_stage1_initialized = True
 
                     z1 = model.project(x_aug1)
                     z2 = model.project(x_aug2)
 
-                    loss = loss_fn_simclr(z1, z2)
+                    loss, pseudo_acc = loss_fn_simclr(z1, z2)
                     state_dict['train_loss'] += loss.item() * B
+                    state_dict['train_simclr_pseudoAcc'] += pseudo_acc * B
                     total_count_loss += B
 
                     opt.zero_grad()
@@ -296,8 +320,10 @@ def train(config: AttributeHashmap) -> None:
                 else:
                     # Freeze encoder, train linear classifier.
                     if not simclr_stage2_initialized:
-                        model.init_linear()
                         model.freeze_encoder()
+                        model.freeze_projection_head()
+                        model.unfreeze_linear()
+                        model.init_linear()
                         simclr_stage2_initialized = True
 
                     y_pred_aug1, y_pred_aug2 = model(x_aug1), model(x_aug2)
@@ -314,45 +340,56 @@ def train(config: AttributeHashmap) -> None:
                     loss.backward()
                     opt_linear.step()
 
+                    # from matplotlib import pyplot as plt
+                    # fig = plt.figure()
+                    # ax = fig.add_subplot(1, 2, 1)
+                    # ax.imshow(x_aug1[0].cpu().detach().numpy().transpose(
+                    #     1, 2, 0))
+                    # ax.set_axis_off()
+                    # ax.set_title(
+                    #     'pred: %s true: %s' %
+                    #     (torch.argmax(y_pred_aug1[0], dim=-1).item(), y_true[0].item()))
+                    # ax = fig.add_subplot(1, 2, 2)
+                    # ax.imshow(x_aug2[0].cpu().detach().numpy().transpose(
+                    #     1, 2, 0))
+                    # ax.set_axis_off()
+                    # ax.set_title('pred: %s true: %s' % (torch.argmax(
+                    #     y_pred_aug2[0], dim=-1).item(), y_true[0].item()))
+                    # fig.savefig('wtf.png')
+
+                    # import pdb
+                    # pdb.set_trace()
+
                     # Full decay for each linear probing epoch.
-                    lr_scheduler_linear.step(batch_idx - simclr_train_batches)
+                    # lr_scheduler_linear.step(batch_idx - simclr_train_batches)
+                    # lr_scheduler_linear.step()
+
+        # lr_scheduler.step()
 
         state_dict['train_loss'] /= total_count_loss
+        if config.contrastive == 'simclr':
+            state_dict['train_simclr_pseudoAcc'] /= total_count_loss
         state_dict['train_acc'] = correct / total_count_acc * 100
 
         correct, total_count_loss, total_count_acc = 0, 0, 0
         model.eval()
         with torch.no_grad():
             for x, y_true in val_loader:
+                B = x.shape[0]
+                assert config.in_channels in [1, 3]
+                if config.in_channels == 1:
+                    # Repeat the channel dimension: 1 channel -> 3 channels.
+                    x = x.repeat(1, 3, 1, 1)
+                x, y_true = x.to(device), y_true.to(device)
+
+                y_pred = model(x)
+                loss = loss_fn_classification(y_pred, y_true)
+                state_dict['val_loss'] += loss.item() * B
+                correct += torch.sum(
+                    torch.argmax(y_pred, dim=-1) == y_true).item()
+                total_count_acc += B
                 if config.contrastive == 'NA':
-                    B = x.shape[0]
-                    assert config.in_channels in [1, 3]
-                    if config.in_channels == 1:
-                        # Repeat the channel dimension: 1 channel -> 3 channels.
-                        x = x.repeat(1, 3, 1, 1)
-                    x, y_true = x.to(device), y_true.to(device)
-
-                    y_pred = model(x)
-                    loss = loss_fn_classification(y_pred, y_true)
-                    state_dict['val_loss'] += loss.item() * B
-                    correct += torch.sum(
-                        torch.argmax(y_pred, dim=-1) == y_true).item()
                     total_count_loss += B
-                    total_count_acc += B
-
-                elif config.contrastive == 'simclr':
-                    B = x.shape[0]
-                    assert config.in_channels in [1, 3]
-                    if config.in_channels == 1:
-                        # Repeat the channel dimension: 1 channel -> 3 channels.
-                        x = x.repeat(1, 3, 1, 1)
-                    x, y_true = x.to(device), y_true.to(device)
-
-                    y_pred = model(x)
-                    # Contrastive loss not computed during validation. Hence putting NaN.
-                    correct += torch.sum(
-                        torch.argmax(y_pred, dim=-1) == y_true).item()
-                    total_count_acc += B
 
         if config.contrastive == 'NA':
             state_dict['val_loss'] /= total_count_loss

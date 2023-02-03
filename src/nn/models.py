@@ -6,8 +6,8 @@ class ResNet50(torch.nn.Module):
 
     def __init__(self,
                  num_classes: int = 10,
-                 hidden_dim: int = 512,
-                 z_dim: int = 128) -> None:
+                 hidden_dim: int = 2048,
+                 z_dim: int = 64) -> None:
         super(ResNet50, self).__init__()
         self.num_classes = num_classes
 
@@ -46,9 +46,25 @@ class ResNet50(torch.nn.Module):
         for param in self.encoder.parameters():
             param.requires_grad = True
 
+    def freeze_projection_head(self):
+        for param in self.projection_head.parameters():
+            param.requires_grad = False
+
+    def unfreeze_projection_head(self):
+        for param in self.projection_head.parameters():
+            param.requires_grad = True
+
+    def freeze_linear(self):
+        for param in self.linear.parameters():
+            param.requires_grad = False
+
+    def unfreeze_linear(self):
+        for param in self.linear.parameters():
+            param.requires_grad = True
+
     def init_linear(self):
-        self.linear.weight.data.fill_(0.01)
-        self.linear.bias.data.fill_(0.01)
+        torch.nn.init.constant_(self.linear.weight, 0.01)
+        torch.nn.init.constant_(self.linear.bias, 0)
 
     def init_params(self):
         for m in self.modules():

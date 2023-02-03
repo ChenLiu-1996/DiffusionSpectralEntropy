@@ -4,6 +4,7 @@ from typing import Tuple
 import torch
 import torchvision.transforms as transforms
 from PIL import ImageFilter
+from sklearn.metrics import accuracy_score
 
 
 class NTXentLoss(torch.nn.Module):
@@ -40,7 +41,11 @@ class NTXentLoss(torch.nn.Module):
         loss += -torch.log(numerator /
                            (denominator + self.epsilon) + self.epsilon)
 
-        return loss / B
+        pseudo_acc = accuracy_score(
+            y_true=pos_pair_ij.cpu().detach().numpy().reshape(-1),
+            y_pred=sim_matrix.cpu().detach().numpy().reshape(-1) > 0.5)
+
+        return loss / B, pseudo_acc
 
 
 class SingleInstanceTwoView:
@@ -52,7 +57,7 @@ class SingleInstanceTwoView:
         self.augmentation = transforms.Compose([
             transforms.RandomResizedCrop(
                 imsize,
-                scale=(0.2, 1.0),
+                scale=(0.5, 2.0),
                 interpolation=transforms.InterpolationMode.BICUBIC),
             transforms.RandomApply([
                 transforms.ColorJitter(
@@ -61,7 +66,8 @@ class SingleInstanceTwoView:
                                    p=0.8),
             transforms.RandomGrayscale(p=0.2),
             transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
-            transforms.RandomHorizontalFlip(),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.RandomRotation(30),
             transforms.ToTensor(),
             transforms.Normalize(mean=mean, std=std)
         ])

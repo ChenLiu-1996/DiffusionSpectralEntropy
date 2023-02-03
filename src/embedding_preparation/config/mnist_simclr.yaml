@@ -5,11 +5,11 @@ dataset_dir: '$ROOT_DIR/data/mnist/'
 max_epoch: 500
 patience: 50
 batch_size: 128
-learning_rate: 1e-1
-momentum: 0.9
+learning_rate: 1e-2
+learning_rate_linear: 1e-4
 weight_decay: 1e-4
 num_workers: 4
 dataset: 'mnist'
 contrastive: 'simclr'
-simclr_train_ratio: 0.9
+simclr_train_ratio: 0.8
 random_seed: 2022
