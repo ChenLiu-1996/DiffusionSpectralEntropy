@@ -63,7 +63,7 @@ class SingleInstanceTwoView:
             transforms.RandomRotation(30),
             transforms.RandomApply([
                 transforms.ColorJitter(
-                    brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1)
+                    brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)
             ],
                                    p=0.8),
             transforms.RandomGrayscale(p=0.2),

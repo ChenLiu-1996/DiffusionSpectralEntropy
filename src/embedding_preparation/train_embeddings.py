@@ -185,8 +185,7 @@ def train(config: AttributeHashmap) -> None:
         #                       weight_decay=float(config.weight_decay))
         opt = torch.optim.AdamW(list(model.encoder.parameters()) +
                                 list(model.linear.parameters()),
-                                lr=float(config.learning_rate),
-                                weight_decay=float(config.weight_decay))
+                                lr=float(config.learning_rate))
     elif config.contrastive == 'simclr':
         # opt = torch.optim.SGD(list(model.encoder.parameters()) +
         #                       list(model.projection_head.parameters()),
@@ -199,11 +198,13 @@ def train(config: AttributeHashmap) -> None:
                                 lr=float(config.learning_rate),
                                 weight_decay=float(config.weight_decay))
 
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        optimizer=opt,
-        T_0=10,
-        T_mult=1,
-        eta_min=float(config.learning_rate) * 1e-3)
+    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+    #     optimizer=opt,
+    #     T_0=10,
+    #     T_mult=1,
+    #     eta_min=float(config.learning_rate) * 1e-3)
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer=opt, T_max=config.max_epoch, eta_min=0)
     # lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
     #     optimizer=opt, gamma=(1e-3)**(1 / float(config.max_epoch)))
 
@@ -235,135 +236,13 @@ def train(config: AttributeHashmap) -> None:
         if config.contrastive == 'simclr':
             state_dict['train_simclr_pseudoAcc'] = 0
 
-        # if config.contrastive == 'simclr':
-        # simclr_probing_initialized = False
-        # # Note: Need to create another optimizer because the model will keep updating
-        # # even after freezing with `requires_grad = False` when `opt` has `momentum`.
-        # opt_linear = torch.optim.SGD(list(model.linear.parameters()),
-        #                              nesterov=True,
-        #                              lr=float(config.learning_rate_linear),
-        #                              momentum=0.9,
-        #                              weight_decay=float(
-        #                                  config.weight_decay))
-        # opt_linear = torch.optim.AdamW(
-        #     list(model.linear.parameters()),
-        #     lr=float(config.learning_rate_linear),
-        #     weight_decay=float(config.weight_decay))
-        # Full decay for each linear probing epoch.
-        # lr_scheduler_linear = torch.optim.lr_scheduler.ExponentialLR(
-        #     optimizer=opt, gamma=(1e-3) ** (1 / simclr_probe_batches))
-        # lr_scheduler_linear = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        #     optimizer=opt_linear, T_0=10, T_mult=1, eta_min=0)
-
-        # for batch_idx, (x, y_true) in enumerate(train_loader):
-        #     if config.contrastive == 'NA':
-        #         # Not using contrastive learning.
-
-        #         B = x.shape[0]
-        #         assert config.in_channels in [1, 3]
-        #         if config.in_channels == 1:
-        #             # Repeat the channel dimension: 1 channel -> 3 channels.
-        #             x = x.repeat(1, 3, 1, 1)
-        #         x, y_true = x.to(device), y_true.to(device)
-
-        #         y_pred = model(x)
-        #         loss = loss_fn_classification(y_pred, y_true)
-        #         state_dict['train_loss'] += loss.item() * B
-        #         correct += torch.sum(
-        #             torch.argmax(y_pred, dim=-1) == y_true).item()
-        #         total_count_loss += B
-        #         total_count_acc += B
-
-        #         opt.zero_grad()
-        #         loss.backward()
-        #         opt.step()
-
-        #         lr_scheduler.step(epoch_idx + batch_idx / len(train_loader))
-
-        #     elif config.contrastive == 'simclr':
-        #         # Using SimCLR.
-
-        #         x_aug1, x_aug2 = x
-        #         B = x_aug1.shape[0]
-        #         assert config.in_channels in [1, 3]
-        #         if config.in_channels == 1:
-        #             # Repeat the channel dimension: 1 channel -> 3 channels.
-        #             x_aug1 = x_aug1.repeat(1, 3, 1, 1)
-        #             x_aug2 = x_aug2.repeat(1, 3, 1, 1)
-        #         x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug2.to(
-        #             device), y_true.to(device)
-
-        #         if batch_idx < simclr_train_batches:
-        #             # Train encoder.
-
-        #             z1 = model.project(x_aug1)
-        #             z2 = model.project(x_aug2)
-
-        #             loss, pseudo_acc = loss_fn_simclr(z1, z2)
-        #             state_dict['train_loss'] += loss.item() * B
-        #             state_dict['train_simclr_pseudoAcc'] += pseudo_acc * B
-        #             total_count_loss += B
-
-        #             opt.zero_grad()
-        #             loss.backward()
-        #             opt.step()
-
-        #             lr_scheduler.step(epoch_idx +
-        #                               batch_idx / simclr_train_batches)
-
-        #         else:
-        #             # Train linear classifier.
-        #             if not simclr_probing_initialized:
-        #                 model.init_linear()
-        #                 simclr_probing_initialized = True
-
-        #             y_pred_aug1, y_pred_aug2 = model(x_aug1), model(x_aug2)
-        #             loss_aug1 = loss_fn_classification(y_pred_aug1, y_true)
-        #             loss_aug2 = loss_fn_classification(y_pred_aug2, y_true)
-        #             loss = (loss_aug1 + loss_aug2) / 2
-        #             correct += torch.sum(
-        #                 torch.argmax(y_pred_aug1, dim=-1) == y_true).item()
-        #             correct += torch.sum(
-        #                 torch.argmax(y_pred_aug2, dim=-1) == y_true).item()
-        #             total_count_acc += 2 * B
-
-        #             opt_linear.zero_grad()
-        #             loss.backward()
-        #             opt_linear.step()
-
-        #             # from matplotlib import pyplot as plt
-        #             # fig = plt.figure()
-        #             # for i in range(5):
-        #             #     ax = fig.add_subplot(5, 2, 2*i+1)
-        #             #     ax.imshow(x_aug1[i].cpu().detach().numpy().transpose(
-        #             #         1, 2, 0))
-        #             #     ax.set_axis_off()
-        #             #     ax.set_title('pred: %s true: %s' % (torch.argmax(
-        #             #         y_pred_aug1[i], dim=-1).item(), y_true[i].item()))
-        #             #     ax = fig.add_subplot(5, 2, 2*i+2)
-        #             #     ax.imshow(x_aug2[i].cpu().detach().numpy().transpose(
-        #             #         1, 2, 0))
-        #             #     ax.set_axis_off()
-        #             #     ax.set_title('pred: %s true: %s' % (torch.argmax(
-        #             #         y_pred_aug2[i], dim=-1).item(), y_true[i].item()))
-        #             # fig.savefig('wtf.png')
-
-        #             # import pdb
-        #             # pdb.set_trace()
-
-        #             # Full decay for each linear probing epoch.
-        #             # lr_scheduler_linear.step(batch_idx - simclr_train_batches)
-        #             # lr_scheduler_linear.step()
-
-        # # lr_scheduler.step()
-
         #
         '''
         Training
         '''
         model.train()
         correct, total_count_loss, total_count_acc = 0, 0, 0
-        for batch_idx, (x, y_true) in enumerate(train_loader):
+        for _, (x, y_true) in enumerate(train_loader):
             if config.contrastive == 'NA':
                 # Not using contrastive learning.
 
@@ -385,8 +264,6 @@ def train(config: AttributeHashmap) -> None:
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
-
-                lr_scheduler.step(epoch_idx + batch_idx / len(train_loader))
 
             elif config.contrastive == 'simclr':
                 # Using SimCLR.
@@ -414,19 +291,25 @@ def train(config: AttributeHashmap) -> None:
                 loss.backward()
                 opt.step()
 
-                lr_scheduler.step(epoch_idx + batch_idx / len(train_loader))
+        # lr_scheduler.step(epoch_idx + batch_idx / len(train_loader))
+
+        lr_scheduler.step()
 
         if config.contrastive == 'simclr':
             # Iter over training set again and train linear classifier.
             model.init_linear()
             # Note: Need to create another optimizer because the model will keep updating
             # even after freezing with `requires_grad = False` when `opt` has `momentum`.
-            opt_linear = torch.optim.SGD(list(model.linear.parameters()),
-                                         nesterov=True,
-                                         lr=float(config.learning_rate_linear),
-                                         momentum=0.9,
-                                         weight_decay=float(
-                                             config.weight_decay))
+            # opt_linear = torch.optim.SGD(list(model.linear.parameters()),
+            #                              nesterov=True,
+            #                              lr=float(config.learning_rate_linear),
+            #                              momentum=0.9,
+            #                              weight_decay=float(
+            #                                  config.weight_decay))
+            opt_linear = torch.optim.AdamW(
+                list(model.linear.parameters()),
+                lr=float(config.learning_rate_linear),
+                weight_decay=float(config.weight_decay))
             for batch_idx, (x, y_true) in enumerate(train_loader):
                 x_aug1, x_aug2 = x
                 B = x_aug1.shape[0]
