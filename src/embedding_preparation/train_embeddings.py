@@ -306,34 +306,42 @@ def train(config: AttributeHashmap) -> None:
             #                              momentum=0.9,
             #                              weight_decay=float(
             #                                  config.weight_decay))
+            probing_epochs = 5
             opt_linear = torch.optim.AdamW(
                 list(model.linear.parameters()),
                 lr=float(config.learning_rate_linear),
                 weight_decay=float(config.weight_decay))
-            for batch_idx, (x, y_true) in enumerate(train_loader):
-                x_aug1, x_aug2 = x
-                B = x_aug1.shape[0]
-                assert config.in_channels in [1, 3]
-                if config.in_channels == 1:
-                    # Repeat the channel dimension: 1 channel -> 3 channels.
-                    x_aug1 = x_aug1.repeat(1, 3, 1, 1)
-                    x_aug2 = x_aug2.repeat(1, 3, 1, 1)
-                x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug2.to(
-                    device), y_true.to(device)
+            lr_scheduler_linear = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer=opt_linear, T_max=probing_epochs*len(train_loader), eta_min=0)
 
-                y_pred_aug1, y_pred_aug2 = model(x_aug1), model(x_aug2)
-                loss_aug1 = loss_fn_classification(y_pred_aug1, y_true)
-                loss_aug2 = loss_fn_classification(y_pred_aug2, y_true)
-                loss = (loss_aug1 + loss_aug2) / 2
-                correct += torch.sum(
-                    torch.argmax(y_pred_aug1, dim=-1) == y_true).item()
-                correct += torch.sum(
-                    torch.argmax(y_pred_aug2, dim=-1) == y_true).item()
-                total_count_acc += 2 * B
+            for _ in range(probing_epochs):
+                for _, (x, y_true) in enumerate(train_loader):
+                    x_aug1, x_aug2 = x
+                    B = x_aug1.shape[0]
+                    assert config.in_channels in [1, 3]
+                    if config.in_channels == 1:
+                        # Repeat the channel dimension: 1 channel -> 3 channels.
+                        x_aug1 = x_aug1.repeat(1, 3, 1, 1)
+                        x_aug2 = x_aug2.repeat(1, 3, 1, 1)
+                    x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug2.to(
+                        device), y_true.to(device)
 
-                opt_linear.zero_grad()
-                loss.backward()
-                opt_linear.step()
+                    with torch.no_grad():
+                        h1, h2 = model.encode(x_aug1), model.encode(x_aug2)
+                    y_pred_aug1, y_pred_aug2 = model.linear(h1), model.linear(h2)
+                    loss_aug1 = loss_fn_classification(y_pred_aug1, y_true)
+                    loss_aug2 = loss_fn_classification(y_pred_aug2, y_true)
+                    loss = (loss_aug1 + loss_aug2) / 2
+                    correct += torch.sum(
+                        torch.argmax(y_pred_aug1, dim=-1) == y_true).item()
+                    correct += torch.sum(
+                        torch.argmax(y_pred_aug2, dim=-1) == y_true).item()
+                    total_count_acc += 2 * B
+
+                    opt_linear.zero_grad()
+                    loss.backward()
+                    opt_linear.step()
+                    lr_scheduler_linear.step()
 
         state_dict['train_loss'] /= total_count_loss
         if config.contrastive == 'simclr':
@@ -443,7 +451,7 @@ def infer(config: AttributeHashmap) -> None:
                     x = x.repeat(1, 3, 1, 1)
                 x, y_true = x.to(device), y_true.to(device)
 
-                z = model.encode(x)
+                h = model.encode(x)
                 y_pred = model(x)
                 y_correct = (torch.argmax(
                     y_pred, dim=-1) == y_true).cpu().detach().numpy()
@@ -466,7 +474,7 @@ def infer(config: AttributeHashmap) -> None:
                            checkpoint_name=checkpoint_name,
                            image_batch=x,
                            label_true_batch=y_true,
-                           embedding_batch=z)
+                           embedding_batch=h)
 
             log('\nCheckpoint: %s' % checkpoint_name,
                 filepath=log_path,
