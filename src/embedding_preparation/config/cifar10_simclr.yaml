@@ -5,10 +5,11 @@ dataset_dir: '$ROOT_DIR/data/cifar10/'
 max_epoch: 500
 patience: 50
 batch_size: 128
-learning_rate: 1e-2
-learning_rate_linear: 1e-2
+learning_rate: 1e0
+learning_rate_probing: 1e-3
+probing_epoch: 10
 weight_decay: 1e-6
-num_workers: 4
+num_workers: 12
 dataset: 'cifar10'
 contrastive: 'simclr'
 random_seed: 2022

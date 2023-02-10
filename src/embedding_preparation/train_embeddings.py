@@ -124,14 +124,16 @@ def get_dataloaders(
                                        download=True,
                                        transform=transform_train),
             batch_size=config.batch_size,
+            num_workers=config.num_workers,
             shuffle=True)
-        val_loader = torch.utils.data.DataLoader(torchvision_dataset_loader(
-            config.dataset_dir,
-            train=False,
-            download=True,
-            transform=transform_val),
-                                                 batch_size=config.batch_size,
-                                                 shuffle=False)
+        val_loader = torch.utils.data.DataLoader(
+            torchvision_dataset_loader(config.dataset_dir,
+                                       train=False,
+                                       download=True,
+                                       transform=transform_val),
+            batch_size=config.batch_size,
+            num_workers=config.num_workers,
+            shuffle=False)
     elif config.dataset in ['stl10']:
         train_loader = torch.utils.data.DataLoader(
             torchvision_dataset_loader(config.dataset_dir,
@@ -139,14 +141,16 @@ def get_dataloaders(
                                        download=True,
                                        transform=transform_train),
             batch_size=config.batch_size,
+            num_workers=config.num_workers,
             shuffle=True)
-        val_loader = torch.utils.data.DataLoader(torchvision_dataset_loader(
-            config.dataset_dir,
-            split='test',
-            download=True,
-            transform=transform_val),
-                                                 batch_size=config.batch_size,
-                                                 shuffle=False)
+        val_loader = torch.utils.data.DataLoader(
+            torchvision_dataset_loader(config.dataset_dir,
+                                       split='test',
+                                       download=True,
+                                       transform=transform_val),
+            batch_size=config.batch_size,
+            num_workers=config.num_workers,
+            shuffle=False)
 
     return (train_loader, val_loader), config
 
@@ -185,7 +189,8 @@ def train(config: AttributeHashmap) -> None:
         #                       weight_decay=float(config.weight_decay))
         opt = torch.optim.AdamW(list(model.encoder.parameters()) +
                                 list(model.linear.parameters()),
-                                lr=float(config.learning_rate))
+                                lr=float(config.learning_rate),
+                                weight_decay=float(config.weight_decay))
     elif config.contrastive == 'simclr':
         # opt = torch.optim.SGD(list(model.encoder.parameters()) +
         #                       list(model.projection_head.parameters()),
@@ -233,6 +238,7 @@ def train(config: AttributeHashmap) -> None:
             'val_loss': 0,
             'val_acc': 0,
         }
+
         if config.contrastive == 'simclr':
             state_dict['train_simclr_pseudoAcc'] = 0
 
@@ -291,92 +297,40 @@ def train(config: AttributeHashmap) -> None:
                 loss.backward()
                 opt.step()
 
-        # lr_scheduler.step(epoch_idx + batch_idx / len(train_loader))
-
-        lr_scheduler.step()
-
-        if config.contrastive == 'simclr':
-            # Iter over training set again and train linear classifier.
-            model.init_linear()
-            # Note: Need to create another optimizer because the model will keep updating
-            # even after freezing with `requires_grad = False` when `opt` has `momentum`.
-            # opt_linear = torch.optim.SGD(list(model.linear.parameters()),
-            #                              nesterov=True,
-            #                              lr=float(config.learning_rate_linear),
-            #                              momentum=0.9,
-            #                              weight_decay=float(
-            #                                  config.weight_decay))
-            probing_epochs = 5
-            opt_linear = torch.optim.AdamW(
-                list(model.linear.parameters()),
-                lr=float(config.learning_rate_linear),
-                weight_decay=float(config.weight_decay))
-            lr_scheduler_linear = torch.optim.lr_scheduler.CosineAnnealingLR(
-                optimizer=opt_linear, T_max=probing_epochs*len(train_loader), eta_min=0)
-
-            for _ in range(probing_epochs):
-                for _, (x, y_true) in enumerate(train_loader):
-                    x_aug1, x_aug2 = x
-                    B = x_aug1.shape[0]
-                    assert config.in_channels in [1, 3]
-                    if config.in_channels == 1:
-                        # Repeat the channel dimension: 1 channel -> 3 channels.
-                        x_aug1 = x_aug1.repeat(1, 3, 1, 1)
-                        x_aug2 = x_aug2.repeat(1, 3, 1, 1)
-                    x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug2.to(
-                        device), y_true.to(device)
-
-                    with torch.no_grad():
-                        h1, h2 = model.encode(x_aug1), model.encode(x_aug2)
-                    y_pred_aug1, y_pred_aug2 = model.linear(h1), model.linear(h2)
-                    loss_aug1 = loss_fn_classification(y_pred_aug1, y_true)
-                    loss_aug2 = loss_fn_classification(y_pred_aug2, y_true)
-                    loss = (loss_aug1 + loss_aug2) / 2
-                    correct += torch.sum(
-                        torch.argmax(y_pred_aug1, dim=-1) == y_true).item()
-                    correct += torch.sum(
-                        torch.argmax(y_pred_aug2, dim=-1) == y_true).item()
-                    total_count_acc += 2 * B
-
-                    opt_linear.zero_grad()
-                    loss.backward()
-                    opt_linear.step()
-                    lr_scheduler_linear.step()
-
-        state_dict['train_loss'] /= total_count_loss
         if config.contrastive == 'simclr':
             state_dict['train_simclr_pseudoAcc'] /= total_count_loss
-        state_dict['train_acc'] = correct / total_count_acc * 100
+        else:
+            state_dict['train_acc'] = correct / total_count_acc * 100
+        state_dict['train_loss'] /= total_count_loss
+
+        if epoch_idx >= 10:
+            lr_scheduler.step()
 
         #
         '''
-        Validation
+        Validation (or Linear Probing + Validation)
         '''
-        correct, total_count_loss, total_count_acc = 0, 0, 0
-        model.eval()
-        with torch.no_grad():
-            for x, y_true in val_loader:
-                B = x.shape[0]
-                assert config.in_channels in [1, 3]
-                if config.in_channels == 1:
-                    # Repeat the channel dimension: 1 channel -> 3 channels.
-                    x = x.repeat(1, 3, 1, 1)
-                x, y_true = x.to(device), y_true.to(device)
-
-                y_pred = model(x)
-                loss = loss_fn_classification(y_pred, y_true)
-                state_dict['val_loss'] += loss.item() * B
-                correct += torch.sum(
-                    torch.argmax(y_pred, dim=-1) == y_true).item()
-                total_count_acc += B
-                if config.contrastive == 'NA':
-                    total_count_loss += B
-
-        if config.contrastive == 'NA':
-            state_dict['val_loss'] /= total_count_loss
+        if config.contrastive == 'simclr':
+            # This function call includes validation.
+            probing_acc, val_acc_final = linear_probing(
+                config=config,
+                train_loader=train_loader,
+                val_loader=val_loader,
+                model=model,
+                device=device,
+                loss_fn_classification=loss_fn_classification)
+            state_dict['train_acc'] = probing_acc
+            state_dict['val_loss'] = np.nan
+            state_dict['val_acc'] = val_acc_final
         else:
-            state_dict['val_loss'] = torch.nan
-        state_dict['val_acc'] = correct / total_count_acc * 100
+            val_loss, val_acc = validate_epoch(
+                config=config,
+                val_loader=val_loader,
+                model=model,
+                device=device,
+                loss_fn_classification=loss_fn_classification)
+            state_dict['val_loss'] = val_loss
+            state_dict['val_acc'] = val_acc
 
         log('Epoch: %d. %s' % (epoch_idx, print_state_dict(state_dict)),
             filepath=log_path,
@@ -414,6 +368,119 @@ def train(config: AttributeHashmap) -> None:
                 to_console=True)
             break
     return
+
+
+def validate_epoch(config: AttributeHashmap,
+                   val_loader: torch.utils.data.DataLoader,
+                   model: torch.nn.Module, device: torch.device,
+                   loss_fn_classification: torch.nn.Module):
+
+    correct, total_count_loss, total_count_acc = 0, 0, 0
+    val_loss, val_acc = 0, 0
+
+    model.eval()
+    with torch.no_grad():
+        for x, y_true in val_loader:
+            B = x.shape[0]
+            assert config.in_channels in [1, 3]
+            if config.in_channels == 1:
+                # Repeat the channel dimension: 1 channel -> 3 channels.
+                x = x.repeat(1, 3, 1, 1)
+            x, y_true = x.to(device), y_true.to(device)
+
+            y_pred = model(x)
+            loss = loss_fn_classification(y_pred, y_true)
+            val_loss += loss.item() * B
+            correct += torch.sum(torch.argmax(y_pred, dim=-1) == y_true).item()
+            total_count_acc += B
+            if config.contrastive == 'NA':
+                total_count_loss += B
+
+    if config.contrastive == 'NA':
+        val_loss /= total_count_loss
+    else:
+        val_loss = torch.nan
+    val_acc = correct / total_count_acc * 100
+
+    return val_loss, val_acc
+
+
+def linear_probing(config: AttributeHashmap,
+                   train_loader: torch.utils.data.DataLoader,
+                   val_loader: torch.utils.data.DataLoader,
+                   model: torch.nn.Module, device: torch.device,
+                   loss_fn_classification: torch.nn.Module):
+
+    # Separately train linear classifier.
+    model.init_linear()
+    # Note: Need to create another optimizer because the model will keep updating
+    # even after freezing with `requires_grad = False` when `opt` has `momentum`.
+    opt_probing = torch.optim.AdamW(list(model.linear.parameters()),
+                                    lr=float(config.learning_rate_probing),
+                                    weight_decay=float(config.weight_decay))
+    lr_scheduler_probing = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer=opt_probing,
+        T_max=config.probing_epoch * len(train_loader),
+        eta_min=0)
+
+    for _ in range(config.probing_epoch):
+        probing_acc = linear_probing_epoch(
+            config=config,
+            train_loader=train_loader,
+            model=model,
+            device=device,
+            opt_probing=opt_probing,
+            lr_scheduler_probing=lr_scheduler_probing,
+            loss_fn_classification=loss_fn_classification)
+
+    _, val_acc = validate_epoch(config=config,
+                                val_loader=val_loader,
+                                model=model,
+                                device=device,
+                                loss_fn_classification=loss_fn_classification)
+
+    return probing_acc, val_acc
+
+
+def linear_probing_epoch(config: AttributeHashmap,
+                         train_loader: torch.utils.data.DataLoader,
+                         model: torch.nn.Module, device: torch.device,
+                         opt_probing: torch.optim.Optimizer,
+                         lr_scheduler_probing: torch.optim.lr_scheduler,
+                         loss_fn_classification: torch.nn.Module):
+    model.train()
+    correct, total_count_acc = 0, 0
+    for _, (x, y_true) in enumerate(train_loader):
+        x_aug1, x_aug2 = x
+        B = x_aug1.shape[0]
+        assert config.in_channels in [1, 3]
+        if config.in_channels == 1:
+            # Repeat the channel dimension: 1 channel -> 3 channels.
+            x_aug1 = x_aug1.repeat(1, 3, 1, 1)
+            x_aug2 = x_aug2.repeat(1, 3, 1, 1)
+        x_aug1, x_aug2, y_true = x_aug1.to(device), x_aug2.to(
+            device), y_true.to(device)
+
+        with torch.no_grad():
+            h1, h2 = model.encode(x_aug1), model.encode(x_aug2)
+        y_pred_aug1, y_pred_aug2 = model.linear(h1), model.linear(h2)
+        loss_aug1 = loss_fn_classification(y_pred_aug1, y_true)
+        loss_aug2 = loss_fn_classification(y_pred_aug2, y_true)
+        loss = (loss_aug1 + loss_aug2) / 2
+        correct += torch.sum(
+            torch.argmax(y_pred_aug1, dim=-1) == y_true).item()
+        correct += torch.sum(
+            torch.argmax(y_pred_aug2, dim=-1) == y_true).item()
+        total_count_acc += 2 * B
+
+        opt_probing.zero_grad()
+        loss.backward()
+        opt_probing.step()
+        lr_scheduler_probing.step()
+
+    probing_acc = correct / total_count_acc * 100
+
+    return probing_acc
 
 
 def infer(config: AttributeHashmap) -> None:
