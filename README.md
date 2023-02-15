@@ -39,6 +39,7 @@ python test_run_model.py --model barlowtwins
 python test_run_model.py --model moco
 python test_run_model.py --model simsiam
 python test_run_model.py --model swav
+python test_run_model.py --model vicreg
 ```
 </details>
 
@@ -88,5 +89,15 @@ wget -O swav_bs4096_ep200.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swa
 wget -O swav_bs4096_ep100.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_100ep_pretrain.pth.tar
 wget -O swav_bs256_ep200.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_200ep_bs256_pretrain.pth.tar
 wget -O swav_bs256_ep400.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_400ep_bs256_pretrain.pth.tar
+```
+</details>
+
+<details> <summary>VICReg</summary>
+
+```
+cd external_src/vicreg/
+mkdir checkpoints && cd checkpoints
+mkdir ImageNet && cd ImageNet
+wget -O vicreg_bs2048_ep100.pth.tar https://dl.fbaipublicfiles.com/vicreg/resnet50.pth
 ```
 </details>

@@ -5,11 +5,13 @@ import sys
 import numpy as np
 import torch
 
-sys.path.insert(0, os.path.abspath('../'))
+import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
+sys.path.insert(0, import_dir + '/external_model_loader/')
 from barlowtwins_model import BarlowTwinsModel
 from moco_model import MoCoModel
 from simsiam_model import SimSiamModel
 from swav_model import SwavModel
+from vicreg_model import VICRegModel
 
 
 def run_model(
@@ -23,6 +25,7 @@ def run_model(
         'moco': 'moco_v1_ep200',
         'simsiam': 'simsiam_bs256_ep100',
         'swav': 'swav_bs256_ep200',
+        'vicreg': 'vicreg_bs2048_ep100',
     }
     if version is None:
         version = base_version[model_name]
@@ -35,6 +38,8 @@ def run_model(
         model = SimSiamModel(device=device, version=version)
     elif model_name == 'swav':
         model = SwavModel(device=device, version=version)
+    elif model_name == 'vicreg':
+        model = VICRegModel(device=device, version=version)
     else:
         raise ValueError('model_name: %s not supported.' % model_name)
 

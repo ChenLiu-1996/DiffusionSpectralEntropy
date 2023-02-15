@@ -10,7 +10,9 @@ class SwavModel(BaseModel):
     Code: https://github.com/facebookresearch/swav.
     '''
 
-    def __init__(self, device: torch.device = None, version: str = None) -> None:
+    def __init__(self,
+                 device: torch.device = None,
+                 version: str = None) -> None:
         '''
         Arg(s):
             device : torch.device
@@ -28,9 +30,12 @@ class SwavModel(BaseModel):
                                         model_name='swav',
                                         version=version,
                                         versions=[
-                                            'swav_bs256_ep200', 'swav_bs256_ep400',
-                                            'swav_bs4096_ep100', 'swav_bs4096_ep200',
-                                            'swav_bs4096_ep400', 'swav_bs4096_ep800',
+                                            'swav_bs256_ep200',
+                                            'swav_bs256_ep400',
+                                            'swav_bs4096_ep100',
+                                            'swav_bs4096_ep200',
+                                            'swav_bs4096_ep400',
+                                            'swav_bs4096_ep800',
                                         ])
 
     def restore_model(self, restore_path: str = None) -> None:
