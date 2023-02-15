@@ -7,12 +7,22 @@ ManifoldTopology
     |   └── `${MODEL_NAME}/...`: git repos for external models
     ├── setup: Instructions for proper setup of environments?
     └── src
-        ├── `investigate.py`: centralized place for our contribution.
-        ├── `${MODEL_NAME}_model.py`: wrapper code to interface with external models.
-        ├── `base.py`: a class with common methods to be inherited by `${MODEL_NAME}_model.py`.
+        ├── embedding_preparation: train our own intermediate models and store the embeddings
+        |   ├── checkpoints
+        |   ├── config
+        |   ├── logs
+        |   ├── results
+        |   └── `train_embeddings.py`
+        ├── nn
+        ├── utils
+        |
+        ├── external_model_loader: a folder full of wrapper code to interface with external models
+        |   ├── `base.py`: a base template that gets inherited by individual wrappers.
+        |   └── `${MODEL_NAME}_model.py`
         ├── unit_test
         |   └── `test_run_${MODEL_NAME}.py`: scripts to check validity of `${MODEL_NAME}_model.py`.
-        └── utils: folder of utility functions.
+        |
+        └── manifold_investigation: Our core investigations can be found here
 ```
 
 ### Environment
