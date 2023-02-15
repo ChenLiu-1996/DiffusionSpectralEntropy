@@ -126,6 +126,8 @@ def get_dataloaders(
             batch_size=config.batch_size,
             num_workers=config.num_workers,
             shuffle=False)
+        config.small_image = True
+
     elif config.dataset in ['stl10']:
         train_loader = torch.utils.data.DataLoader(
             torchvision_dataset_loader(config.dataset_dir,
@@ -143,6 +145,7 @@ def get_dataloaders(
             batch_size=config.batch_size,
             num_workers=config.num_workers,
             shuffle=False)
+        config.small_image = False
 
     return (train_loader, val_loader), config
 
@@ -169,7 +172,7 @@ def train(config: AttributeHashmap) -> None:
     config_str += '\nTraining History:'
     log(config_str, filepath=log_path, to_console=False)
 
-    model = ResNet50(num_classes=config.num_classes).to(device)
+    model = ResNet50(num_classes=config.num_classes, small_image=config.small_image).to(device)
     model.init_params()
 
     if config.contrastive == 'NA':

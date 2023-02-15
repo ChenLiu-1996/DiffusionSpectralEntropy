@@ -11,6 +11,7 @@ class ResNet50(torch.nn.Module):
 
     def __init__(self,
                  num_classes: int = 10,
+                 small_image: bool = False,
                  hidden_dim: int = 512,
                  z_dim: int = 128) -> None:
         super(ResNet50, self).__init__()
@@ -20,28 +21,30 @@ class ResNet50(torch.nn.Module):
 
         # Get the correct dimensions of the classifer.
         self.encoder = torchvision.models.resnet50(
-            num_classes=self.num_classes)
+            num_classes=self.num_classes, weights=None)
         self.linear_in_features = self.encoder.fc.in_features
         self.linear_out_features = self.encoder.fc.out_features
         self.encoder.fc = torch.nn.Identity()
 
-        # Modify the encoder.
-        del self.encoder
-        self.encoder = []
-        for name, module in torchvision.models.resnet50(
-                num_classes=self.num_classes).named_children():
-            if name == 'conv1':
-                module = torch.nn.Conv2d(3,
-                                         64,
-                                         kernel_size=3,
-                                         stride=1,
-                                         padding=1,
-                                         bias=False)
-            if not isinstance(module, torch.nn.Linear) and not isinstance(
-                    module, torch.nn.MaxPool2d):
-                self.encoder.append(module)
-        self.encoder.append(torch.nn.Flatten())
-        self.encoder = torch.nn.Sequential(*self.encoder)
+        if small_image:
+            # Modify the encoder for small images (MNIST, CIFAR, etc.).
+            del self.encoder
+            self.encoder = []
+            for name, module in torchvision.models.resnet50(
+                    num_classes=self.num_classes,
+                    weights=None).named_children():
+                if name == 'conv1':
+                    module = torch.nn.Conv2d(3,
+                                             64,
+                                             kernel_size=3,
+                                             stride=1,
+                                             padding=1,
+                                             bias=False)
+                if not isinstance(module, torch.nn.Linear) and not isinstance(
+                        module, torch.nn.MaxPool2d):
+                    self.encoder.append(module)
+            self.encoder.append(torch.nn.Flatten())
+            self.encoder = torch.nn.Sequential(*self.encoder)
 
         # This is the linear classifier for fine-tuning and inference.
         self.linear = torch.nn.Linear(in_features=self.linear_in_features,

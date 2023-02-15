@@ -6,7 +6,7 @@ max_epoch: 500
 patience: 50
 batch_size: 128
 learning_rate: 1e-1
-weight_decay: 1e-2
+weight_decay: 1e-4
 num_workers: 12
 dataset: 'stl10'
 contrastive: 'NA'
