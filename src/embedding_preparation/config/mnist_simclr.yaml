@@ -7,7 +7,7 @@ patience: 50
 batch_size: 128
 learning_rate: 2e-5
 learning_rate_probing: 1e-3
-probing_epoch: 10
+probing_epoch: 1
 weight_decay: 1e-6
 num_workers: 4
 dataset: 'mnist'

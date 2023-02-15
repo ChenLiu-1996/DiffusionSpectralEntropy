@@ -15,19 +15,11 @@ sys.path.insert(0, import_dir + '/nn/')
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
 from early_stop import EarlyStopping
+from path_utils import update_config_dirs
 from log_utils import log
 from models import ResNet50
 from seed import seed_everything
 from simclr import NTXentLoss, SingleInstanceTwoView
-
-
-def update_config_dirs(config: AttributeHashmap) -> AttributeHashmap:
-    root_dir = '/'.join(
-        os.path.dirname(os.path.abspath(__file__)).split('/')[:-2])
-    for key in config.keys():
-        if type(config[key]) is str and '$ROOT_DIR' in config[key]:
-            config[key] = config[key].replace('$ROOT_DIR', root_dir)
-    return config
 
 
 def print_state_dict(state_dict: dict) -> str:
@@ -181,23 +173,11 @@ def train(config: AttributeHashmap) -> None:
     model.init_params()
 
     if config.contrastive == 'NA':
-        # opt = torch.optim.SGD(list(model.encoder.parameters()) +
-        #                       list(model.linear.parameters()),
-        #                       nesterov=True,
-        #                       lr=float(config.learning_rate),
-        #                       momentum=float(config.momentum),
-        #                       weight_decay=float(config.weight_decay))
         opt = torch.optim.AdamW(list(model.encoder.parameters()) +
                                 list(model.linear.parameters()),
                                 lr=float(config.learning_rate),
                                 weight_decay=float(config.weight_decay))
     elif config.contrastive == 'simclr':
-        # opt = torch.optim.SGD(list(model.encoder.parameters()) +
-        #                       list(model.projection_head.parameters()),
-        #                       nesterov=True,
-        #                       lr=float(config.learning_rate),
-        #                       momentum=float(config.momentum),
-        #                       weight_decay=float(config.weight_decay))
         opt = torch.optim.AdamW(list(model.encoder.parameters()) +
                                 list(model.projection_head.parameters()),
                                 lr=float(config.learning_rate),
@@ -212,11 +192,6 @@ def train(config: AttributeHashmap) -> None:
         optimizer=opt, T_max=config.max_epoch, eta_min=0)
     # lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
     #     optimizer=opt, gamma=(1e-3)**(1 / float(config.max_epoch)))
-
-    # if config.contrastive == 'simclr':
-    #     simclr_train_batches = int(config.simclr_train_ratio *
-    #                                len(train_loader))
-    #     # simclr_probe_batches = len(train_loader) - simclr_train_batches
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -418,10 +393,6 @@ def linear_probing(config: AttributeHashmap,
     opt_probing = torch.optim.AdamW(list(model.linear.parameters()),
                                     lr=float(config.learning_rate_probing),
                                     weight_decay=float(config.weight_decay))
-    lr_scheduler_probing = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt_probing,
-        T_max=config.probing_epoch * len(train_loader),
-        eta_min=0)
 
     for _ in range(config.probing_epoch):
         probing_acc = linear_probing_epoch(
@@ -430,7 +401,6 @@ def linear_probing(config: AttributeHashmap,
             model=model,
             device=device,
             opt_probing=opt_probing,
-            lr_scheduler_probing=lr_scheduler_probing,
             loss_fn_classification=loss_fn_classification)
 
     _, val_acc = validate_epoch(config=config,
@@ -446,7 +416,6 @@ def linear_probing_epoch(config: AttributeHashmap,
                          train_loader: torch.utils.data.DataLoader,
                          model: torch.nn.Module, device: torch.device,
                          opt_probing: torch.optim.Optimizer,
-                         lr_scheduler_probing: torch.optim.lr_scheduler,
                          loss_fn_classification: torch.nn.Module):
     model.train()
     correct, total_count_acc = 0, 0
@@ -476,7 +445,6 @@ def linear_probing_epoch(config: AttributeHashmap,
         opt_probing.zero_grad()
         loss.backward()
         opt_probing.step()
-        lr_scheduler_probing.step()
 
     probing_acc = correct / total_count_acc * 100
 

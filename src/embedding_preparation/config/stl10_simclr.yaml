@@ -4,12 +4,12 @@ output_save_path: '$ROOT_DIR/src/embedding_preparation/results/'
 dataset_dir: '$ROOT_DIR/data/stl10/'
 max_epoch: 500
 patience: 50
-batch_size: 128
+batch_size: 64
 learning_rate: 1e-1
 learning_rate_probing: 1e-2
 probing_epoch: 10
 weight_decay: 1e-6
-num_workers: 4
+num_workers: 12
 dataset: 'stl10'
 contrastive: 'simclr'
 random_seed: 2022
