@@ -15,9 +15,9 @@ sys.path.insert(0, import_dir + '/nn/')
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
 from early_stop import EarlyStopping
-from path_utils import update_config_dirs
 from log_utils import log
 from models import ResNet50
+from path_utils import update_config_dirs
 from seed import seed_everything
 from simclr import NTXentLoss, SingleInstanceTwoView
 
@@ -172,7 +172,8 @@ def train(config: AttributeHashmap) -> None:
     config_str += '\nTraining History:'
     log(config_str, filepath=log_path, to_console=False)
 
-    model = ResNet50(num_classes=config.num_classes, small_image=config.small_image).to(device)
+    model = ResNet50(num_classes=config.num_classes,
+                     small_image=config.small_image).to(device)
     model.init_params()
 
     if config.contrastive == 'NA':
@@ -458,7 +459,8 @@ def infer(config: AttributeHashmap) -> None:
     dataloaders, config = get_dataloaders(config=config)
     _, val_loader = dataloaders
 
-    model = ResNet50(num_classes=config.num_classes).to(device)
+    model = ResNet50(num_classes=config.num_classes,
+                     small_image=config.small_image).to(device)
 
     checkpoint_paths = sorted(
         glob('%s/%s-%s*.pth' %
