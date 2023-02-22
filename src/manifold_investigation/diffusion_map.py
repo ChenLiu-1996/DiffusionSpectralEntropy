@@ -101,18 +101,21 @@ if __name__ == '__main__':
         data_phate = phate_op.fit_transform(embeddings)
 
         # Diffusion map p_t
-        # p = phate_op.graph.diff_op.toarray() # SPARSE instead of DENSE
-        p = phate_op.graph.diff_op
+        # p = phate_op.graph.diff_op.toarray()
+        p = phate_op.graph.diff_op  # SPARSE instead of DENSE
         t = phate_op._find_optimal_t(t_max=100, plot=False, ax=None)
         print(p.shape, p.dtype, t.dtype)
+
+        vne = phate_op._von_neumann_entropy(t_max=t)[1][-1]
+        log('von Neumann Entropy: %s' % vne, log_path)
         # print(p[0, :10])
-        # p_t = np.linalg.matrix_power(p, t) # SPARSE instead of DENSE
-        # p_t = sparse.csr_matrix.power(p, t)
-        #NOTE: somehow with P^t the extrema do not lie on extrema?
+        # p_t = np.linalg.matrix_power(p, t)
+        #NOTE: Matrix power is very slow.
+        # p_t = p ** t
         p_t = p
 
-        # W, V = np.linalg.eig(p_t) # SPARSE instead of DENSE
-        W, V = sparse.linalg.eigs(p_t, k=100)
+        # W, V = np.linalg.eig(p_t)
+        W, V = sparse.linalg.eigs(p_t, k=100)  # SPARSE instead of DENSE
         #NOTE: W, V represented as complex numbers in the previous operation even though they are real.
         W, V = np.real(W), np.real(V)
 
@@ -140,6 +143,9 @@ if __name__ == '__main__':
         min_inds = np.argmin(diff_embed, 0)[:k]
         max_inds = np.argmax(diff_embed, 0)[:k]
 
+        # import pdb
+        # pdb.set_trace()
+
         colors = np.empty((N), dtype=object)
         colors.fill('grey')
 
@@ -148,7 +154,7 @@ if __name__ == '__main__':
                               c=colors,
                               legend_anchor=(1, 1),
                               ax=ax,
-                              title=os.path.basename(embedding_folder),
+                              title=None,
                               xticks=False,
                               yticks=False,
                               label_prefix='PHATE',
@@ -162,7 +168,8 @@ if __name__ == '__main__':
             c=np.concatenate((colors[max_inds], colors[min_inds])),
             legend_anchor=(1, 1),
             ax=ax,
-            title=os.path.basename(embedding_folder),
+            title='%s  von Neumann Entropy: %.2f' %
+            (os.path.basename(embedding_folder), vne),
             xticks=False,
             yticks=False,
             label_prefix='PHATE',
