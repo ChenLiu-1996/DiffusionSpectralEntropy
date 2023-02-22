@@ -15,9 +15,9 @@ sys.path.insert(0, import_dir + '/nn/')
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
 from early_stop import EarlyStopping
-from path_utils import update_config_dirs
 from log_utils import log
 from models import ResNet50
+from path_utils import update_config_dirs
 from seed import seed_everything
 from simclr import NTXentLoss, SingleInstanceTwoView
 
@@ -77,14 +77,14 @@ def get_dataloaders(
             transform_train = torchvision.transforms.Compose([
                 torchvision.transforms.RandomResizedCrop(
                     imsize,
-                    scale=(0.8, 1.2),
+                    scale=(0.5, 2.0),
                     interpolation=torchvision.transforms.InterpolationMode.
                     BICUBIC),
                 torchvision.transforms.RandomHorizontalFlip(p=0.5),
                 torchvision.transforms.RandomRotation(30),
                 torchvision.transforms.RandomApply([
                     torchvision.transforms.ColorJitter(
-                        brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)
+                        brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1)
                 ],
                                                    p=0.8),
                 torchvision.transforms.ToTensor(),
@@ -172,7 +172,8 @@ def train(config: AttributeHashmap) -> None:
     config_str += '\nTraining History:'
     log(config_str, filepath=log_path, to_console=False)
 
-    model = ResNet50(num_classes=config.num_classes, small_image=config.small_image).to(device)
+    model = ResNet50(num_classes=config.num_classes,
+                     small_image=config.small_image).to(device)
     model.init_params()
 
     if config.contrastive == 'NA':
@@ -186,15 +187,8 @@ def train(config: AttributeHashmap) -> None:
                                 lr=float(config.learning_rate),
                                 weight_decay=float(config.weight_decay))
 
-    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-    #     optimizer=opt,
-    #     T_0=10,
-    #     T_mult=1,
-    #     eta_min=float(config.learning_rate) * 1e-3)
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer=opt, T_max=config.max_epoch, eta_min=0)
-    # lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
-    #     optimizer=opt, gamma=(1e-3)**(1 / float(config.max_epoch)))
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -465,7 +459,8 @@ def infer(config: AttributeHashmap) -> None:
     dataloaders, config = get_dataloaders(config=config)
     _, val_loader = dataloaders
 
-    model = ResNet50(num_classes=config.num_classes).to(device)
+    model = ResNet50(num_classes=config.num_classes,
+                     small_image=config.small_image).to(device)
 
     checkpoint_paths = sorted(
         glob('%s/%s-%s*.pth' %
