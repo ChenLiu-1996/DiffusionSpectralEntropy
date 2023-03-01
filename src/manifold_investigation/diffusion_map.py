@@ -102,19 +102,20 @@ if __name__ == '__main__':
 
         # Diffusion map p_t
         # p = phate_op.graph.diff_op.toarray() # SPARSE instead of DENSE
-        p = phate_op.graph.diff_op
+        p = phate_op.graph.diff_op.toarray()
         t = phate_op._find_optimal_t(t_max=100, plot=False, ax=None)
         print(p.shape, p.dtype, t.dtype)
-        # print(p[0, :10])
-        # p_t = np.linalg.matrix_power(p, t) # SPARSE instead of DENSE
-        # p_t = sparse.csr_matrix.power(p, t)
+        print(p[0, :10])
+        print('P^T...')
+        p_t = np.linalg.matrix_power(p, t) # SPARSE instead of DENSE
+        #p_t = sparse.csr_matrix.power(p, t)
         #NOTE: somehow with P^t the extrema do not lie on extrema?
-        p_t = p
-
-        # W, V = np.linalg.eig(p_t) # SPARSE instead of DENSE
-        W, V = sparse.linalg.eigs(p_t, k=100)
+        #p_t = p
+        print('Eigen Decomposing...')
+        W, V = np.linalg.eig(p_t) # SPARSE instead of DENSE
+        #W, V = sparse.linalg.eigs(p_t, k=100)
         #NOTE: W, V represented as complex numbers in the previous operation even though they are real.
-        W, V = np.real(W), np.real(V)
+        #W, V = np.real(W), np.real(V)
 
         eigenstr = '%s Eigenvalues: ' % os.path.basename(embedding_folder)
         percentiles = [50, 90, 95, 99]
