@@ -111,3 +111,18 @@ mkdir ImageNet && cd ImageNet
 wget -O vicreg_bs2048_ep100.pth.tar https://dl.fbaipublicfiles.com/vicreg/resnet50.pth
 ```
 </details>
+
+### Train our Supervised vs Contrastive encoders.
+Using (MNIST + Supervised) as an example.
+```
+cd src/embedding_preparation
+python train_embeddings.py --mode train --config ./config/mnist_supervised.yaml
+```
+
+### Analysis
+Using (MNIST + Supervised) as an example.
+```
+cd src/manifold_investigation
+python visualize_embeddings.py --config ../embedding_preparation/config/mnist_supervised.yaml
+python diffusion_characteristics.py --config ../embedding_preparation/config/mnist_supervised.yaml
+```
