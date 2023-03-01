@@ -137,7 +137,7 @@ if __name__ == '__main__':
 
     for i, embedding_folder in enumerate(embedding_folders):
         files = sorted(glob(embedding_folder + '/*'))
-        log('\n' + os.path.basename(embedding_folder), log_path)
+        log(os.path.basename(embedding_folder), log_path)
 
         labels, embeddings = None, None
 
@@ -165,12 +165,11 @@ if __name__ == '__main__':
             labels = labels_updated
             del labels_updated
 
-        # PHATE plot.
+        # PHATE dimensionality reduction.
         phate_op = phate.PHATE(random_state=0,
                                n_jobs=1,
                                n_components=2,
                                verbose=False)
-
         data_phate = phate_op.fit_transform(embeddings)
 
         #
@@ -222,38 +221,7 @@ if __name__ == '__main__':
         sns.heatmap(dist_matrix, ax=ax)
         ax.set_title('%s  Mean extrema Euc distance: %.2f' %
                      (os.path.basename(embedding_folder), mean_dist))
-        log('Mean extrema Euc distance: %.2f' % mean_dist, log_path)
+        log('Mean extrema Euc distance: %.2f\n' % mean_dist, log_path)
 
         fig2.tight_layout()
         fig2.savefig(save_path_2)
-
-# Diffusion map P
-# p = phate_op.graph.diff_op.toarray()
-# P = phate_op.graph.diff_op  # SPARSE instead of DENSE
-# W, V = np.linalg.eig(P)
-# W, V = sparse.linalg.eigs(P, k=100)  # SPARSE instead of DENSE
-# #NOTE: W, V represented as complex numbers in the previous operation even though they are real.
-# W, V = np.real(W), np.real(V)
-
-# eigenstr = '%s Eigenvalues: ' % os.path.basename(embedding_folder)
-# percentiles = [50, 90, 95, 99]
-# for per in percentiles:
-#     eigenstr += '%.2f percentile: %.7f\t' % (per, np.percentile(
-#         W, per))
-#     eigenstr += '> count: %d; \n' % (W > np.percentile(W, per)).sum()
-
-# # Top K eigenvalues
-# k = 12
-# sorted_idx = np.argsort(W)[::-1]
-# W = W[sorted_idx]
-# V = V[:, sorted_idx]
-# eigenstr += 'Top %d eigenvalues: ' % k
-# for kindex in range(k):
-#     eigenstr += '%.7f ' % W[kindex]
-# log(eigenstr, log_path)
-
-# # Diffusion Map Embedding
-# diff_embed = V @ np.diag((W**0.5))
-# print('diff_embed shape: ', diff_embed.shape)
-# min_inds = np.argmin(diff_embed, 0)[:k]
-# max_inds = np.argmax(diff_embed, 0)[:k]
