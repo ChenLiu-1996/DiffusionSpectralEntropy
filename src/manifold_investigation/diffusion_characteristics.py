@@ -202,7 +202,7 @@ if __name__ == '__main__':
                               cmap=cmap,
                               title='%s  von Neumann Entropy: %.3f' %
                               (os.path.basename(embedding_folder), vne),
-                              legend_anchor=(1, 1),
+                              legend_anchor=(1.25, 1),
                               ax=ax,
                               xticks=False,
                               yticks=False,
