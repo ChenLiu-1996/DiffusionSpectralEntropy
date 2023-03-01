@@ -215,13 +215,19 @@ if __name__ == '__main__':
 
         extrema = embeddings[extrema_inds]
         dist_matrix = pairwise_distances(extrema)
-        mean_dist = dist_matrix.sum() / 2 / k
+        distances = np.array([
+            dist_matrix[i, j] for i in range(len(dist_matrix) - 1)
+            for j in range(i + 1, len(dist_matrix))
+        ])
+        dist_mean = distances.mean()
+        dist_std = distances.std()
 
         ax = fig2.add_subplot(num_rows, 1, i + 1)
         sns.heatmap(dist_matrix, ax=ax)
-        ax.set_title('%s  Mean extrema Euc distance: %.2f' %
-                     (os.path.basename(embedding_folder), mean_dist))
-        log('Mean extrema Euc distance: %.2f\n' % mean_dist, log_path)
+        ax.set_title('%s  Extrema Euc distance: %.2f \u00B1 %.2f' %
+                     (os.path.basename(embedding_folder), dist_mean, dist_std))
+        log('Extrema Euc distance: %.2f \u00B1 %.2f\n' % (dist_mean, dist_std),
+            log_path)
 
         fig2.tight_layout()
         fig2.savefig(save_path_2)
