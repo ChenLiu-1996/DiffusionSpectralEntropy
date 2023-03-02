@@ -17,6 +17,7 @@ from scipy import sparse
 import scipy
 from tqdm import tqdm
 import seaborn as sns
+import pygsp
 
 os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
 os.environ["OPENBLAS_NUM_THREADS"] = "1"  # export OPENBLAS_NUM_THREADS=1
@@ -113,7 +114,7 @@ def indicator_distribution(labels, n_classes):
 
     for i in range(n_classes):
         ids = list(np.argwhere(labels == i)[:, 0])
-        d[ids] = 1.0 / len(ids)
+        d[ids] = 1
         dists.append(d)
     
     dists = np.concatenate(dists, axis=1)
@@ -141,19 +142,6 @@ def common_graph(X, k=30, th=1e-3):
     #print(np.diagonal(adj), adj[0,:10])
     print('Create binary Adj Matrix... avg row sum: ', np.mean(np.sum(adj, axis=1)))
     
-    # topk = np.sort(dist, axis=1)[:, k].reshape(N, 1)  # (N, 1)
-    # filter_m = np.tile(topk, (1, N))  # (N, N)
-    # adj = (dist <= filter_m) * 1  # zero out non-neighbors
-    # print('Create binary Adj Matrix... ', np.mean(np.sum(adj, axis=1)))
-
-    # Make it symmetric
-    # for i in range(adj.shape[0]//2+1):
-    #     for j in range(adj.shape[1]//2+1):
-    #         if adj[i,j]-adj[j,i] != 0:
-    #             adj[i,j] = 1
-    #             adj[j,i] = 1
-                
-    # print(scipy.linalg.issymmetric(adj))
     return adj
 
 
@@ -189,7 +177,7 @@ if __name__ == '__main__':
 
         labels, embeddings = None, None
 
-        for file in tqdm(files):
+        for file in tqdm(files[:3]):
             np_file = np.load(file)
             curr_label = np_file['label_true']
             curr_embedding = np_file['embedding']
@@ -206,16 +194,24 @@ if __name__ == '__main__':
         assert labels.shape[0] == N
         assert labels.shape[1] == 1
 
-        adj = common_graph(embeddings) # N x N
+        #adj = common_graph(embeddings) # N x N
+        G =  pygsp.graphs.NNGraph(
+            embeddings, epsilon=2, NNtype="radius", rescale=True, center=False
+        )
+        print('G... avg row sum: ', np.mean(np.sum(G.W, axis=1)))
+
         dists = indicator_distribution(labels, n_classes=np.max(labels) + 1)
 
         dc = DiffusionCheb()
 
         # Embeddings where the L1 distance approximates the Earth Mover's Distance
-        dist_embeddings = dc.fit_transform(adj, dists) # Shape: (10, Ks)
+        #dist_embeddings = dc.fit_transform(adj, dists) # Shape: (10, Ks)
+        dist_embeddings = dc.fit_transform(G.W, dists) # Shape: (10, Ks)
         print('EMD embeddings.shape: ', dist_embeddings.shape)
 
         opc = scipy.spatial.distance_matrix(dist_embeddings,dist_embeddings,p=1)
+        print('opc: ', opc[0, :10])
+
         
         ax = fig.add_subplot(num_rows, 1, i + 1)
         sns.heatmap(opc, ax=ax)
