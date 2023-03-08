@@ -150,25 +150,28 @@ if __name__ == '__main__':
 
     save_root = './results_diffusion_characteristics/'
     os.makedirs(save_root, exist_ok=True)
-    save_path_fig0 = '%s/diffusion-eigenvalues-%s-%s-knn-%s.png' % (
+    save_path_fig_DiffusionEigenvalues = '%s/diffusion-eigenvalues-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
-    save_path_fig1 = '%s/extrema-PHATE-%s-%s-knn-%s.png' % (
+    save_path_fig_ExtremaPhate = '%s/extrema-PHATE-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
-    save_path_fig2 = '%s/extrema-EucDist-%s-%s-knn-%s.png' % (
+    save_path_ExtremaEucdist = '%s/extrema-EucDist-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
-    save_path_fig3 = '%s/von-Neumann-%s-%s-knn-%s.png' % (
+    save_path_fig_vonNeumann = '%s/von-Neumann-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
-    save_path_fig4 = '%s/curvature-%s-%s-knn-%s.png' % (
+    save_path_fig_Curvature = '%s/curvature-%s-%s-knn-%s.png' % (
+        save_root, config.dataset, config.contrastive, args.knn)
+    save_path_fig_CurvaturePhate = '%s/curvature-PHATE-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
     log_path = '%s/log-%s-%s-knn-%s.txt' % (save_root, config.dataset,
                                             config.contrastive, args.knn)
 
     num_rows = len(embedding_folders)
-    fig0 = plt.figure(figsize=(12, 6 * num_rows))
-    fig1 = plt.figure(figsize=(8, 5 * num_rows))
-    fig2 = plt.figure(figsize=(8, 5 * num_rows))
-    fig3 = plt.figure(figsize=(12, 5))
-    fig4 = plt.figure(figsize=(8, 10))
+    fig_DiffusionEigenvalues = plt.figure(figsize=(12, 6 * num_rows))
+    fig_ExtremaPhate = plt.figure(figsize=(8, 5 * num_rows))
+    fig_CurvaturePhate = plt.figure(figsize=(12, 5 * num_rows))
+    fig_ExtremaEucdist = plt.figure(figsize=(8, 5 * num_rows))
+    fig_vonNeumann = plt.figure(figsize=(12, 5))
+    fig_Curvature = plt.figure(figsize=(8, 10))
     von_neumann_thr_list = [0.5, 0.7, 0.9, 0.95, 0.99]
     x_axis_text, x_axis_value = [], []
     vne_stats_phateP, vne_stats_diffcurP = {}, {}
@@ -260,22 +263,22 @@ if __name__ == '__main__':
                          eigenvalues_diffcurP=eigenvalues_diffcurP)
             print('Eigenvalues computed.')
 
-        ax = fig0.add_subplot(2 * num_rows, 2, 4 * i + 1)
+        ax = fig_DiffusionEigenvalues.add_subplot(2 * num_rows, 2, 4 * i + 1)
         ax.set_title('%s (phate knn P matrix)' % checkpoint_name)
         ax.hist(eigenvalues_phateP, color='w', edgecolor='k')
-        ax = fig0.add_subplot(2 * num_rows, 2, 4 * i + 3)
+        ax = fig_DiffusionEigenvalues.add_subplot(2 * num_rows, 2, 4 * i + 3)
         sns.boxplot(x=eigenvalues_phateP, color='skyblue', ax=ax)
-        ax = fig0.add_subplot(2 * num_rows, 2, 4 * i + 2)
+        ax = fig_DiffusionEigenvalues.add_subplot(2 * num_rows, 2, 4 * i + 2)
         ax.set_title('%s (diffcur adaptive anisotropic P matrix)' %
                      checkpoint_name)
         ax.hist(eigenvalues_diffcurP, color='w', edgecolor='k')
-        ax = fig0.add_subplot(2 * num_rows, 2, 4 * i + 4)
+        ax = fig_DiffusionEigenvalues.add_subplot(2 * num_rows, 2, 4 * i + 4)
         sns.boxplot(x=eigenvalues_diffcurP, color='skyblue', ax=ax)
-        fig0.tight_layout()
-        fig0.savefig(save_path_fig0)
+        fig_DiffusionEigenvalues.tight_layout()
+        fig_DiffusionEigenvalues.savefig(save_path_fig_DiffusionEigenvalues)
 
         #
-        '''Laplacian Extrema'''
+        '''Laplacian Extrema in PHATE coordinates'''
         save_path_extrema = '%s/numpy_files/laplacian-extrema/laplacian-extrema-%s-%s-knn-%s-%s.npz' % (
             save_root, config.dataset, config.contrastive, args.knn,
             checkpoint_name.split('_')[-1])
@@ -293,7 +296,7 @@ if __name__ == '__main__':
                 np.savez(f, extrema_inds=extrema_inds)
             print('Laplacian extrema computed.')
 
-        ax = fig1.add_subplot(num_rows, 1, i + 1)
+        ax = fig_ExtremaPhate.add_subplot(num_rows, 1, i + 1)
         colors = np.empty((N), dtype=object)
         colors.fill('Embedding\nVectors')
         colors[extrema_inds] = 'Laplacian\nExtrema'
@@ -317,9 +320,11 @@ if __name__ == '__main__':
                               fontsize=8,
                               s=sizes)
 
-        fig1.tight_layout()
-        fig1.savefig(save_path_fig1)
+        fig_ExtremaPhate.tight_layout()
+        fig_ExtremaPhate.savefig(save_path_fig_ExtremaPhate)
 
+        #
+        '''Laplacian Extrema Euclidean Distances'''
         extrema = embeddings[extrema_inds]
         dist_matrix = pairwise_distances(extrema)
         distances = np.array([
@@ -329,15 +334,15 @@ if __name__ == '__main__':
         dist_mean = distances.mean()
         dist_std = distances.std()
 
-        ax = fig2.add_subplot(num_rows, 1, i + 1)
+        ax = fig_ExtremaEucdist.add_subplot(num_rows, 1, i + 1)
         sns.heatmap(dist_matrix, ax=ax)
         ax.set_title('%s  Extrema Euc distance: %.2f \u00B1 %.2f' %
                      (checkpoint_name, dist_mean, dist_std))
         log('Extrema Euc distance: %.2f \u00B1 %.2f' % (dist_mean, dist_std),
             log_path)
 
-        fig2.tight_layout()
-        fig2.savefig(save_path_fig2)
+        fig_ExtremaEucdist.tight_layout()
+        fig_ExtremaEucdist.savefig(save_path_ExtremaEucdist)
 
         #
         '''von Neumann Entropy'''
@@ -402,7 +407,46 @@ if __name__ == '__main__':
 
         log('', log_path)
 
-    ax = fig3.add_subplot(1, 2, 1)
+        #
+        '''Diffusion Curvature in PHATE coordinates'''
+        ax = fig_CurvaturePhate.add_subplot(num_rows, 2, 2 * i + 1)
+        colors = curvature_phateP
+        sizes = np.ones((N), dtype=int)
+        scprep.plot.scatter2d(
+            embedding_phate,
+            c=colors,
+            cmap='coolwarm',
+            title='%s Diffusion Curvature\n(phate knn P matrix)' %
+            checkpoint_name,
+            legend_anchor=(1.25, 1),
+            ax=ax,
+            xticks=False,
+            yticks=False,
+            label_prefix='PHATE',
+            fontsize=8,
+            s=sizes)
+        ax = fig_CurvaturePhate.add_subplot(num_rows, 2, 2 * i + 2)
+        colors = curvature_diffcurP
+        sizes = np.ones((N), dtype=int)
+        scprep.plot.scatter2d(
+            embedding_phate,
+            c=colors,
+            cmap='coolwarm',
+            title=
+            '%s Diffusion Curvature\n(diffcur adaptive anisotropic P matrix)' %
+            checkpoint_name,
+            legend_anchor=(1.25, 1),
+            ax=ax,
+            xticks=False,
+            yticks=False,
+            label_prefix='PHATE',
+            fontsize=8,
+            s=sizes)
+
+        fig_CurvaturePhate.tight_layout()
+        fig_CurvaturePhate.savefig(save_path_fig_CurvaturePhate)
+
+    ax = fig_vonNeumann.add_subplot(1, 2, 1)
     for trivial_thr in von_neumann_thr_list:
         ax.scatter(x_axis_value, vne_stats_phateP[trivial_thr])
     ax.legend(von_neumann_thr_list, bbox_to_anchor=(1.12, 0.4))
@@ -415,7 +459,7 @@ if __name__ == '__main__':
     # Plot separately to avoid legend mismatch.
     for trivial_thr in von_neumann_thr_list:
         ax.plot(x_axis_value, vne_stats_phateP[trivial_thr])
-    ax = fig3.add_subplot(1, 2, 2)
+    ax = fig_vonNeumann.add_subplot(1, 2, 2)
     for trivial_thr in von_neumann_thr_list:
         ax.scatter(x_axis_value, vne_stats_diffcurP[trivial_thr])
     ax.legend(von_neumann_thr_list, bbox_to_anchor=(1.12, 0.4))
@@ -428,15 +472,15 @@ if __name__ == '__main__':
     # Plot separately to avoid legend mismatch.
     for trivial_thr in von_neumann_thr_list:
         ax.plot(x_axis_value, vne_stats_diffcurP[trivial_thr])
-    fig3.tight_layout()
-    fig3.savefig(save_path_fig3)
+    fig_vonNeumann.tight_layout()
+    fig_vonNeumann.savefig(save_path_fig_vonNeumann)
 
-    ax = fig4.add_subplot(2, 1, 1)
+    ax = fig_Curvature.add_subplot(2, 1, 1)
     df = pd.DataFrame(np.array(curvature_stats_phateP).T, columns=x_axis_value)
     sns.boxplot(data=df, color='skyblue', ax=ax, orient='v')
     ax.set_xticklabels(x_axis_text)
     ax.set_title('Diffusion Curvature Distribution (PHATE knn P matrix)')
-    ax = fig4.add_subplot(2, 1, 2)
+    ax = fig_Curvature.add_subplot(2, 1, 2)
     df = pd.DataFrame(np.array(curvature_stats_diffcurP).T,
                       columns=x_axis_value)
     sns.boxplot(data=df, color='skyblue', ax=ax, orient='v')
@@ -444,5 +488,5 @@ if __name__ == '__main__':
     ax.set_title(
         'Diffusion Curvature Distribution (diffcur adaptive anisotropic P matrix)'
     )
-    fig4.tight_layout()
-    fig4.savefig(save_path_fig4)
+    fig_Curvature.tight_layout()
+    fig_Curvature.savefig(save_path_fig_Curvature)
