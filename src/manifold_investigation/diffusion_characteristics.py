@@ -3,13 +3,20 @@ import os
 import sys
 from glob import glob
 
+import graphtools as gt
+import networkx as nx
 import numpy as np
+import pandas as pd
 import phate
+import scipy
 import scprep
 import seaborn as sns
 import yaml
+from diffusion_curvature.core import DiffusionMatrix
+from diffusion_curvature.laziness import curvature
 from matplotlib import pyplot as plt
-from scipy import sparse
+from scipy.linalg import svd
+# from scipy import sparse
 from sklearn.metrics import pairwise_distances
 from tqdm import tqdm
 
@@ -24,6 +31,7 @@ sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
 from log_utils import log
 from path_utils import update_config_dirs
+from seed import seed_everything
 
 cifar10_int2name = {
     0: 'airplane',
@@ -39,13 +47,18 @@ cifar10_int2name = {
 }
 
 
-def von_neumann_entropy(data, trivial_thr: float = 0.9):
-    from scipy.linalg import svd
-    _, eigenvalues, _ = svd(data)
+def von_neumann_entropy(eigenvalues, trivial_thr: float = 0.9):
+    #NOTE: Shall we use the SVD version?
+    # _, eigenvalues, _ = svd(diffusion_matrix)
 
     eigenvalues = np.array(sorted(eigenvalues)[::-1])
+
     # Drop the biggest eigenvalue(s).
     eigenvalues = eigenvalues[eigenvalues < trivial_thr]
+
+    # Shift the negative eigenvalue(s).
+    if eigenvalues.min() < 0:
+        eigenvalues -= eigenvalues.min()
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps
@@ -58,7 +71,7 @@ def get_laplacian_extrema(data,
                           knn=10,
                           n_pca=100,
                           subsample=True,
-                          random_state=0):
+                          big_size: int = 10000):
     '''
     Finds the 'Laplacian extrema' of a dataset.  The first extrema is chosen as
     the point that minimizes the first non-trivial eigenvalue of the Laplacian graph
@@ -66,13 +79,10 @@ def get_laplacian_extrema(data,
     non-negative vector that is zero on all previous extrema while at the same time
     minimizing the Laplacian quadratic form, then taking the argmax of this vector.
     '''
-    import graphtools as gt
-    import networkx as nx
-    import scipy
 
-    if subsample and data.shape[0] > 10000:
-        np.random.seed(random_state)
-        data = data[np.random.choice(data.shape[0], 10000, replace=False), :]
+    if subsample and data.shape[0] > big_size:
+        data = data[
+            np.random.choice(data.shape[0], big_size, replace=False), :]
     G = gt.Graph(data, use_pygsp=True, decay=None, knn=knn, n_pca=n_pca)
 
     # We need to convert G into a NetworkX graph to use the Tracemin PCG algorithm
@@ -88,7 +98,7 @@ def get_laplacian_extrema(data,
 
     init_lanczos = fiedler
     init_lanczos = np.delete(init_lanczos, first_extrema)
-    for i in range(n_extrema - 1):
+    for _ in range(n_extrema - 1):
         # Generate the Laplacian submatrix by removing rows/cols for previous extrema
         indices = range(data.shape[0])
         indices = np.delete(indices, extrema)
@@ -112,16 +122,19 @@ def get_laplacian_extrema(data,
     return extrema
 
 
+def compute_curvature(diffusion_matrix, diffusion_power):
+    diffusion_curvatures = curvature(diffusion_matrix,
+                                     diffusion_powers=diffusion_power)
+    return diffusion_curvatures
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
-    parser.add_argument('-P',
-                        '--plot-diffusion-eigenvalues',
-                        help='Plot diffusion eigenvalues distribution.',
-                        action='store_true')
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
+    parser.add_argument('--seed', help='random seed.', type=int, default=0)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -129,31 +142,37 @@ if __name__ == '__main__':
     config = AttributeHashmap(yaml.safe_load(open(args.config)))
     config = update_config_dirs(AttributeHashmap(config))
 
+    seed_everything(args.seed)
+
     embedding_folders = sorted(
         glob('%s/embeddings/%s-%s-*' %
              (config.output_save_path, config.dataset, config.contrastive)))
 
-    save_root = './diffusion_PHATE/'
+    save_root = './results_diffusion_characteristics/'
     os.makedirs(save_root, exist_ok=True)
     save_path_fig0 = '%s/diffusion-eigenvalues-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
     save_path_fig1 = '%s/extrema-PHATE-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
-    save_path_fig2 = '%s/extrema-dist-PHATE-%s-%s-knn-%s.png' % (
+    save_path_fig2 = '%s/extrema-EucDist-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
     save_path_fig3 = '%s/von-Neumann-%s-%s-knn-%s.png' % (
+        save_root, config.dataset, config.contrastive, args.knn)
+    save_path_fig4 = '%s/curvature-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
     log_path = '%s/log-%s-%s-knn-%s.txt' % (save_root, config.dataset,
                                             config.contrastive, args.knn)
 
     num_rows = len(embedding_folders)
-    fig0 = plt.figure(figsize=(8, 6 * num_rows))
+    fig0 = plt.figure(figsize=(12, 6 * num_rows))
     fig1 = plt.figure(figsize=(8, 5 * num_rows))
     fig2 = plt.figure(figsize=(8, 5 * num_rows))
-    fig3 = plt.figure(figsize=(8, 5))
+    fig3 = plt.figure(figsize=(12, 5))
+    fig4 = plt.figure(figsize=(8, 10))
     von_neumann_thr_list = [0.5, 0.7, 0.9, 0.95, 0.99]
-    vne_stats = {}
-    vne_x_axis_text, vne_x_axis_value = [], []
+    x_axis_text, x_axis_value = [], []
+    vne_stats_phateP, vne_stats_diffcurP = {}, {}
+    curvature_stats_phateP, curvature_stats_diffcurP = [], []
 
     for i, embedding_folder in enumerate(embedding_folders):
         files = sorted(glob(embedding_folder + '/*'))
@@ -174,6 +193,7 @@ if __name__ == '__main__':
                 labels = np.vstack((labels, curr_label[:, None]))
                 embeddings = np.vstack((embeddings, curr_embedding))
 
+        # This is the matrix of N embedding vectors each at dim [1, D].
         N, D = embeddings.shape
 
         assert labels.shape[0] == N
@@ -186,69 +206,92 @@ if __name__ == '__main__':
             labels = labels_updated
             del labels_updated
 
-        # PHATE dimensionality reduction.
-        phate_op = phate.PHATE(random_state=0,
-                               n_jobs=1,
-                               n_components=2,
-                               knn=args.knn,
-                               verbose=False)
-        data_phate = phate_op.fit_transform(embeddings)
-
         #
-        '''von Neumann Entropy'''
-        # t = phate_op._find_optimal_t(t_max=100, plot=False, ax=None)
-        # vne_ref = phate_op._von_neumann_entropy(t_max=t)[1][0]
-        log('von Neumann Entropy: ', log_path)
-        for trivial_thr in von_neumann_thr_list:
-            vne = von_neumann_entropy(phate_op.diff_op,
-                                      trivial_thr=trivial_thr)
-            log(
-                '    removing eigenvalues > %.2f: entropy = %.4f' %
-                (trivial_thr, vne), log_path)
-
-            if trivial_thr not in vne_stats.keys():
-                vne_stats[trivial_thr] = [vne]
-            else:
-                vne_stats[trivial_thr].append(vne)
-
-        vne_x_axis_text.append(checkpoint_name.split('_')[-1])
-        if '%' in vne_x_axis_text[-1]:
-            vne_x_axis_value.append(
-                int(vne_x_axis_text[-1].split('%')[0]) / 100)
+        '''PHATE embeddings and Diffusion Matrix'''
+        save_path_phate_diffusion = '%s/numpy_files/phate-diffusion/phate-diffusion-%s-%s-knn-%s-%s.npz' % (
+            save_root, config.dataset, config.contrastive, args.knn,
+            checkpoint_name.split('_')[-1])
+        os.makedirs(os.path.dirname(save_path_phate_diffusion), exist_ok=True)
+        if os.path.exists(save_path_phate_diffusion):
+            data_numpy = np.load(save_path_phate_diffusion)
+            embedding_phate = data_numpy['embedding_phate']
+            diffusion_matrix_phate = data_numpy['diffusion_matrix']
+            diffusion_matrix_diffcur = data_numpy['diffusion_matrix_diffcur']
+            optimal_t = data_numpy['optimal_t']
+            print('Pre-computed phate embeddings and diffusion matrix loaded.')
         else:
-            vne_x_axis_value.append(vne_x_axis_value[-1] + 0.1)
+            phate_op = phate.PHATE(random_state=args.seed,
+                                   n_jobs=1,
+                                   n_components=2,
+                                   knn=args.knn,
+                                   verbose=False)
+            embedding_phate = phate_op.fit_transform(embeddings)
+            diffusion_matrix_phate = phate_op.graph.diff_op.toarray()
+            diffusion_matrix_diffcur = DiffusionMatrix(
+                embeddings, kernel_type="adaptive anisotropic", k=args.knn)
+            optimal_t = phate_op._find_optimal_t(t_max=100,
+                                                 plot=False,
+                                                 ax=None)
+            with open(save_path_phate_diffusion, 'wb+') as f:
+                np.savez(f,
+                         embedding_phate=embedding_phate,
+                         diffusion_matrix=diffusion_matrix_phate,
+                         diffusion_matrix_diffcur=diffusion_matrix_diffcur,
+                         optimal_t=optimal_t)
+            print('Phate embeddings and diffusion matrix computed.')
 
         #
-        '''Diffusion map'''
-        if args.plot_diffusion_eigenvalues:
-            save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues-%s-%s-knn-%s-%s.npz' % (
-                save_root, config.dataset, config.contrastive, args.knn,
-                checkpoint_name.split('_')[-1])
-            os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
-            if os.path.exists(save_path_eigenvalues):
-                # Load the eigenvalues if exists.
-                data_numpy = np.load(save_path_eigenvalues)
-                eigenvalues = data_numpy['eigenvalues']
-            else:
-                P = phate_op.graph.diff_op  # SPARSE instead of DENSE
-                eigenvalues, _ = np.linalg.eig(P.toarray())
-                # eigenvalues, eigenvectors = sparse.linalg.eigs(P, k=100)
-                with open(save_path_eigenvalues, 'wb+') as f:
-                    np.savez(f, eigenvalues=eigenvalues)
-            ax0 = fig0.add_subplot(2 * num_rows, 1, 2 * i + 1)
-            ax0.set_title(checkpoint_name)
-            ax0.hist(eigenvalues, color='w', edgecolor='k')
-            ax0 = fig0.add_subplot(2 * num_rows, 1, 2 * i + 2)
-            sns.boxplot(x=eigenvalues, color='skyblue', ax=ax0)
-            fig0.tight_layout()
-            fig0.savefig(save_path_fig0)
+        '''Diffusion Eigenvalues'''
+        save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s-%s-knn-%s-%s.npz' % (
+            save_root, config.dataset, config.contrastive, args.knn,
+            checkpoint_name.split('_')[-1])
+        os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
+        if os.path.exists(save_path_eigenvalues):
+            data_numpy = np.load(save_path_eigenvalues)
+            eigenvalues_phateP = data_numpy['eigenvalues_phateP']
+            eigenvalues_diffcurP = data_numpy['eigenvalues_diffcurP']
+            print('Pre-computed eigenvalues loaded.')
+        else:
+            eigenvalues_phateP = np.linalg.eigvals(diffusion_matrix_phate)
+            eigenvalues_diffcurP = np.linalg.eigvals(diffusion_matrix_diffcur)
+            with open(save_path_eigenvalues, 'wb+') as f:
+                np.savez(f,
+                         eigenvalues_phateP=eigenvalues_phateP,
+                         eigenvalues_diffcurP=eigenvalues_diffcurP)
+            print('Eigenvalues computed.')
+
+        ax = fig0.add_subplot(2 * num_rows, 2, 4 * i + 1)
+        ax.set_title('%s (phate knn P matrix)' % checkpoint_name)
+        ax.hist(eigenvalues_phateP, color='w', edgecolor='k')
+        ax = fig0.add_subplot(2 * num_rows, 2, 4 * i + 3)
+        sns.boxplot(x=eigenvalues_phateP, color='skyblue', ax=ax)
+        ax = fig0.add_subplot(2 * num_rows, 2, 4 * i + 2)
+        ax.set_title('%s (diffcur adaptive anisotropic P matrix)' %
+                     checkpoint_name)
+        ax.hist(eigenvalues_diffcurP, color='w', edgecolor='k')
+        ax = fig0.add_subplot(2 * num_rows, 2, 4 * i + 4)
+        sns.boxplot(x=eigenvalues_diffcurP, color='skyblue', ax=ax)
+        fig0.tight_layout()
+        fig0.savefig(save_path_fig0)
 
         #
         '''Laplacian Extrema'''
-        n_extrema = 10
-        extrema_inds = get_laplacian_extrema(data=embeddings,
-                                             n_extrema=n_extrema,
-                                             knn=args.knn)
+        save_path_extrema = '%s/numpy_files/laplacian-extrema/laplacian-extrema-%s-%s-knn-%s-%s.npz' % (
+            save_root, config.dataset, config.contrastive, args.knn,
+            checkpoint_name.split('_')[-1])
+        os.makedirs(os.path.dirname(save_path_extrema), exist_ok=True)
+        if os.path.exists(save_path_extrema):
+            data_numpy = np.load(save_path_extrema)
+            extrema_inds = data_numpy['extrema_inds']
+            print('Pre-computed laplacian extrema loaded.')
+        else:
+            n_extrema = 10
+            extrema_inds = get_laplacian_extrema(data=embeddings,
+                                                 n_extrema=n_extrema,
+                                                 knn=args.knn)
+            with open(save_path_extrema, 'wb+') as f:
+                np.savez(f, extrema_inds=extrema_inds)
+            print('Laplacian extrema computed.')
 
         ax = fig1.add_subplot(num_rows, 1, i + 1)
         colors = np.empty((N), dtype=object)
@@ -262,7 +305,7 @@ if __name__ == '__main__':
         sizes.fill(1)
         sizes[extrema_inds] = 50
 
-        scprep.plot.scatter2d(data_phate,
+        scprep.plot.scatter2d(embedding_phate,
                               c=colors,
                               cmap=cmap,
                               title='%s' % checkpoint_name,
@@ -290,23 +333,116 @@ if __name__ == '__main__':
         sns.heatmap(dist_matrix, ax=ax)
         ax.set_title('%s  Extrema Euc distance: %.2f \u00B1 %.2f' %
                      (checkpoint_name, dist_mean, dist_std))
-        log('Extrema Euc distance: %.2f \u00B1 %.2f\n' % (dist_mean, dist_std),
+        log('Extrema Euc distance: %.2f \u00B1 %.2f' % (dist_mean, dist_std),
             log_path)
 
         fig2.tight_layout()
         fig2.savefig(save_path_fig2)
 
-    ax = fig3.add_subplot(1, 1, 1)
+        #
+        '''von Neumann Entropy'''
+        # vne_ref = phate_op._von_neumann_entropy(t_max=optimal_t)[1][0]
+        log('von Neumann Entropy (phate knn P matrix): ', log_path)
+        for trivial_thr in von_neumann_thr_list:
+            vne_phateP = von_neumann_entropy(eigenvalues_phateP,
+                                             trivial_thr=trivial_thr)
+            log(
+                '    removing eigenvalues > %.2f: entropy = %.4f' %
+                (trivial_thr, vne_phateP), log_path)
+
+            if trivial_thr not in vne_stats_phateP.keys():
+                vne_stats_phateP[trivial_thr] = [vne_phateP]
+            else:
+                vne_stats_phateP[trivial_thr].append(vne_phateP)
+
+        log('von Neumann Entropy (diffcur adaptive anisotropic P matrix): ',
+            log_path)
+        for trivial_thr in von_neumann_thr_list:
+            vne_diffcurP = von_neumann_entropy(eigenvalues_diffcurP,
+                                               trivial_thr=trivial_thr)
+            log(
+                '    removing eigenvalues > %.2f: entropy = %.4f' %
+                (trivial_thr, vne_diffcurP), log_path)
+
+            if trivial_thr not in vne_stats_diffcurP.keys():
+                vne_stats_diffcurP[trivial_thr] = [vne_diffcurP]
+            else:
+                vne_stats_diffcurP[trivial_thr].append(vne_diffcurP)
+
+        x_axis_text.append(checkpoint_name.split('_')[-1])
+        if '%' in x_axis_text[-1]:
+            x_axis_value.append(int(x_axis_text[-1].split('%')[0]) / 100)
+        else:
+            x_axis_value.append(x_axis_value[-1] + 0.1)
+
+        #
+        '''Diffusion Curvature'''
+        save_path_curvature = '%s/numpy_files/diffusion-curvature/diffusion-curvature-%s-%s-knn-%s-%s.npz' % (
+            save_root, config.dataset, config.contrastive, args.knn,
+            checkpoint_name.split('_')[-1])
+        os.makedirs(os.path.dirname(save_path_curvature), exist_ok=True)
+        if os.path.exists(save_path_curvature):
+            data_numpy = np.load(save_path_curvature)
+            curvature_phateP = data_numpy['curvature_phateP']
+            curvature_diffcurP = data_numpy['curvature_diffcurP']
+            print('Pre-computed curvatures loaded.')
+        else:
+            curvature_phateP = compute_curvature(diffusion_matrix_phate,
+                                                 diffusion_power=optimal_t)
+            curvature_diffcurP = compute_curvature(diffusion_matrix_diffcur,
+                                                   diffusion_power=optimal_t)
+            with open(save_path_curvature, 'wb+') as f:
+                np.savez(f,
+                         curvature_phateP=curvature_phateP,
+                         curvature_diffcurP=curvature_diffcurP)
+            print('Curvatures computed.')
+
+        curvature_stats_phateP.append(curvature_phateP)
+        curvature_stats_diffcurP.append(curvature_diffcurP)
+
+        log('', log_path)
+
+    ax = fig3.add_subplot(1, 2, 1)
     for trivial_thr in von_neumann_thr_list:
-        ax.scatter(vne_x_axis_value, vne_stats[trivial_thr])
+        ax.scatter(x_axis_value, vne_stats_phateP[trivial_thr])
     ax.legend(von_neumann_thr_list, bbox_to_anchor=(1.12, 0.4))
-    ax.set_xticks(vne_x_axis_value)
-    ax.set_xticklabels(vne_x_axis_text)
+    ax.set_xticks(x_axis_value)
+    ax.set_xticklabels(x_axis_text)
     ax.set_title(
-        'von Neumann Entropy (at different eigenvalue removal threshold)')
+        'von Neumann Entropy (at different eigenvalue removal threshold)\n(phate knn P matrix)'
+    )
     ax.spines[['right', 'top']].set_visible(False)
     # Plot separately to avoid legend mismatch.
     for trivial_thr in von_neumann_thr_list:
-        ax.plot(vne_x_axis_value, vne_stats[trivial_thr])
+        ax.plot(x_axis_value, vne_stats_phateP[trivial_thr])
+    ax = fig3.add_subplot(1, 2, 2)
+    for trivial_thr in von_neumann_thr_list:
+        ax.scatter(x_axis_value, vne_stats_diffcurP[trivial_thr])
+    ax.legend(von_neumann_thr_list, bbox_to_anchor=(1.12, 0.4))
+    ax.set_xticks(x_axis_value)
+    ax.set_xticklabels(x_axis_text)
+    ax.set_title(
+        'von Neumann Entropy (at different eigenvalue removal threshold)\n(diffcur adaptive anisotropic P matrix)'
+    )
+    ax.spines[['right', 'top']].set_visible(False)
+    # Plot separately to avoid legend mismatch.
+    for trivial_thr in von_neumann_thr_list:
+        ax.plot(x_axis_value, vne_stats_diffcurP[trivial_thr])
     fig3.tight_layout()
     fig3.savefig(save_path_fig3)
+
+    ax = fig4.add_subplot(2, 1, 1)
+    df = pd.DataFrame(np.array(curvature_stats_phateP).T, columns=x_axis_value)
+    sns.boxplot(data=df, color='skyblue', ax=ax, orient='v')
+    ax.set_xticklabels(x_axis_text)
+    ax.set_title('Diffusion Curvature Distribution (PHATE knn P matrix)')
+    ax = fig4.add_subplot(2, 1, 2)
+    df = pd.DataFrame(np.array(curvature_stats_diffcurP).T,
+                      columns=x_axis_value)
+    sns.boxplot(data=df, color='skyblue', ax=ax, orient='v')
+    ax.set_xticklabels(x_axis_text)
+    ax.set_title(
+        'Diffusion Curvature Distribution (diffcur adaptive anisotropic P matrix)'
+    )
+    fig4.tight_layout()
+    fig4.savefig(save_path_fig4)
