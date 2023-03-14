@@ -47,18 +47,19 @@ cifar10_int2name = {
 }
 
 
-def von_neumann_entropy(eigenvalues, trivial_thr: float = 0.9):
+def von_neumann_entropy(eigs, trivial_thr: float = 0.9):
+    eigenvalues = eigs.copy()
+
     #NOTE: Shall we use the SVD version?
     # _, eigenvalues, _ = svd(diffusion_matrix)
 
     eigenvalues = np.array(sorted(eigenvalues)[::-1])
 
     # Drop the biggest eigenvalue(s).
-    eigenvalues = eigenvalues[eigenvalues < trivial_thr]
+    eigenvalues = eigenvalues[eigenvalues <= trivial_thr]
 
-    # Shift the negative eigenvalue(s).
-    if eigenvalues.min() < 0:
-        eigenvalues -= eigenvalues.min()
+    # Remove the negative eigenvalue(s).
+    eigenvalues = eigenvalues[eigenvalues >= 0]
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps
@@ -172,7 +173,7 @@ if __name__ == '__main__':
     fig_ExtremaEucdist = plt.figure(figsize=(8, 5 * num_rows))
     fig_vonNeumann = plt.figure(figsize=(12, 5))
     fig_Curvature = plt.figure(figsize=(8, 10))
-    von_neumann_thr_list = [0.5, 0.7, 0.9, 0.95, 0.99]
+    von_neumann_thr_list = [0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 1.00]
     x_axis_text, x_axis_value = [], []
     vne_stats_phateP, vne_stats_diffcurP = {}, {}
     curvature_stats_phateP, curvature_stats_diffcurP = [], []
@@ -449,7 +450,6 @@ if __name__ == '__main__':
     ax = fig_vonNeumann.add_subplot(1, 2, 1)
     for trivial_thr in von_neumann_thr_list:
         ax.scatter(x_axis_value, vne_stats_phateP[trivial_thr])
-    ax.legend(von_neumann_thr_list, bbox_to_anchor=(1.12, 0.4))
     ax.set_xticks(x_axis_value)
     ax.set_xticklabels(x_axis_text)
     ax.set_title(
@@ -462,7 +462,7 @@ if __name__ == '__main__':
     ax = fig_vonNeumann.add_subplot(1, 2, 2)
     for trivial_thr in von_neumann_thr_list:
         ax.scatter(x_axis_value, vne_stats_diffcurP[trivial_thr])
-    ax.legend(von_neumann_thr_list, bbox_to_anchor=(1.12, 0.4))
+    ax.legend(von_neumann_thr_list, bbox_to_anchor=(1.0, 0.4))
     ax.set_xticks(x_axis_value)
     ax.set_xticklabels(x_axis_text)
     ax.set_title(
