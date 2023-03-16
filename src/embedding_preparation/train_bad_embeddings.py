@@ -187,7 +187,7 @@ def train(config: AttributeHashmap) -> None:
 
     os.makedirs(config.checkpoint_dir, exist_ok=True)
     os.makedirs(config.log_dir, exist_ok=True)
-    log_path = '%s/bad-%s-%s.log' % (config.log_dir, config.dataset,
+    log_path = '%s/%s-%s.log' % (config.log_dir, config.dataset,
                                      config.bad_method)
 
     # Log the config.
@@ -284,7 +284,7 @@ def train(config: AttributeHashmap) -> None:
         if state_dict['divergence'] > biggest_acc_divergence:
             biggest_acc_divergence = state_dict['divergence']
             best_model = model.state_dict()
-            model_save_path = '%s/bad-%s-%s-%s' % (
+            model_save_path = '%s/%s-%s-%s' % (
                 config.checkpoint_dir, config.dataset, config.bad_method,
                 'acc_divergence_biggest.pth')
             torch.save(best_model, model_save_path)
@@ -295,7 +295,7 @@ def train(config: AttributeHashmap) -> None:
             for acc_divergence_percentage in acc_divergence_pct_list:
                 if state_dict['divergence'] > acc_divergence_percentage and \
                         not is_model_saved['acc_divergence_%s%%' % acc_divergence_percentage]:
-                    model_save_path = '%s/bad-%s-%s-%s' % (
+                    model_save_path = '%s/%s-%s-%s' % (
                         config.checkpoint_dir, config.dataset,
                         config.bad_method,
                         'acc_divergence_%s%%.pth' % acc_divergence_percentage)
@@ -360,9 +360,9 @@ def infer(config: AttributeHashmap) -> None:
                      small_image=config.small_image).to(device)
 
     checkpoint_paths = sorted(
-        glob('%s/bad-%s-%s*.pth' %
+        glob('%s/%s-%s*.pth' %
              (config.checkpoint_dir, config.dataset, config.bad_method)))
-    log_path = '%s/bad-%s-%s.log' % (config.log_dir, config.dataset,
+    log_path = '%s/%s-%s.log' % (config.log_dir, config.dataset,
                                      config.bad_method)
 
     for checkpoint in tqdm(checkpoint_paths):

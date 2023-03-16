@@ -37,9 +37,7 @@ cifar10_int2name = {
 }
 
 
-def von_neumann_entropy(eigs,
-                        trivial_thr: float = 0.9,
-                        method: str = 'shift'):
+def von_neumann_entropy(eigs, trivial_thr: float = 0.9):
     eigenvalues = eigs.copy()
 
     eigenvalues = np.array(sorted(eigenvalues)[::-1])
@@ -47,13 +45,9 @@ def von_neumann_entropy(eigs,
     # Drop the biggest eigenvalue(s).
     eigenvalues = eigenvalues[eigenvalues <= trivial_thr]
 
-    if method == 'shift':
-        # Shift the negative eigenvalue(s).
-        if eigenvalues.min() < 0:
-            eigenvalues -= eigenvalues.min()
-    elif method == 'truncate':
-        # Remove the negative eigenvalue(s).
-        eigenvalues = eigenvalues[eigenvalues >= 0]
+    # Shift the negative eigenvalue(s).
+    if eigenvalues.min() < 0:
+        eigenvalues -= eigenvalues.min()
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps
@@ -77,26 +71,32 @@ if __name__ == '__main__':
 
     seed_everything(args.seed)
 
+    if 'contrastive' in config.keys():
+        method_str = config.contrastive
+        x_axis_title = 'model validation accuracy'
+    elif 'bad_method' in config.keys():
+        method_str = config.bad_method
+        x_axis_title = 'model train/validation divergence'
+
     embedding_folders = sorted(
-        glob('%s/embeddings/%s-%s-*' %
-             (config.output_save_path, config.dataset, config.contrastive)))
+        glob('%s/embeddings/*%s-%s-*' %
+             (config.output_save_path, config.dataset, method_str)))
 
     save_root = './results_diffusion_entropy/'
     os.makedirs(save_root, exist_ok=True)
     save_path_fig_DiffusionEigenvalues = '%s/diffusion-eigenvalues-%s-%s-knn-%s.png' % (
-        save_root, config.dataset, config.contrastive, args.knn)
-    save_path_fig_vne = '%s/von-Neumann-%s-%s-knn-%s.png' % (
-        save_root, config.dataset, config.contrastive, args.knn)
+        save_root, config.dataset, method_str, args.knn)
+    save_path_fig_vne = '%s/diffusion-entropy-%s-%s-knn-%s.png' % (
+        save_root, config.dataset, method_str, args.knn)
     log_path = '%s/log-%s-%s-knn-%s.txt' % (save_root, config.dataset,
-                                            config.contrastive, args.knn)
+                                            method_str, args.knn)
 
     num_rows = len(embedding_folders)
     vne_thr_list = [0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 1.00]
     x_axis_text, x_axis_value = [], []
-    vne_methods = ['truncate', 'shift']
-    vne_stats_by_method = {k: {} for k in vne_methods}
+    vne_stats = {}
     fig_DiffusionEigenvalues = plt.figure(figsize=(8, 6 * num_rows))
-    fig_vne = plt.figure(figsize=(4 * len(vne_methods), 5))
+    fig_vne = plt.figure(figsize=(6, 6))
 
     for i, embedding_folder in enumerate(embedding_folders):
         files = sorted(glob(embedding_folder + '/*'))
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         #
         '''Diffusion Matrix'''
         save_path_diffusion = '%s/numpy_files/diffusion/diffusion-%s-%s-knn-%s-%s.npz' % (
-            save_root, config.dataset, config.contrastive, args.knn,
+            save_root, config.dataset, method_str, args.knn,
             checkpoint_name.split('_')[-1])
         os.makedirs(os.path.dirname(save_path_diffusion), exist_ok=True)
         if os.path.exists(save_path_diffusion):
@@ -150,7 +150,7 @@ if __name__ == '__main__':
         #
         '''Diffusion Eigenvalues'''
         save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s-%s-knn-%s-%s.npz' % (
-            save_root, config.dataset, config.contrastive, args.knn,
+            save_root, config.dataset, method_str, args.knn,
             checkpoint_name.split('_')[-1])
         os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
         if os.path.exists(save_path_eigenvalues):
@@ -174,22 +174,18 @@ if __name__ == '__main__':
 
         #
         '''von Neumann Entropy'''
-        for vne_method in vne_methods:
+        log('von Neumann Entropy (diffcur adaptive anisotropic P matrix): ',
+            log_path)
+        for trivial_thr in vne_thr_list:
+            vne = von_neumann_entropy(eigenvalues_P, trivial_thr=trivial_thr)
             log(
-                'von Neumann Entropy (diffcur adaptive anisotropic P matrix)\nmethod: %s: '
-                % vne_method, log_path)
-            for trivial_thr in vne_thr_list:
-                vne = von_neumann_entropy(eigenvalues_P,
-                                          trivial_thr=trivial_thr,
-                                          method='%s' % vne_method)
-                log(
-                    '    removing eigenvalues > %.2f: entropy = %.4f' %
-                    (trivial_thr, vne), log_path)
+                '    removing eigenvalues > %.2f: entropy = %.4f' %
+                (trivial_thr, vne), log_path)
 
-                if trivial_thr not in vne_stats_by_method[vne_method].keys():
-                    vne_stats_by_method[vne_method][trivial_thr] = [vne]
-                else:
-                    vne_stats_by_method[vne_method][trivial_thr].append(vne)
+            if trivial_thr not in vne_stats.keys():
+                vne_stats[trivial_thr] = [vne]
+            else:
+                vne_stats[trivial_thr].append(vne)
 
         x_axis_text.append(checkpoint_name.split('_')[-1])
         if '%' in x_axis_text[-1]:
@@ -197,23 +193,18 @@ if __name__ == '__main__':
         else:
             x_axis_value.append(x_axis_value[-1] + 0.1)
 
-    for subplot_idx, vne_method in enumerate(vne_methods):
-        ax = fig_vne.add_subplot(1, len(vne_methods), subplot_idx + 1)
-        for trivial_thr in vne_thr_list:
-            ax.scatter(x_axis_value,
-                       vne_stats_by_method[vne_method][trivial_thr])
-        ax.set_xticks(x_axis_value)
-        ax.set_xticklabels(x_axis_text)
-        ax.set_title(
-            'method for eigenvalues < 0: %s'
-            % vne_method)
-        ax.spines[['right', 'top']].set_visible(False)
-        # Plot separately to avoid legend mismatch.
-        for trivial_thr in vne_thr_list:
-            ax.plot(x_axis_value, vne_stats_by_method[vne_method][trivial_thr])
+    ax = fig_vne.add_subplot(1, 1, 1)
+    for trivial_thr in vne_thr_list:
+        ax.scatter(x_axis_value, vne_stats[trivial_thr])
+    ax.set_xticks(x_axis_value)
+    ax.set_xticklabels(x_axis_text)
+    ax.spines[['right', 'top']].set_visible(False)
+    # Plot separately to avoid legend mismatch.
+    for trivial_thr in vne_thr_list:
+        ax.plot(x_axis_value, vne_stats[trivial_thr])
     ax.legend(vne_thr_list, bbox_to_anchor=(1.00, 0.48))
     fig_vne.suptitle(
         'von Neumann Entropy at different eigenvalue removal thresholds')
-    fig_vne.supxlabel('model validation accuracy')
+    fig_vne.supxlabel(x_axis_title)
     fig_vne.tight_layout()
     fig_vne.savefig(save_path_fig_vne)
