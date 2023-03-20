@@ -5,6 +5,7 @@ https://github.com/leftthomas/SimCLR/blob/master/model.py
 
 import torch
 import torchvision
+from typing import List
 
 
 class ResNet50(torch.nn.Module):
@@ -68,6 +69,109 @@ class ResNet50(torch.nn.Module):
 
     def forward(self, x):
         return self.linear(self.encoder(x))
+
+    def init_linear(self):
+        torch.nn.init.constant_(self.linear.weight, 0.01)
+        torch.nn.init.constant_(self.linear.bias, 0)
+
+    def init_params(self):
+        for m in self.modules():
+            if isinstance(m, torch.nn.Conv2d) or isinstance(
+                    m, torch.nn.ConvTranspose2d):
+                torch.nn.init.kaiming_normal_(m.weight, mode='fan_in')
+                if m.bias is not None:
+                    torch.nn.init.constant_(m.bias, 0)
+            elif isinstance(m, torch.nn.BatchNorm2d):
+                torch.nn.init.constant_(m.weight, 1)
+                torch.nn.init.constant_(m.bias, 0)
+            elif isinstance(m, torch.nn.Linear):
+                torch.nn.init.normal_(m.weight, std=1e-3)
+                if m.bias is not None:
+                    torch.nn.init.constant_(m.bias, 0)
+                    torch.nn.init.constant_(m.bias, 0)
+
+
+class AutoEncoder(torch.nn.Module):
+
+    def __init__(self,
+                num_classes: int = 10,
+                small_image: bool = False,
+                channels: List[int] = [1,32,64],
+                code_dim: int = 1024, # NOTE: 1024 instead of 2048, cuz 28x28 < 900.
+                imsize: int = 28,
+                hidden_dim: int = 512,
+                z_dim: int = 128) -> None:
+        super(AutoEncoder, self).__init__()
+        self.num_classes = num_classes
+        self.channels = channels
+        self.code_dim = code_dim
+        spatial_dim = imsize // (2**(len(self.channels)-1))
+        # Encoder
+        in_channels = self.channels[0]
+        encoder_modules = []
+        for i in range(1, len(self.channels)):
+            h_dim = self.channels[i]
+            encoder_modules.append(
+                torch.nn.Sequential(
+                    torch.nn.Conv2d(in_channels=in_channels, out_channels=h_dim,
+                              kernel_size=3, stride=2, padding=1),
+                    torch.nn.BatchNorm2d(h_dim),
+                    torch.nn.ReLU())
+            )
+            in_channels = h_dim
+        #print(spatial_dim*spatial_dim*h_dim)
+        encoder_modules.append(
+            torch.nn.Sequential(
+                torch.nn.Flatten(1),
+                torch.nn.Linear(spatial_dim*spatial_dim*h_dim, code_dim)
+            ))
+        self.encoder = torch.nn.Sequential(*encoder_modules)
+
+        # Decoder
+        decoder_modules = []
+        decoder_modules.append(
+            torch.nn.Sequential(
+                    torch.nn.Linear(code_dim, spatial_dim*spatial_dim*h_dim),
+                    torch.nn.Unflatten(1, (h_dim,spatial_dim,spatial_dim)),
+            )
+        )
+
+        for i in range(len(self.channels)-1, 0,-1):
+            #print('?', self.hidden_channels)
+            h_dim = self.channels[i]
+            next_h_dim = self.channels[i-1]
+            #print('h_dim: ', h_dim, 'next_h_dim:', next_h_dim)
+            decoder_modules.append(
+                torch.nn.Sequential(
+                    torch.nn.ConvTranspose2d(in_channels=h_dim, out_channels=next_h_dim,
+                              kernel_size=3, stride=2, padding=1, output_padding=1),
+                    torch.nn.BatchNorm2d(next_h_dim),
+                    torch.nn.ReLU())
+            )
+            in_channels = h_dim
+        decoder_modules.append(torch.nn.Sequential(
+            torch.nn.Conv2d(self.channels[0], out_channels=self.channels[0],
+                      kernel_size=3, padding=1),
+            torch.nn.Tanh()))
+        self.decoder = torch.nn.Sequential(*decoder_modules)
+        
+        #This is the linear classifier for fine-tuning and inference.
+        self.linear = torch.nn.Linear(in_features=self.code_dim,
+                                      out_features=self.num_classes)
+    
+    def encode(self, x):
+        code = self.encoder(x)
+        #print(code.shape)
+        return code
+    
+
+    def decode(self, code):
+        return self.decoder(code)
+
+    def forward(self, x):
+        code = self.encoder(x)
+        code = code.view(code.shape[0], -1) # Flatten
+        return self.linear(code)
 
     def init_linear(self):
         torch.nn.init.constant_(self.linear.weight, 0.01)

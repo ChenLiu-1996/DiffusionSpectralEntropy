@@ -1,0 +1,16 @@
+checkpoint_dir: '$ROOT_DIR/src/embedding_preparation/checkpoints/'
+log_dir: '$ROOT_DIR/src/embedding_preparation/logs/'
+output_save_path: '$ROOT_DIR/src/embedding_preparation/results/'
+dataset_dir: '$ROOT_DIR/data/mnist/'
+max_epoch: 500
+patience: 50
+batch_size: 64
+learning_rate: 1e-3
+learning_rate_probing: 5e-10
+probing_epoch: 1
+weight_decay: 1e-6
+num_workers: 1
+dataset: 'mnist'
+contrastive: 'autoencoder'
+random_seed: 2022
+imsize: 28
