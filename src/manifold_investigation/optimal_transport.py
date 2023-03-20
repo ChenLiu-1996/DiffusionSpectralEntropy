@@ -12,6 +12,7 @@ import numpy as np
 import phate
 import scprep
 import yaml
+import ot
 from matplotlib import pyplot as plt
 from scipy import sparse
 import scipy
@@ -150,6 +151,9 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
+    parser.add_argument('--method',
+                        help='iso|phate|emd',
+                        default='phate')
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -177,7 +181,7 @@ if __name__ == '__main__':
 
         labels, embeddings = None, None
 
-        for file in tqdm(files[:3]):
+        for file in tqdm(files[:]):
             np_file = np.load(file)
             curr_label = np_file['label_true']
             curr_embedding = np_file['embedding']
@@ -194,30 +198,54 @@ if __name__ == '__main__':
         assert labels.shape[0] == N
         assert labels.shape[1] == 1
 
-        #adj = common_graph(embeddings) # N x N
-        G =  pygsp.graphs.NNGraph(
-            embeddings, epsilon=2, NNtype="radius", rescale=True, center=False
-        )
-        print('G... avg row sum: ', np.mean(np.sum(G.W, axis=1)))
+        if args.method == 'emd':
+            #adj = common_graph(embeddings) # N x N
+            G =  pygsp.graphs.NNGraph(
+                embeddings, epsilon=2, NNtype="radius", rescale=True, center=False
+            )
+            print('G... avg row sum: ', np.mean(np.sum(G.W, axis=1)))
 
-        dists = indicator_distribution(labels, n_classes=np.max(labels) + 1)
+            dists = indicator_distribution(labels, n_classes=np.max(labels) + 1)
 
-        dc = DiffusionCheb()
+            dc = DiffusionCheb()
 
-        # Embeddings where the L1 distance approximates the Earth Mover's Distance
-        #dist_embeddings = dc.fit_transform(adj, dists) # Shape: (10, Ks)
-        dist_embeddings = dc.fit_transform(G.W, dists) # Shape: (10, Ks)
-        print('EMD embeddings.shape: ', dist_embeddings.shape)
+            # Embeddings where the L1 distance approximates the Earth Mover's Distance
+            #dist_embeddings = dc.fit_transform(adj, dists) # Shape: (10, Ks)
+            dist_embeddings = dc.fit_transform(G.W, dists) # Shape: (10, Ks)
+            print('EMD embeddings.shape: ', dist_embeddings.shape)
 
-        opc = scipy.spatial.distance_matrix(dist_embeddings,dist_embeddings,p=1)
-        print('opc: ', opc[0, :10])
+            opc = scipy.spatial.distance_matrix(dist_embeddings,dist_embeddings,p=1)
+            #print('opc: ', opc[0, :10])
 
+        
+        if args.method == 'iso':
+            geodesic = comp_geodesic(embeddings, k=20)
+            opc = comp_opcost(embeddings,
+                            labels,
+                            n_classes=np.max(labels) + 1,
+                            geodesic=geodesic)
+        elif args.method == 'phate':
+            # PHATE dimensionality reduction.
+            phate_op = phate.PHATE(knn=10,
+                               n_jobs=1,
+                               n_components=2,
+                               verbose=False)
+            phate_op.fit(embeddings)
+            diff_pot = phate_op.diff_potential # N x landmark
+            geodesic = scipy.spatial.distance.cdist(diff_pot, diff_pot) # NxN
+	        
+            print(geodesic.shape)
+
+            opc = comp_opcost(embeddings,
+                                labels,
+                                n_classes=np.max(labels) + 1,
+                                geodesic=geodesic)
+        print(opc.shape)
         
         ax = fig.add_subplot(num_rows, 1, i + 1)
         sns.heatmap(opc, ax=ax)
-        ax.set_title('%s L1 from diffusion EMD' %
-                     (os.path.basename(embedding_folder)))
-
+        ax.set_title('%s method:%s' %
+                     (os.path.basename(embedding_folder), args.method))
         
         fig.tight_layout()
         fig.savefig(save_path)
