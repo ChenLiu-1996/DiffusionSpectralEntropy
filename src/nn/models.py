@@ -97,9 +97,9 @@ class AutoEncoder(torch.nn.Module):
                 num_classes: int = 10,
                 small_image: bool = False,
                 channels: List[int] = [1,32,64],
-                code_dim: int = 1024, # NOTE: 1024 instead of 2048, cuz 28x28 < 900.
+                code_dim: int = 20, # NOTE: 1024 instead of 2048, cuz 28x28 < 900.
                 imsize: int = 28,
-                hidden_dim: int = 512,
+                hidden_dim: int = 10,
                 z_dim: int = 128) -> None:
         super(AutoEncoder, self).__init__()
         self.num_classes = num_classes
@@ -119,7 +119,8 @@ class AutoEncoder(torch.nn.Module):
                     torch.nn.ReLU())
             )
             in_channels = h_dim
-        #print(spatial_dim*spatial_dim*h_dim)
+        print(spatial_dim, h_dim, spatial_dim*spatial_dim*h_dim)
+
         encoder_modules.append(
             torch.nn.Sequential(
                 torch.nn.Flatten(1),
@@ -152,8 +153,90 @@ class AutoEncoder(torch.nn.Module):
         decoder_modules.append(torch.nn.Sequential(
             torch.nn.Conv2d(self.channels[0], out_channels=self.channels[0],
                       kernel_size=3, padding=1),
-            torch.nn.Tanh()))
+            torch.nn.Sigmoid()))
         self.decoder = torch.nn.Sequential(*decoder_modules)
+        
+        #This is the linear classifier for fine-tuning and inference.
+        self.linear = torch.nn.Linear(in_features=self.code_dim,
+                                      out_features=self.num_classes)
+    
+    def encode(self, x):
+        code = self.encoder(x)
+        #print(code.shape)
+        return code
+    
+
+    def decode(self, code):
+        return self.decoder(code)
+
+    def forward(self, x):
+        code = self.encoder(x)
+        code = code.view(code.shape[0], -1) # Flatten
+        return self.linear(code)
+
+    def init_linear(self):
+        torch.nn.init.constant_(self.linear.weight, 0.01)
+        torch.nn.init.constant_(self.linear.bias, 0)
+
+    def init_params(self):
+        for m in self.modules():
+            if isinstance(m, torch.nn.Conv2d) or isinstance(
+                    m, torch.nn.ConvTranspose2d):
+                torch.nn.init.kaiming_normal_(m.weight, mode='fan_in')
+                if m.bias is not None:
+                    torch.nn.init.constant_(m.bias, 0)
+            elif isinstance(m, torch.nn.BatchNorm2d):
+                torch.nn.init.constant_(m.weight, 1)
+                torch.nn.init.constant_(m.bias, 0)
+            elif isinstance(m, torch.nn.Linear):
+                torch.nn.init.normal_(m.weight, std=1e-3)
+                if m.bias is not None:
+                    torch.nn.init.constant_(m.bias, 0)
+                    torch.nn.init.constant_(m.bias, 0)
+
+
+class CAutoEncoder(torch.nn.Module):
+
+    def __init__(self,
+                num_classes: int = 10,
+                small_image: bool = False,
+                channels: List[int] = [3,32,64],
+                code_dim: int = 392, # NOTE: 1024 instead of 2048, cuz 28x28 < 900.
+                imsize: int = 28,
+                hidden_dim: int = 10,
+                z_dim: int = 128) -> None:
+        super(CAutoEncoder, self).__init__()
+        self.num_classes = num_classes
+        self.channels = channels
+        self.code_dim = code_dim
+        spatial_dim = imsize // (2**(len(self.channels)-1))
+        
+        self.encoder = torch.nn.Sequential(
+          torch.nn.Conv2d(1, 4, 3, 1, 1),
+          torch.nn.ReLU(),
+          torch.nn.MaxPool2d(2,2),
+          torch.nn.Conv2d(4, 8, 3, 1, 1),
+          torch.nn.ReLU(),
+          torch.nn.MaxPool2d(2,2),
+          torch.nn.Flatten(),
+          torch.nn.Linear(392, 20),
+          torch.nn.ReLU(),
+          torch.nn.Linear(20, 2)
+        )
+
+        self.decoder = torch.nn.Sequential(
+          torch.nn.Linear(2,20),
+          torch.nn.ReLU(),
+          torch.nn.Linear(20, 392),
+          torch.nn.ReLU(),
+          torch.nn.Unflatten(1, (8, 7,7)),
+          torch.nn.Upsample(scale_factor=2),
+          torch.nn.Conv2d(8, 4, 3, 1, 1),
+          torch.nn.ReLU(),
+          torch.nn.Upsample(scale_factor=2),
+          torch.nn.Conv2d(4, 1, 3, 1, 1),
+          torch.nn.Sigmoid()
+        )
         
         #This is the linear classifier for fine-tuning and inference.
         self.linear = torch.nn.Linear(in_features=self.code_dim,

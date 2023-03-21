@@ -96,8 +96,8 @@ def get_dataloaders(
             transform_train = torchvision.transforms.Compose([
                 torchvision.transforms.RandomHorizontalFlip(p=0.5),
                 torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize(mean=dataset_mean,
-                                                 std=dataset_std),
+                # torchvision.transforms.Normalize(mean=dataset_mean,
+                #                                  std=dataset_std),
                 #torchvision.transforms.Resize(imsize),                                
             ])
 
@@ -175,8 +175,9 @@ def train(config: AttributeHashmap) -> None:
     log(config_str, filepath=log_path, to_console=False)
 
     if config.contrastive == 'autoencoder':
+        print('config.imsiz', config.imsize)
         model = AutoEncoder(num_classes=config.num_classes,
-                         small_image=config.small_image).to(device)
+                         small_image=config.small_image, imsize=config.imsize).to(device)
     else:
         model = ResNet50(num_classes=config.num_classes,
                         small_image=config.small_image).to(device)
@@ -470,8 +471,8 @@ def linear_probing(config: AttributeHashmap,
                 x_recon = torch.squeeze(x_recon)
                 x = torch.squeeze(x)
             else:
-                x_recon = torch.permute(x_recon, (1,2,0))
-                x = torch.permute(x, (1,2,0))
+                x_recon = torch.permute(x_recon, (0,2,3,1))
+                x = torch.permute(x, (0,2,3,1))
 
 
             
@@ -482,6 +483,8 @@ def linear_probing(config: AttributeHashmap,
                 axs[i,0].imshow(x[i, :, :])
                 axs[i,1].imshow(x_recon[i, :, :])
                 plt.savefig('%s_visualization.png'%(config.dataset))
+                plt.close()
+
                 
 
     return probing_acc, val_acc
@@ -572,6 +575,7 @@ def infer(config: AttributeHashmap) -> None:
     _, val_loader = dataloaders
 
     if config.contrastive == 'autoencoder':
+        print('config.imsiz', config.imsize)
         model = AutoEncoder(num_classes=config.num_classes,
                          small_image=config.small_image, imsize=config.imsize).to(device)
     else:
