@@ -160,22 +160,21 @@ def diffusion_entropy(load_weights: bool = True,
         ],
         'vicreg': ['vicreg_bs2048_ep100']
     }
-    top1_acc = {
+    top1_acc_nominal = {
         'barlowtwins': [73.5],
         'moco': [60.6, 67.7, 71.1],
         'simsiam': [68.3, 68.1],
         'swav': [72.7, 74.3, 72.1, 73.9, 74.6, 75.3],
         'vicreg': [73.2],
     }
-    summary = {'vne_thr_list': [0.3, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 1.00]}
+    summary = {'vne_thr_list': [0.5, 0.7, 0.9, 0.95, 0.99, 1.00]}
 
     for model_name in __models:
         for i, version in enumerate(__versions[model_name]):
             print('model: %s, version: %s' % (model_name, version))
 
             summary[version] = {
-                'top1_acc': top1_acc[model_name][i],
-                'vne_list': [],
+                'top1_acc_nominal': top1_acc_nominal[model_name][i]
             }
 
             embedding_npy_path = '%s/%s_embeddings.npy' % (npy_folder, version)
@@ -235,6 +234,17 @@ def diffusion_entropy(load_weights: bool = True,
                 summary['vne_thr_list'],
                 eig_npy_path=eig_npy_path)
 
+            linear_probing_model_path = '%s/%s_LinearProbeModel.pt' % (
+                npy_folder, version)
+            if os.path.exists(linear_probing_model_path):
+                linear_probe_acc = infer_model(model,
+                                               linear_probing_model_path)
+            else:
+                linear_probe_acc = probe_model(model,
+                                               linear_probing_model_path)
+
+            summary[version]['top1_acc_actual'] = linear_probe_acc
+
     return summary
 
 
@@ -257,7 +267,7 @@ def normalize(
 
 
 def plot_summary(summary: dict, fig_prefix: str = None):
-    version_list, vne_list, acc_list = [], [], []
+    version_list, vne_list, acc_list_nominal = [], [], []
     vne_thr_list = summary['vne_thr_list']
 
     fig_vne = plt.figure(figsize=(10, 8))
@@ -270,11 +280,11 @@ def plot_summary(summary: dict, fig_prefix: str = None):
         version = key
         version_list.append(version)
         vne_list.append(summary[version]['vne_list'])
-        acc_list.append(summary[version]['top1_acc'])
+        acc_list_nominal.append(summary[version]['top1_acc_nominal'])
 
     vne_array = np.array(vne_list)
-    acc_list = np.array(acc_list)
-    scaled_acc = normalize(acc_list,
+    acc_list_nominal = np.array(acc_list_nominal)
+    scaled_acc = normalize(acc_list_nominal,
                            dynamic_range=[np.min(vne_list),
                                           np.max(vne_list)])
 
@@ -290,14 +300,16 @@ def plot_summary(summary: dict, fig_prefix: str = None):
 
     for thr_idx in range(len(vne_thr_list)):
         ax = fig_corr.add_subplot(len(vne_thr_list), 1, thr_idx + 1)
-        ax.scatter(acc_list, vne_array[..., thr_idx])
-        pearson_r, pearson_p = pearsonr(acc_list, vne_array[..., thr_idx])
-        spearman_r, spearman_p = spearmanr(acc_list, vne_array[..., thr_idx])
+        ax.scatter(acc_list_nominal, vne_array[..., thr_idx])
+        pearson_r, pearson_p = pearsonr(acc_list_nominal, vne_array[...,
+                                                                    thr_idx])
+        spearman_r, spearman_p = spearmanr(acc_list_nominal,
+                                           vne_array[..., thr_idx])
         ax.set_title(
             '[Diffusion Entropy] removing eigenvalues > %s \nP.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)'
             % (vne_thr_list[thr_idx], pearson_r, pearson_p, spearman_r,
                spearman_p))
-        ax.set_xticks(acc_list)
+        ax.set_xticks(acc_list_nominal)
         ax.set_xticklabels(version_list, rotation=90)
         ax.spines[['right', 'top']].set_visible(False)
 

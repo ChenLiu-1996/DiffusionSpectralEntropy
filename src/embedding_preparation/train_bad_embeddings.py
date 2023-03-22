@@ -43,7 +43,6 @@ def get_dataloaders(
     if config.dataset == 'mnist':
         config.in_channels = 1
         config.num_classes = 10
-        imsize = 32
         dataset_mean = (0.1307, )
         dataset_std = (0.3081, )
         torchvision_dataset = torchvision.datasets.MNIST
@@ -51,7 +50,6 @@ def get_dataloaders(
     elif config.dataset == 'cifar10':
         config.in_channels = 3
         config.num_classes = 10
-        imsize = 32
         dataset_mean = (0.4914, 0.4822, 0.4465)
         dataset_std = (0.2023, 0.1994, 0.2010)
         torchvision_dataset = torchvision.datasets.CIFAR10
@@ -59,7 +57,6 @@ def get_dataloaders(
     elif config.dataset == 'cifar100':
         config.in_channels = 3
         config.num_classes = 100
-        imsize = 32
         dataset_mean = (0.4914, 0.4822, 0.4465)
         dataset_std = (0.2023, 0.1994, 0.2010)
         torchvision_dataset = torchvision.datasets.CIFAR100
@@ -67,7 +64,6 @@ def get_dataloaders(
     elif config.dataset == 'stl10':
         config.in_channels = 3
         config.num_classes = 10
-        imsize = 96
         dataset_mean = (0.4467, 0.4398, 0.4066)
         dataset_std = (0.2603, 0.2566, 0.2713)
         torchvision_dataset = torchvision.datasets.STL10
@@ -77,31 +73,13 @@ def get_dataloaders(
             '`config.dataset` value not supported. Value provided: %s.' %
             config.dataset)
 
-    if config.in_channels == 3:
-        transform_train = torchvision.transforms.Compose([
-            torchvision.transforms.RandomResizedCrop(
-                imsize,
-                scale=(0.5, 2.0),
-                interpolation=torchvision.transforms.InterpolationMode.BICUBIC
-            ),
-            torchvision.transforms.RandomHorizontalFlip(p=0.5),
-            torchvision.transforms.RandomRotation(30),
-            torchvision.transforms.RandomApply([
-                torchvision.transforms.ColorJitter(
-                    brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1)
-            ],
-                                               p=0.8),
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(mean=dataset_mean,
-                                             std=dataset_std)
-        ])
-    else:
-        transform_train = torchvision.transforms.Compose([
-            torchvision.transforms.RandomHorizontalFlip(p=0.5),
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(mean=dataset_mean,
-                                             std=dataset_std)
-        ])
+    transform_train = torchvision.transforms.Compose([
+        torchvision.transforms.RandomHorizontalFlip(p=0.5),
+        torchvision.transforms.RandomRotation(30),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(mean=dataset_mean,
+                                            std=dataset_std)
+    ])
 
     transform_val = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
