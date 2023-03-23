@@ -58,8 +58,9 @@ def von_neumann_entropy(eigs, trivial_thr: float = 0.9):
     # Drop the biggest eigenvalue(s).
     eigenvalues = eigenvalues[eigenvalues <= trivial_thr]
 
-    # Remove the negative eigenvalue(s).
-    eigenvalues = eigenvalues[eigenvalues >= 0]
+    # Shift the negative eigenvalue(s).
+    if eigenvalues.min() < 0:
+        eigenvalues -= eigenvalues.min()
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps
@@ -145,6 +146,10 @@ if __name__ == '__main__':
 
     seed_everything(args.seed)
 
+    if 'contrastive' not in config.keys():
+        assert 'bad_method' in config.keys()
+        config.contrastive = config.bad_method
+
     embedding_folders = sorted(
         glob('%s/embeddings/%s-%s-*' %
              (config.output_save_path, config.dataset, config.contrastive)))
@@ -157,7 +162,7 @@ if __name__ == '__main__':
         save_root, config.dataset, config.contrastive, args.knn)
     save_path_ExtremaEucdist = '%s/extrema-EucDist-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
-    save_path_fig_vonNeumann = '%s/von-Neumann-%s-%s-knn-%s.png' % (
+    save_path_fig_DiffusionEntropy = '%s/diffusion-entropy-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
     save_path_fig_Curvature = '%s/curvature-%s-%s-knn-%s.png' % (
         save_root, config.dataset, config.contrastive, args.knn)
@@ -171,9 +176,9 @@ if __name__ == '__main__':
     fig_ExtremaPhate = plt.figure(figsize=(8, 5 * num_rows))
     fig_CurvaturePhate = plt.figure(figsize=(12, 5 * num_rows))
     fig_ExtremaEucdist = plt.figure(figsize=(8, 5 * num_rows))
-    fig_vonNeumann = plt.figure(figsize=(12, 5))
+    fig_DiffusionEntropy = plt.figure(figsize=(12, 5))
     fig_Curvature = plt.figure(figsize=(8, 10))
-    von_neumann_thr_list = [0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 1.00]
+    diffusion_entropy_thr_list = [0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 1.00]
     x_axis_text, x_axis_value = [], []
     vne_stats_phateP, vne_stats_diffcurP = {}, {}
     curvature_stats_phateP, curvature_stats_diffcurP = [], []
@@ -349,7 +354,7 @@ if __name__ == '__main__':
         '''von Neumann Entropy'''
         # vne_ref = phate_op._von_neumann_entropy(t_max=optimal_t)[1][0]
         log('von Neumann Entropy (phate knn P matrix): ', log_path)
-        for trivial_thr in von_neumann_thr_list:
+        for trivial_thr in diffusion_entropy_thr_list:
             vne_phateP = von_neumann_entropy(eigenvalues_phateP,
                                              trivial_thr=trivial_thr)
             log(
@@ -363,7 +368,7 @@ if __name__ == '__main__':
 
         log('von Neumann Entropy (diffcur adaptive anisotropic P matrix): ',
             log_path)
-        for trivial_thr in von_neumann_thr_list:
+        for trivial_thr in diffusion_entropy_thr_list:
             vne_diffcurP = von_neumann_entropy(eigenvalues_diffcurP,
                                                trivial_thr=trivial_thr)
             log(
@@ -447,8 +452,8 @@ if __name__ == '__main__':
         fig_CurvaturePhate.tight_layout()
         fig_CurvaturePhate.savefig(save_path_fig_CurvaturePhate)
 
-    ax = fig_vonNeumann.add_subplot(1, 2, 1)
-    for trivial_thr in von_neumann_thr_list:
+    ax = fig_DiffusionEntropy.add_subplot(1, 2, 1)
+    for trivial_thr in diffusion_entropy_thr_list:
         ax.scatter(x_axis_value, vne_stats_phateP[trivial_thr])
     ax.set_xticks(x_axis_value)
     ax.set_xticklabels(x_axis_text)
@@ -457,12 +462,12 @@ if __name__ == '__main__':
     )
     ax.spines[['right', 'top']].set_visible(False)
     # Plot separately to avoid legend mismatch.
-    for trivial_thr in von_neumann_thr_list:
+    for trivial_thr in diffusion_entropy_thr_list:
         ax.plot(x_axis_value, vne_stats_phateP[trivial_thr])
-    ax = fig_vonNeumann.add_subplot(1, 2, 2)
-    for trivial_thr in von_neumann_thr_list:
+    ax = fig_DiffusionEntropy.add_subplot(1, 2, 2)
+    for trivial_thr in diffusion_entropy_thr_list:
         ax.scatter(x_axis_value, vne_stats_diffcurP[trivial_thr])
-    ax.legend(von_neumann_thr_list, bbox_to_anchor=(1.0, 0.4))
+    ax.legend(diffusion_entropy_thr_list, bbox_to_anchor=(1.0, 0.4))
     ax.set_xticks(x_axis_value)
     ax.set_xticklabels(x_axis_text)
     ax.set_title(
@@ -470,10 +475,10 @@ if __name__ == '__main__':
     )
     ax.spines[['right', 'top']].set_visible(False)
     # Plot separately to avoid legend mismatch.
-    for trivial_thr in von_neumann_thr_list:
+    for trivial_thr in diffusion_entropy_thr_list:
         ax.plot(x_axis_value, vne_stats_diffcurP[trivial_thr])
-    fig_vonNeumann.tight_layout()
-    fig_vonNeumann.savefig(save_path_fig_vonNeumann)
+    fig_DiffusionEntropy.tight_layout()
+    fig_DiffusionEntropy.savefig(save_path_fig_DiffusionEntropy)
 
     ax = fig_Curvature.add_subplot(2, 1, 1)
     df = pd.DataFrame(np.array(curvature_stats_phateP).T, columns=x_axis_value)
