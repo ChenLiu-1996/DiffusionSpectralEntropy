@@ -23,7 +23,8 @@ class BaseModel(object):
         version: str = 'moco_v1_ep200',
         versions: List[str] = [
             'moco_v1_ep200', 'moco_v2_ep200', 'moco_v2_ep800'
-        ]
+        ],
+        num_classes: int = 10,
     ) -> None:
         '''
         Arg(s):
@@ -38,6 +39,7 @@ class BaseModel(object):
         self.device = device
         self.model_name = model_name
         self.model_class_name = model_class_name
+        self.num_classes = num_classes
 
         # The versions we offer.
         self.__versions = versions
@@ -67,25 +69,49 @@ class BaseModel(object):
         # Register hook to allow accessing of latent outputs.
         self.track_latent()
 
+        # Add a linear layer for linear probing.
+        self.model.linear = torch.nn.Linear(
+            in_features=self.model.fc.in_features,
+            out_features=self.num_classes).to(self.device)
+        for name, param in self.model.named_parameters():
+            if name in ['linear.weight', 'linear.bias']:
+                param.requires_grad = False
+
     def freeze_all(self) -> None:
         '''
         Freeze all layers.
         '''
-        # Freeze all layers.
         for _, param in self.model.named_parameters():
             param.requires_grad = False
 
-    def freeze_all_but_last_FC(self) -> None:
+    def unfreeze_all(self) -> None:
         '''
-        Freeze all layers except for the last fully connected layer.
+        Unfreeze all layers.
         '''
-        # Freeze all layers but the last FC.
+        for _, param in self.model.named_parameters():
+            param.requires_grad = True
+
+    def init_and_unfreeze_linear(self) -> None:
+
+        self.model.linear.weight.data.normal_(mean=0.0, std=0.01)
+        self.model.linear.bias.data.zero_()
         for name, param in self.model.named_parameters():
-            if name not in ['fc.weight', 'fc.bias']:
-                param.requires_grad = False
-        # Init the FC layer.
-        self.model.fc.weight.data.normal_(mean=0.0, std=0.01)
-        self.model.fc.bias.data.zero_()
+            if name in ['linear.weight', 'linear.bias']:
+                param.requires_grad = True
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        '''
+        Forwards through network, except for the final linear layer.
+        '''
+        x = self.__transform_inputs(x)
+        _ = self.model(x)
+        latent_outputs = self.fetch_latent()
+        h = latent_outputs['avgpool']
+        h = h.view(h.shape[0], -1)
+        return h
+
+    def linear(self, x: torch.Tensor) -> torch.Tensor:
+        return self.model.linear(x)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
@@ -98,7 +124,8 @@ class BaseModel(object):
             torch.Tensor[float32] : B x C' x H' x W'
         '''
         x = self.__transform_inputs(x)
-        z = self.model(x)
+        h = self.model.encoder(x)
+        z = self.model.fc(h)
         return z
 
     def __transform_inputs(self, _in: torch.Tensor) -> torch.Tensor:
@@ -167,6 +194,9 @@ class BaseModel(object):
 
         return self.model.parameters()
 
+    def linear_parameters(self) -> List[torch.Tensor]:
+        return self.model.linear.parameters()
+
     def named_parameters(self) -> dict[str, torch.Tensor]:
         '''
         Returns the list of named parameters in the model
@@ -224,9 +254,10 @@ class BaseModel(object):
                 Which key phrases in the state dict to rename.
         '''
         if restore_path is None:
+            # Loading from the official checkpoints.
             restore_path = self.pretrained
 
-        if os.path.isfile(restore_path):
+            assert os.path.isfile(restore_path)
             log('`%s.restore_model()`: loading checkpoint %s' %
                 (self.model_class_name, restore_path),
                 to_console=True)
@@ -249,15 +280,18 @@ class BaseModel(object):
                     del state_dict[k]
 
             msg = self.model.load_state_dict(state_dict, strict=False)
-            assert set(msg.missing_keys) == {"fc.weight", "fc.bias"}
+            assert set(msg.missing_keys) == {
+                "fc.weight", "fc.bias", "linear.weight", "linear.bias"
+            }
 
             log('`%s.restore_model()`: loaded pre-trained model %s' %
                 (self.model_class_name, restore_path),
                 to_console=True)
         else:
-            log('`%s.restore_model()`: no checkpoint found at %s' %
-                (self.model_class_name, restore_path),
-                to_console=True)
+            # Loading from our saved checkpoints.
+            self.model.load_state_dict(
+                torch.load(restore_path, map_location='cpu'))
+            self.model.to(self.device)
 
         # Need to re-track latent after redefining model.
         self.track_latent()

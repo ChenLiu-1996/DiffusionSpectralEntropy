@@ -12,7 +12,7 @@ class SwavModel(BaseModel):
 
     def __init__(self,
                  device: torch.device = None,
-                 version: str = None) -> None:
+                 version: str = None, num_classes: int = None) -> None:
         '''
         Arg(s):
             device : torch.device
@@ -36,7 +36,8 @@ class SwavModel(BaseModel):
                                             'swav_bs4096_ep200',
                                             'swav_bs4096_ep400',
                                             'swav_bs4096_ep800',
-                                        ])
+                                        ],
+                                        num_classes=num_classes)
 
     def restore_model(self, restore_path: str = None) -> None:
         '''

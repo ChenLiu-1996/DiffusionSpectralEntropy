@@ -12,7 +12,8 @@ class VICRegModel(BaseModel):
 
     def __init__(self,
                  device: torch.device = None,
-                 version: str = None) -> None:
+                 version: str = None,
+                 num_classes: int = None) -> None:
         '''
         Arg(s):
             device : torch.device
@@ -25,7 +26,8 @@ class VICRegModel(BaseModel):
                                           model_class_name='VICRegModel',
                                           model_name='vicreg',
                                           version=version,
-                                          versions=['vicreg_bs2048_ep100'])
+                                          versions=['vicreg_bs2048_ep100'],
+                                          num_classes=num_classes)
 
     def restore_model(self, restore_path: str = None) -> None:
         '''

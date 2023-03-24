@@ -1,7 +1,7 @@
 import argparse
 import os
 import sys
-from typing import List, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 import seaborn as sns
@@ -79,12 +79,16 @@ def compute_diffusion_entropy(embeddings: torch.Tensor, args: AttributeHashmap,
     return vne_list
 
 
-def get_val_loader(args: AttributeHashmap) -> torch.utils.data.DataLoader:
+def get_dataloaders(
+    args: AttributeHashmap
+) -> Tuple[Tuple[torch.utils.data.DataLoader, ], AttributeHashmap]:
+
     dataset_dir = '%s/data/%s' % (args.root_dir, args.dataset)
 
     if args.dataset == 'mnist':
         args.in_channels = 1
         args.num_classes = 10
+        imsize = 28
         dataset_mean = (0.1307, )
         dataset_std = (0.3081, )
         torchvision_dataset_loader = torchvision.datasets.MNIST
@@ -92,6 +96,7 @@ def get_val_loader(args: AttributeHashmap) -> torch.utils.data.DataLoader:
     elif args.dataset == 'cifar10':
         args.in_channels = 3
         args.num_classes = 10
+        imsize = 32
         dataset_mean = (0.4914, 0.4822, 0.4465)
         dataset_std = (0.2023, 0.1994, 0.2010)
         torchvision_dataset_loader = torchvision.datasets.CIFAR10
@@ -99,6 +104,7 @@ def get_val_loader(args: AttributeHashmap) -> torch.utils.data.DataLoader:
     elif args.dataset == 'cifar100':
         args.in_channels = 3
         args.num_classes = 100
+        imsize = 32
         dataset_mean = (0.4914, 0.4822, 0.4465)
         dataset_std = (0.2023, 0.1994, 0.2010)
         torchvision_dataset_loader = torchvision.datasets.CIFAR100
@@ -106,14 +112,41 @@ def get_val_loader(args: AttributeHashmap) -> torch.utils.data.DataLoader:
     elif args.dataset == 'stl10':
         args.in_channels = 3
         args.num_classes = 10
+        imsize = 96
         dataset_mean = (0.4467, 0.4398, 0.4066)
         dataset_std = (0.2603, 0.2566, 0.2713)
         torchvision_dataset_loader = torchvision.datasets.STL10
 
     else:
         raise ValueError(
-            '`args.dataset` value not supported. Value provided: %s.' %
+            '`config.dataset` value not supported. Value provided: %s.' %
             args.dataset)
+
+    if args.in_channels == 3:
+        transform_train = torchvision.transforms.Compose([
+            torchvision.transforms.RandomResizedCrop(
+                imsize,
+                scale=(0.5, 2.0),
+                interpolation=torchvision.transforms.InterpolationMode.BICUBIC
+            ),
+            torchvision.transforms.RandomHorizontalFlip(p=0.5),
+            torchvision.transforms.RandomRotation(30),
+            torchvision.transforms.RandomApply([
+                torchvision.transforms.ColorJitter(
+                    brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1)
+            ],
+                                               p=0.8),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(mean=dataset_mean,
+                                             std=dataset_std)
+        ])
+    else:
+        transform_train = torchvision.transforms.Compose([
+            torchvision.transforms.RandomHorizontalFlip(p=0.5),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(mean=dataset_mean,
+                                             std=dataset_std)
+        ])
 
     transform_val = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
@@ -121,29 +154,137 @@ def get_val_loader(args: AttributeHashmap) -> torch.utils.data.DataLoader:
     ])
 
     if args.dataset in ['mnist', 'cifar10', 'cifar100']:
+        train_loader = torch.utils.data.DataLoader(
+            torchvision_dataset_loader(dataset_dir,
+                                       train=True,
+                                       download=True,
+                                       transform=transform_train),
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+            shuffle=True)
         val_loader = torch.utils.data.DataLoader(torchvision_dataset_loader(
-            dataset_dir, train=False, download=False, transform=transform_val),
+            dataset_dir, train=False, download=True, transform=transform_val),
                                                  batch_size=args.batch_size,
                                                  num_workers=args.num_workers,
                                                  shuffle=False)
 
     elif args.dataset in ['stl10']:
-        val_loader = torch.utils.data.DataLoader(
+        train_loader = torch.utils.data.DataLoader(
             torchvision_dataset_loader(dataset_dir,
-                                       split='test',
-                                       download=False,
-                                       transform=transform_val),
+                                       split='train',
+                                       download=True,
+                                       transform=transform_train),
             batch_size=args.batch_size,
             num_workers=args.num_workers,
-            shuffle=False)
+            shuffle=True)
+        val_loader = torch.utils.data.DataLoader(torchvision_dataset_loader(
+            dataset_dir, split='test', download=True, transform=transform_val),
+                                                 batch_size=args.batch_size,
+                                                 num_workers=args.num_workers,
+                                                 shuffle=False)
 
-    return val_loader
+    return train_loader, val_loader
 
 
-def diffusion_entropy(load_weights: bool = True,
-                      dataloader: torch.utils.data.DataLoader = None,
-                      device: torch.device = None,
-                      npy_folder: str = None):
+def probe_model(args: AttributeHashmap,
+                train_loader: torch.utils.data.DataLoader,
+                model: torch.nn.Module, device: torch.device,
+                loss_fn_classification: torch.nn.Module, model_path: str):
+
+    model.freeze_all()
+    model.init_and_unfreeze_linear()
+
+    # Note: Need to create another optimizer because the model will keep updating
+    # even after freezing with `requires_grad = False` when `opt` has `momentum`.
+    opt_probing = torch.optim.AdamW(list(model.linear_parameters()),
+                                    lr=float(args.learning_rate_probing))
+
+    for epoch_idx in range(args.probing_epoch):
+        probing_acc = linear_probing_epoch(
+            args=args,
+            train_loader=train_loader,
+            model=model,
+            device=device,
+            opt_probing=opt_probing,
+            loss_fn_classification=loss_fn_classification)
+        print('Probing epoch: %d, acc: %.3f' % (epoch_idx, probing_acc))
+
+    model.eval()
+    model.save_model(model_path)
+    return
+
+
+def linear_probing_epoch(args: AttributeHashmap,
+                         train_loader: torch.utils.data.DataLoader,
+                         model: torch.nn.Module, device: torch.device,
+                         opt_probing: torch.optim.Optimizer,
+                         loss_fn_classification: torch.nn.Module):
+    model.train()
+    correct, total_count = 0, 0
+    for _, (x, y_true) in enumerate(tqdm(train_loader)):
+        B = x.shape[0]
+        assert args.in_channels in [1, 3]
+        if args.in_channels == 1:
+            # Repeat the channel dimension: 1 channel -> 3 channels.
+            x = x.repeat(1, 3, 1, 1)
+        x, y_true = x.to(device), y_true.to(device)
+
+        with torch.no_grad():
+            h = model.encode(x)
+        y_pred = model.linear(h)
+        loss = loss_fn_classification(y_pred, y_true)
+        correct += torch.sum(torch.argmax(y_pred, dim=-1) == y_true).item()
+        total_count += B
+
+        opt_probing.zero_grad()
+        loss.backward()
+        opt_probing.step()
+
+    probing_acc = correct / total_count * 100
+    model.eval()
+
+    return probing_acc
+
+
+def infer_model(val_loader: torch.utils.data.DataLoader,
+                model: torch.nn.Module, device: torch.device,
+                model_path: str) -> float:
+    model.restore_model(restore_path=model_path)
+    model.eval()
+    correct, total_count = 0, 0
+    with torch.no_grad():
+        for _, (x, y_true) in enumerate(tqdm(val_loader)):
+            B = x.shape[0]
+            assert args.in_channels in [1, 3]
+            if args.in_channels == 1:
+                # Repeat the channel dimension: 1 channel -> 3 channels.
+                x = x.repeat(1, 3, 1, 1)
+            x, y_true = x.to(device), y_true.to(device)
+
+            h = model.encode(x)
+            y_pred = model.linear(h)
+            correct += torch.sum(torch.argmax(y_pred, dim=-1) == y_true).item()
+            total_count += B
+
+    val_acc_actual = correct / total_count * 100
+    print('\n\n val acc actual %.2f' % val_acc_actual)
+    return val_acc_actual
+
+
+def diffusion_entropy(args: AttributeHashmap):
+    device = torch.device('cuda:%d' %
+                          args.gpu_id if torch.cuda.is_available() else 'cpu')
+
+    args.root_dir = '/'.join(
+        os.path.dirname(os.path.abspath(__file__)).split('/')[:-2])
+
+    save_folder = './results_diffusion_entropy_PublicModels/%s' % args.dataset
+    npy_folder = '%s/%s/' % (save_folder, 'numpy_files')
+    pt_folder = '%s/%s/' % (save_folder, 'linear_probed_models')
+    os.makedirs(npy_folder, exist_ok=True)
+    os.makedirs(pt_folder, exist_ok=True)
+
+    train_loader, val_loader = get_dataloaders(args=args)
 
     __models = ['barlowtwins', 'moco', 'simsiam', 'swav', 'vicreg']
     __versions = {
@@ -180,32 +321,40 @@ def diffusion_entropy(load_weights: bool = True,
             embedding_npy_path = '%s/%s_embeddings.npy' % (npy_folder, version)
             eig_npy_path = '%s/%s_eigP.npy' % (npy_folder, version)
 
+            if model_name == 'barlowtwins':
+                model = BarlowTwinsModel(device=device,
+                                         version=version,
+                                         num_classes=args.num_classes)
+            elif model_name == 'moco':
+                model = MoCoModel(device=device,
+                                  version=version,
+                                  num_classes=args.num_classes)
+            elif model_name == 'simsiam':
+                model = SimSiamModel(device=device,
+                                     version=version,
+                                     num_classes=args.num_classes)
+            elif model_name == 'swav':
+                model = SwavModel(device=device,
+                                  version=version,
+                                  num_classes=args.num_classes)
+            elif model_name == 'vicreg':
+                model = VICRegModel(device=device,
+                                    version=version,
+                                    num_classes=args.num_classes)
+            else:
+                raise ValueError('model_name: %s not supported.' % model_name)
+
+            model.restore_model()
+            model.eval()
+
             if os.path.exists(embedding_npy_path):
                 data_numpy = np.load(embedding_npy_path)
                 embeddings = data_numpy['embeddings']
                 print('Pre-computed embeddings loaded.')
             else:
-                if model_name == 'barlowtwins':
-                    model = BarlowTwinsModel(device=device, version=version)
-                elif model_name == 'moco':
-                    model = MoCoModel(device=device, version=version)
-                elif model_name == 'simsiam':
-                    model = SimSiamModel(device=device, version=version)
-                elif model_name == 'swav':
-                    model = SwavModel(device=device, version=version)
-                elif model_name == 'vicreg':
-                    model = VICRegModel(device=device, version=version)
-                else:
-                    raise ValueError('model_name: %s not supported.' %
-                                     model_name)
-
-                if load_weights:
-                    model.restore_model()
-                model.eval()
-
                 embeddings = []
                 with torch.no_grad():
-                    for i, (x, y_true) in enumerate(tqdm(dataloader)):
+                    for i, (x, y_true) in enumerate(tqdm(val_loader)):
                         assert args.in_channels in [1, 3]
                         if args.in_channels == 1:
                             # Repeat the channel dimension: 1 channel -> 3 channels.
@@ -235,17 +384,34 @@ def diffusion_entropy(load_weights: bool = True,
                 eig_npy_path=eig_npy_path)
 
             linear_probing_model_path = '%s/%s_LinearProbeModel.pt' % (
-                npy_folder, version)
+                pt_folder, version)
             if os.path.exists(linear_probing_model_path):
-                linear_probe_acc = infer_model(model,
-                                               linear_probing_model_path)
+                print('Loading probed model: %s' % version)
+                val_acc_actual = infer_model(
+                    val_loader=val_loader,
+                    model=model,
+                    device=device,
+                    model_path=linear_probing_model_path)
             else:
-                linear_probe_acc = probe_model(model,
-                                               linear_probing_model_path)
+                print('Probing model: %s ...' % version)
+                probe_model(args=args,
+                            train_loader=train_loader,
+                            model=model,
+                            device=device,
+                            loss_fn_classification=torch.nn.CrossEntropyLoss(),
+                            model_path=linear_probing_model_path)
+                val_acc_actual = infer_model(
+                    val_loader=val_loader,
+                    model=model,
+                    device=device,
+                    model_path=linear_probing_model_path)
 
-            summary[version]['top1_acc_actual'] = linear_probe_acc
+            summary[version]['top1_acc_actual'] = val_acc_actual
 
-    return summary
+    fig_prefix = '%s/diffusion-entropy-PublicModels-%s' % (save_folder,
+                                                           args.dataset)
+    plot_summary(summary, fig_prefix=fig_prefix)
+    return
 
 
 def normalize(
@@ -267,7 +433,7 @@ def normalize(
 
 
 def plot_summary(summary: dict, fig_prefix: str = None):
-    version_list, vne_list, acc_list_nominal = [], [], []
+    version_list, vne_list, acc_list_nominal, acc_list_actual = [], [], [], []
     vne_thr_list = summary['vne_thr_list']
 
     fig_vne = plt.figure(figsize=(10, 8))
@@ -281,16 +447,22 @@ def plot_summary(summary: dict, fig_prefix: str = None):
         version_list.append(version)
         vne_list.append(summary[version]['vne_list'])
         acc_list_nominal.append(summary[version]['top1_acc_nominal'])
+        acc_list_actual.append(summary[version]['top1_acc_actual'])
 
     vne_array = np.array(vne_list)
     acc_list_nominal = np.array(acc_list_nominal)
-    scaled_acc = normalize(acc_list_nominal,
-                           dynamic_range=[np.min(vne_list),
-                                          np.max(vne_list)])
+    acc_list_actual = np.array(acc_list_actual)
+    scaled_acc_nominal = normalize(
+        acc_list_nominal, dynamic_range=[np.min(vne_list),
+                                         np.max(vne_list)])
+    scaled_acc_actual = normalize(
+        acc_list_actual, dynamic_range=[np.min(vne_list),
+                                        np.max(vne_list)])
 
     ax.plot(version_list, vne_array)
     ax.legend(vne_thr_list)
-    ax.scatter(version_list, scaled_acc)
+    ax.scatter(version_list, scaled_acc_nominal, color='grey')
+    ax.scatter(version_list, scaled_acc_actual, color='skyblue')
     ax.set_xticks(np.arange(len(version_list)))
     ax.set_xticklabels(version_list, rotation=90)
     ax.spines[['right', 'top']].set_visible(False)
@@ -300,16 +472,16 @@ def plot_summary(summary: dict, fig_prefix: str = None):
 
     for thr_idx in range(len(vne_thr_list)):
         ax = fig_corr.add_subplot(len(vne_thr_list), 1, thr_idx + 1)
-        ax.scatter(acc_list_nominal, vne_array[..., thr_idx])
-        pearson_r, pearson_p = pearsonr(acc_list_nominal, vne_array[...,
-                                                                    thr_idx])
-        spearman_r, spearman_p = spearmanr(acc_list_nominal,
-                                           vne_array[..., thr_idx])
+        ax.scatter(acc_list_actual, vne_array[..., thr_idx])
+        pearson_r, pearson_p = pearsonr(acc_list_actual, vne_array[...,
+                                                                   thr_idx])
+        spearman_r, spearman_p = spearmanr(acc_list_actual, vne_array[...,
+                                                                      thr_idx])
         ax.set_title(
             '[Diffusion Entropy] removing eigenvalues > %s \nP.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)'
             % (vne_thr_list[thr_idx], pearson_r, pearson_p, spearman_r,
                spearman_p))
-        ax.set_xticks(acc_list_nominal)
+        ax.set_xticks(acc_list_actual)
         ax.set_xticklabels(version_list, rotation=90)
         ax.spines[['right', 'top']].set_visible(False)
 
@@ -330,28 +502,14 @@ if __name__ == '__main__':
                         default='mnist')
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
     parser.add_argument('--seed', help='random seed.', type=int, default=0)
-    parser.add_argument('--batch-size', type=int, default=128)
+    parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--num-workers', type=int, default=1)
+    parser.add_argument('--learning_rate_probing', type=float, default=1e-3)
+    parser.add_argument('--probing_epoch', type=int, default=50)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
     args = AttributeHashmap(args)
     seed_everything(args.seed)
 
-    device = torch.device('cuda:%d' %
-                          args.gpu_id if torch.cuda.is_available() else 'cpu')
-
-    args.root_dir = '/'.join(
-        os.path.dirname(os.path.abspath(__file__)).split('/')[:-2])
-
-    save_folder = './results_diffusion_entropy_PublicModels/%s' % args.dataset
-    npy_folder = '%s/%s/' % (save_folder, 'numpy_files')
-    os.makedirs(npy_folder, exist_ok=True)
-
-    val_loader = get_val_loader(args=args)
-    summary = diffusion_entropy(dataloader=val_loader,
-                                device=device,
-                                npy_folder=npy_folder)
-    fig_prefix = '%s/diffusion-entropy-PublicModels-%s' % (save_folder,
-                                                           args.dataset)
-    plot_summary(summary, fig_prefix=fig_prefix)
+    diffusion_entropy(args=args)

@@ -12,7 +12,7 @@ class SimSiamModel(BaseModel):
 
     def __init__(self,
                  device: torch.device = None,
-                 version: str = None) -> None:
+                 version: str = None, num_classes: int = None) -> None:
         '''
         Arg(s):
             device : torch.device
@@ -26,7 +26,8 @@ class SimSiamModel(BaseModel):
             model_class_name='SimSiamModel',
             model_name='simsiam',
             version=version,
-            versions=['simsiam_bs256_ep100', 'simsiam_bs512_ep100'])
+            versions=['simsiam_bs256_ep100', 'simsiam_bs512_ep100'],
+            num_classes=num_classes)
 
     def restore_model(self, restore_path: str = None) -> None:
         '''
