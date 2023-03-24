@@ -194,10 +194,10 @@ def probe_model(args: AttributeHashmap,
     model.freeze_all()
     model.init_and_unfreeze_linear()
 
-    # Note: Need to create another optimizer because the model will keep updating
-    # even after freezing with `requires_grad = False` when `opt` has `momentum`.
     opt_probing = torch.optim.AdamW(list(model.linear_parameters()),
                                     lr=float(args.learning_rate_probing))
+    scheduler_probing = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer=opt_probing, T_max=args.probing_epoch, eta_min=0)
 
     for epoch_idx in range(args.probing_epoch):
         probing_acc = linear_probing_epoch(
@@ -207,6 +207,7 @@ def probe_model(args: AttributeHashmap,
             device=device,
             opt_probing=opt_probing,
             loss_fn_classification=loss_fn_classification)
+        scheduler_probing.step()
         print('Probing epoch: %d, acc: %.3f' % (epoch_idx, probing_acc))
 
     model.eval()
@@ -504,8 +505,8 @@ if __name__ == '__main__':
     parser.add_argument('--seed', help='random seed.', type=int, default=0)
     parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--num-workers', type=int, default=1)
-    parser.add_argument('--learning_rate_probing', type=float, default=1e-3)
-    parser.add_argument('--probing_epoch', type=int, default=50)
+    parser.add_argument('--learning_rate_probing', type=float, default=1e-1)
+    parser.add_argument('--probing_epoch', type=int, default=100)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
