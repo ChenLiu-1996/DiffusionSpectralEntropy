@@ -123,6 +123,12 @@ python train_embeddings.py --mode train --config ./config/mnist_supervised.yaml
 Using (MNIST + Supervised) as an example.
 ```
 cd src/manifold_investigation
+
 python visualize_embeddings.py --config ../embedding_preparation/config/mnist_supervised.yaml
+
 python diffusion_characteristics.py --config ../embedding_preparation/config/mnist_supervised.yaml
+
+python diffusion_entropy.py --config ../embedding_preparation/config/mnist_supervised.yaml
+
+python diffusion_entropy_PublicModels.py --dataset mnist
 ```
