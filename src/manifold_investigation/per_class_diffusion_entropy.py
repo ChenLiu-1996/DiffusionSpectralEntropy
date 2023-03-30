@@ -84,15 +84,13 @@ if __name__ == '__main__':
 
     save_root = './results_diffusion_entropy_PerClass/'
     os.makedirs(save_root, exist_ok=True)
-    save_path_fig_DiffusionEigenvalues = '%s/diffusion-eigenvalues-%s-%s-knn-%s.png' % (
-        save_root, config.dataset, method_str, args.knn)
     save_path_fig_vne = '%s/diffusion-entropy-%s-%s-knn-%s.png' % (
         save_root, config.dataset, method_str, args.knn)
     log_path = '%s/log-%s-%s-knn-%s.txt' % (save_root, config.dataset,
                                             method_str, args.knn)
 
     num_rows = len(embedding_folders)
-    vne_thr_list = [0.8, 0.9, 0.95, 0.98, 0.99, 1.00]
+    vne_thr_list = [0.8, 0.9, 0.95, 0.99, 1.00]
     x_axis_text, x_axis_value = [], []
     vne_stats = {}
     vne_std = {}
@@ -131,69 +129,6 @@ if __name__ == '__main__':
                 labels_updated[k] = cifar10_int2name[labels[k].item()]
             labels = labels_updated
             del labels_updated
-
-        #
-        # '''Diffusion Matrix'''
-        # save_path_diffusion = '%s/numpy_files/diffusion/diffusion-%s-%s-knn-%s-%s.npz' % (
-        #     save_root, config.dataset, method_str, args.knn,
-        #     checkpoint_name.split('_')[-1])
-        # os.makedirs(os.path.dirname(save_path_diffusion), exist_ok=True)
-        # if os.path.exists(save_path_diffusion):
-        #     data_numpy = np.load(save_path_diffusion)
-        #     diffusion_matrix = data_numpy['diffusion_matrix']
-        #     print('Pre-computed diffusion matrix loaded.')
-        # else:
-        #     diffusion_matrix = DiffusionMatrix(
-        #         embeddings, kernel_type="adaptive anisotropic", k=args.knn)
-        #     with open(save_path_diffusion, 'wb+') as f:
-        #         np.savez(f, diffusion_matrix=diffusion_matrix)
-        #     print('Diffusion matrix computed.')
-
-        #
-        # '''Diffusion Eigenvalues'''
-        # save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s-%s-knn-%s-%s.npz' % (
-        #     save_root, config.dataset, method_str, args.knn,
-        #     checkpoint_name.split('_')[-1])
-        # os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
-        # if os.path.exists(save_path_eigenvalues):
-        #     data_numpy = np.load(save_path_eigenvalues)
-        #     eigenvalues_P = data_numpy['eigenvalues_P']
-        #     print('Pre-computed eigenvalues loaded.')
-        # else:
-        #     eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
-        #     with open(save_path_eigenvalues, 'wb+') as f:
-        #         np.savez(f, eigenvalues_P=eigenvalues_P)
-        #     print('Eigenvalues computed.')
-
-        # ax = fig_DiffusionEigenvalues.add_subplot(2 * num_rows, 1, 2 * i + 1)
-        # ax.set_title('%s (diffcur adaptive anisotropic P matrix)' %
-        #              checkpoint_name)
-        # ax.hist(eigenvalues_P, color='w', edgecolor='k')
-        # ax = fig_DiffusionEigenvalues.add_subplot(2 * num_rows, 1, 2 * i + 2)
-        # sns.boxplot(x=eigenvalues_P, color='skyblue', ax=ax)
-        # fig_DiffusionEigenvalues.tight_layout()
-        # fig_DiffusionEigenvalues.savefig(save_path_fig_DiffusionEigenvalues)
-
-        #
-        # '''von Neumann Entropy'''
-        # log('von Neumann Entropy (diffcur adaptive anisotropic P matrix): ',
-        #     log_path)
-        # for trivial_thr in vne_thr_list:
-        #     vne = von_neumann_entropy(eigenvalues_P, trivial_thr=trivial_thr)
-        #     log(
-        #         '    removing eigenvalues > %.2f: entropy = %.4f' %
-        #         (trivial_thr, vne), log_path)
-
-        #     if trivial_thr not in vne_stats.keys():
-        #         vne_stats[trivial_thr] = [vne]
-        #     else:
-        #         vne_stats[trivial_thr].append(vne)
-
-        # x_axis_text.append(checkpoint_name.split('_')[-1])
-        # if '%' in x_axis_text[-1]:
-        #     x_axis_value.append(int(x_axis_text[-1].split('%')[0]) / 100)
-        # else:
-        #     x_axis_value.append(x_axis_value[-1] + 0.1)
 
         log('von Neumann Entropy (diffcur adaptive anisotropic P matrix): ',
             log_path)
@@ -247,13 +182,11 @@ if __name__ == '__main__':
 
     ax = fig_vne.add_subplot(1, 1, 1)
     for trivial_thr in vne_thr_list:
-        ax.scatter(x_axis_value, vne_mean[trivial_thr])
+        ax.plot(x_axis_value, vne_mean[trivial_thr])
     ax.set_xticks(x_axis_value)
     ax.set_xticklabels(x_axis_text)
     ax.spines[['right', 'top']].set_visible(False)
-    # Plot separately to avoid legend mismatch.
     for trivial_thr in vne_thr_list:
-        ax.plot(x_axis_value, vne_mean[trivial_thr])
         ax.fill_between(
             x_axis_value,
             np.array(vne_mean[trivial_thr]) - np.array(vne_std[trivial_thr]),

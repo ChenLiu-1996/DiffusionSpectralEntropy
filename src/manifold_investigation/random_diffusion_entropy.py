@@ -82,17 +82,15 @@ if __name__ == '__main__':
         glob('%s/embeddings/*%s-%s-*' %
              (config.output_save_path, config.dataset, method_str)))
 
-    save_root = './results_diffusion_entropy/'
+    save_root = './results_diffusion_entropy_RandomSubset/'
     os.makedirs(save_root, exist_ok=True)
-    save_path_fig_DiffusionEigenvalues = '%s/diffusion-eigenvalues-%s-%s-knn-%s.png' % (
-        save_root, config.dataset, method_str, args.knn)
     save_path_fig_vne = '%s/diffusion-entropy-%s-%s-knn-%s.png' % (
         save_root, config.dataset, method_str, args.knn)
     log_path = '%s/log-%s-%s-knn-%s.txt' % (save_root, config.dataset,
                                             method_str, args.knn)
 
     num_rows = len(embedding_folders)
-    vne_thr_list = [0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 1.00]
+    vne_thr_list = [0.8, 0.9, 0.95, 0.99, 1.00]
     x_axis_text, x_axis_value = [], []
     vne_stats = {}
     vne_std = {}
@@ -132,79 +130,18 @@ if __name__ == '__main__':
             labels = labels_updated
             del labels_updated
 
-        #
-        '''Diffusion Matrix'''
-        save_path_diffusion = '%s/numpy_files/diffusion/diffusion-%s-%s-knn-%s-%s.npz' % (
-            save_root, config.dataset, method_str, args.knn,
-            checkpoint_name.split('_')[-1])
-        os.makedirs(os.path.dirname(save_path_diffusion), exist_ok=True)
-        if os.path.exists(save_path_diffusion):
-            data_numpy = np.load(save_path_diffusion)
-            diffusion_matrix = data_numpy['diffusion_matrix']
-            print('Pre-computed diffusion matrix loaded.')
-        else:
-            diffusion_matrix = DiffusionMatrix(
-                embeddings, kernel_type="adaptive anisotropic", k=args.knn)
-            with open(save_path_diffusion, 'wb+') as f:
-                np.savez(f, diffusion_matrix=diffusion_matrix)
-            print('Diffusion matrix computed.')
-
-        #
-        '''Diffusion Eigenvalues'''
-        save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s-%s-knn-%s-%s.npz' % (
-            save_root, config.dataset, method_str, args.knn,
-            checkpoint_name.split('_')[-1])
-        os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
-        if os.path.exists(save_path_eigenvalues):
-            data_numpy = np.load(save_path_eigenvalues)
-            eigenvalues_P = data_numpy['eigenvalues_P']
-            print('Pre-computed eigenvalues loaded.')
-        else:
-            eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
-            with open(save_path_eigenvalues, 'wb+') as f:
-                np.savez(f, eigenvalues_P=eigenvalues_P)
-            print('Eigenvalues computed.')
-
-        ax = fig_DiffusionEigenvalues.add_subplot(2 * num_rows, 1, 2 * i + 1)
-        ax.set_title('%s (diffcur adaptive anisotropic P matrix)' %
-                     checkpoint_name)
-        ax.hist(eigenvalues_P, color='w', edgecolor='k')
-        ax = fig_DiffusionEigenvalues.add_subplot(2 * num_rows, 1, 2 * i + 2)
-        sns.boxplot(x=eigenvalues_P, color='skyblue', ax=ax)
-        fig_DiffusionEigenvalues.tight_layout()
-        fig_DiffusionEigenvalues.savefig(save_path_fig_DiffusionEigenvalues)
-
-        #
-        '''von Neumann Entropy'''
         log('von Neumann Entropy (diffcur adaptive anisotropic P matrix): ',
             log_path)
-        for trivial_thr in vne_thr_list:
-            vne = von_neumann_entropy(eigenvalues_P, trivial_thr=trivial_thr)
-            log(
-                '    removing eigenvalues > %.2f: entropy = %.4f' %
-                (trivial_thr, vne), log_path)
-
-            if trivial_thr not in vne_stats.keys():
-                vne_stats[trivial_thr] = [vne]
-            else:
-                vne_stats[trivial_thr].append(vne)
-
-        x_axis_text.append(checkpoint_name.split('_')[-1])
-        if '%' in x_axis_text[-1]:
-            x_axis_value.append(int(x_axis_text[-1].split('%')[0]) / 100)
-        else:
-            x_axis_value.append(x_axis_value[-1] + 0.1)
-
         # Randomly sample 10% of val data and compute entropy
         permute_list = np.random.permutation(N)
         sample_size = int(N * 0.1)
         n_batch = int(N / sample_size)
         sample_stats = np.zeros((n_batch, len(vne_thr_list)))
-        for bi in tqdm(n_batch):
-            inds = permute_list[bi:bi+sample_size]
-            samples = embeddings[inds, :] # B x D
+        for bi in tqdm(range(n_batch)):
+            inds = permute_list[bi:bi + sample_size]
+            samples = embeddings[inds, :]  # B x D
             assert samples.shape[0] == sample_size
-            assert labels.shape[1] == D
+            assert samples.shape[1] == D
 
             # Diffusion Matrix
             s_diffusion_matrix = DiffusionMatrix(
@@ -214,19 +151,25 @@ if __name__ == '__main__':
             # Von Neumann Entropy
             for trivial_thr_idx in range(len(vne_thr_list)):
                 trivial_thr = vne_thr_list[trivial_thr_idx]
-                s_vne = von_neumann_entropy(s_eigenvalues_P, trivial_thr=trivial_thr)
+                s_vne = von_neumann_entropy(s_eigenvalues_P,
+                                            trivial_thr=trivial_thr)
                 sample_stats[bi, trivial_thr_idx] = s_vne
+
+        x_axis_text.append(checkpoint_name.split('_')[-1])
+        if '%' in x_axis_text[-1]:
+            x_axis_value.append(int(x_axis_text[-1].split('%')[0]) / 100)
+        else:
+            x_axis_value.append(x_axis_value[-1] + 0.1)
 
         # Compute sample mean, std
         means = np.mean(sample_stats, axis=0).tolist()
         stds = np.std(sample_stats, axis=0).tolist()
+
         for trivial_thr_idx in range(len(vne_thr_list)):
             trivial_thr = vne_thr_list[trivial_thr_idx]
             std = stds[trivial_thr_idx]
             mean = means[trivial_thr_idx]
-            log(
-                    '    removing samples eigenvalues > %.2f: entropy = %.4f' %
-                    (trivial_thr, s_vne), log_path)
+
             if trivial_thr not in vne_std.keys():
                 vne_std[trivial_thr] = [std]
             else:
@@ -236,20 +179,24 @@ if __name__ == '__main__':
             else:
                 vne_mean[trivial_thr].append(mean)
 
+            log('    removing samples eigenvalues > %.2f: entropy mean = %.4f, std = %.4f'
+                % (trivial_thr, mean, std),
+                log_path,
+                to_console=False)
 
     ax = fig_vne.add_subplot(1, 1, 1)
     for trivial_thr in vne_thr_list:
-        ax.scatter(x_axis_value, vne_stats[trivial_thr])
+        ax.plot(x_axis_value, vne_mean[trivial_thr])
     ax.set_xticks(x_axis_value)
     ax.set_xticklabels(x_axis_text)
     ax.spines[['right', 'top']].set_visible(False)
-    # Plot separately to avoid legend mismatch.
     for trivial_thr in vne_thr_list:
-        ax.plot(x_axis_value, vne_stats[trivial_thr])
+        ax.fill_between(
+            x_axis_value,
+            np.array(vne_mean[trivial_thr]) - np.array(vne_std[trivial_thr]),
+            np.array(vne_mean[trivial_thr]) + np.array(vne_std[trivial_thr]),
+            alpha=0.2)
     ax.legend(vne_thr_list, bbox_to_anchor=(1.00, 0.48))
-    # Add error bars for the standard deviation
-    for trivial_thr in vne_thr_list:
-        ax.errorbar(x_axis_value, vne_mean[trivial_thr], yerr=vne_std[trivial_thr], fmt='none', ecolor='green')
 
     fig_vne.suptitle(
         'von Neumann Entropy at different eigenvalue removal thresholds')
