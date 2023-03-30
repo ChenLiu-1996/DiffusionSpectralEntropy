@@ -482,8 +482,14 @@ def plot_summary(summary: dict, fig_prefix: str = None):
             '[Diffusion Entropy] removing eigenvalues > %s \nP.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)'
             % (vne_thr_list[thr_idx], pearson_r, pearson_p, spearman_r,
                spearman_p))
-        ax.set_xticks(acc_list_actual)
-        ax.set_xticklabels(version_list, rotation=90)
+        # ax.set_xticks(acc_list_actual)
+        # ax.set_xticklabels(version_list, rotation=90)
+        for i in range(len(version_list)):
+            ax.annotate(
+                version_list[i], (acc_list_actual[i], vne_array[i, thr_idx]),
+                xytext=(acc_list_actual[i] - 5.0, vne_array[i, thr_idx] - 0.5),
+                arrowprops=dict(arrowstyle="->",
+                                connectionstyle="angle3,angleA=0,angleB=-90"))
         ax.spines[['right', 'top']].set_visible(False)
 
     fig_corr.tight_layout()
