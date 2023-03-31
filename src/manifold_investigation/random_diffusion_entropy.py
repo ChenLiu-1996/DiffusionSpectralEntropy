@@ -23,19 +23,6 @@ from log_utils import log
 from path_utils import update_config_dirs
 from seed import seed_everything
 
-cifar10_int2name = {
-    0: 'airplane',
-    1: 'automobile',
-    2: 'bird',
-    3: 'cat',
-    4: 'deer',
-    5: 'dog',
-    6: 'frog',
-    7: 'horse',
-    8: 'ship',
-    9: 'truck',
-}
-
 
 def von_neumann_entropy(eigs, trivial_thr: float = 0.9):
     eigenvalues = eigs.copy()
@@ -92,7 +79,6 @@ if __name__ == '__main__':
     num_rows = len(embedding_folders)
     vne_thr_list = [0.8, 0.9, 0.95, 0.99, 1.00]
     x_axis_text, x_axis_value = [], []
-    vne_stats = {}
     vne_std = {}
     vne_mean = {}
     fig_DiffusionEigenvalues = plt.figure(figsize=(8, 6 * num_rows))
