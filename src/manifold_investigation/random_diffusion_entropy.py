@@ -84,7 +84,7 @@ if __name__ == '__main__':
 
     save_root = './results_diffusion_entropy_RandomSubset/'
     os.makedirs(save_root, exist_ok=True)
-    save_path_fig_vne = '%s/diffusion-entropy-%s-%s-knn-%s.png' % (
+    save_path_fig_vne = '%s/diffusion-entropy-RandomSubset-%s-%s-knn-%s.png' % (
         save_root, config.dataset, method_str, args.knn)
     log_path = '%s/log-%s-%s-knn-%s.txt' % (save_root, config.dataset,
                                             method_str, args.knn)
@@ -122,13 +122,6 @@ if __name__ == '__main__':
 
         assert labels.shape[0] == N
         assert labels.shape[1] == 1
-
-        if config.dataset == 'cifar10':
-            labels_updated = np.zeros(labels.shape, dtype='object')
-            for k in range(N):
-                labels_updated[k] = cifar10_int2name[labels[k].item()]
-            labels = labels_updated
-            del labels_updated
 
         log('von Neumann Entropy (diffcur adaptive anisotropic P matrix): ',
             log_path)

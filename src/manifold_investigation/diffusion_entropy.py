@@ -92,7 +92,7 @@ if __name__ == '__main__':
                                             method_str, args.knn)
 
     num_rows = len(embedding_folders)
-    vne_thr_list = [0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 1.00]
+    vne_thr_list = [0.8, 0.9, 0.95, 0.99, 1.00]
     x_axis_text, x_axis_value = [], []
     vne_stats = {}
     fig_DiffusionEigenvalues = plt.figure(figsize=(8, 6 * num_rows))
