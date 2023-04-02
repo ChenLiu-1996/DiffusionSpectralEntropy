@@ -16,7 +16,7 @@ sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
 from early_stop import EarlyStopping
 from log_utils import log
-from models import ResNet50
+from models import get_model
 from path_utils import update_config_dirs
 from seed import seed_everything
 from simclr import NTXentLoss, SingleInstanceTwoView
@@ -162,8 +162,9 @@ def train(config: AttributeHashmap) -> None:
 
     os.makedirs(config.checkpoint_dir, exist_ok=True)
     os.makedirs(config.log_dir, exist_ok=True)
-    log_path = '%s/%s-%s.log' % (config.log_dir, config.dataset,
-                                 config.contrastive)
+    log_path = '%s/%s-%s-%s-seed%s.log' % (config.log_dir, config.dataset,
+                                           config.contrastive, config.model,
+                                           config.random_seed)
 
     # Log the config.
     config_str = 'Config: \n'
@@ -172,8 +173,9 @@ def train(config: AttributeHashmap) -> None:
     config_str += '\nTraining History:'
     log(config_str, filepath=log_path, to_console=False)
 
-    model = ResNet50(num_classes=config.num_classes,
-                     small_image=config.small_image).to(device)
+    model = get_model(model_name=config.model,
+                      num_classes=config.num_classes,
+                      small_image=config.small_image).to(device)
     model.init_params()
 
     if config.contrastive == 'NA':
@@ -308,12 +310,16 @@ def train(config: AttributeHashmap) -> None:
             filepath=log_path,
             to_console=False)
 
+        model_save_path = '%s/%s-%s-%s-seed%s-epoch-%s%s' % (
+            config.checkpoint_dir, config.dataset, config.contrastive,
+            config.model, config.random_seed, str(epoch_idx).zfill(4), '.pth')
+        torch.save(model.state_dict(), model_save_path)
         if state_dict['val_acc'] > best_val_acc:
             best_val_acc = state_dict['val_acc']
             best_model = model.state_dict()
-            model_save_path = '%s/%s-%s-%s' % (
+            model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
                 config.checkpoint_dir, config.dataset, config.contrastive,
-                'val_acc_best.pth')
+                config.model, config.random_seed, 'val_acc_best.pth')
             torch.save(best_model, model_save_path)
             log('Best model (so far) successfully saved.',
                 filepath=log_path,
@@ -323,9 +329,9 @@ def train(config: AttributeHashmap) -> None:
                 if state_dict[
                         'val_acc'] > val_acc_percentage and not is_model_saved[
                             'val_acc_%s%%' % val_acc_percentage]:
-                    model_save_path = '%s/%s-%s-%s' % (
+                    model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
                         config.checkpoint_dir, config.dataset,
-                        config.contrastive,
+                        config.contrastive, config.model, config.random_seed,
                         'val_acc_%s%%.pth' % val_acc_percentage)
                     torch.save(best_model, model_save_path)
                     is_model_saved['val_acc_%s%%' % val_acc_percentage] = True
@@ -459,14 +465,17 @@ def infer(config: AttributeHashmap) -> None:
     dataloaders, config = get_dataloaders(config=config)
     _, val_loader = dataloaders
 
-    model = ResNet50(num_classes=config.num_classes,
-                     small_image=config.small_image).to(device)
+    model = get_model(model_name=config.model,
+                      num_classes=config.num_classes,
+                      small_image=config.small_image).to(device)
 
     checkpoint_paths = sorted(
-        glob('%s/%s-%s*.pth' %
-             (config.checkpoint_dir, config.dataset, config.contrastive)))
-    log_path = '%s/%s-%s.log' % (config.log_dir, config.dataset,
-                                 config.contrastive)
+        glob('%s/%s-%s-%s-%s*.pth' %
+             (config.checkpoint_dir, config.dataset, config.contrastive,
+              config.model, config.random_seed)))
+    log_path = '%s/%s-%s-%s-%s.log' % (config.log_dir, config.dataset,
+                                       config.contrastive, config.model,
+                                       config.random_seed)
 
     for checkpoint in tqdm(checkpoint_paths):
         checkpoint_name = checkpoint.split('/')[-1].replace('.pth', '')
@@ -563,6 +572,11 @@ if __name__ == '__main__':
     config.config_file_name = args.config
     config.gpu_id = args.gpu_id
     config = update_config_dirs(AttributeHashmap(config))
+
+    # Update checkpoint dir.
+    config.checkpoint_dir = '%s/%s-%s-%s-seed%s/' % (
+        config.checkpoint_dir, config.dataset, config.contrastive,
+        config.model, config.random_seed)
 
     seed_everything(config.random_seed)
 

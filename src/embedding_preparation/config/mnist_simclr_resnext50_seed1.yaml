@@ -1,0 +1,16 @@
+checkpoint_dir: '$ROOT_DIR/src/embedding_preparation/checkpoints/'
+log_dir: '$ROOT_DIR/src/embedding_preparation/logs/'
+output_save_path: '$ROOT_DIR/src/embedding_preparation/results/'
+dataset_dir: '$ROOT_DIR/data/mnist/'
+model: 'resnext50'
+max_epoch: 500
+patience: 50
+batch_size: 128
+learning_rate: 2e-5
+learning_rate_probing: 1e-3
+probing_epoch: 1
+weight_decay: 1e-6
+num_workers: 4
+dataset: 'mnist'
+contrastive: 'simclr'
+random_seed: 1
