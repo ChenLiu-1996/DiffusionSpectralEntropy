@@ -75,7 +75,6 @@ def get_dataloaders(
 
     transform_train = torchvision.transforms.Compose([
         torchvision.transforms.RandomHorizontalFlip(p=0.5),
-        torchvision.transforms.RandomRotation(30),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=dataset_mean, std=dataset_std)
     ])
@@ -439,12 +438,18 @@ if __name__ == '__main__':
                         help='Available GPU index.',
                         type=int,
                         default=0)
+    parser.add_argument('--random-seed',
+                        help='Random Seed. If not None, will overwrite config.random_seed.',
+                        type=int,
+                        default=None)
     args = vars(parser.parse_args())
 
     args = AttributeHashmap(args)
     config = AttributeHashmap(yaml.safe_load(open(args.config)))
     config.config_file_name = args.config
     config.gpu_id = args.gpu_id
+    if args.random_seed is not None:
+        config.random_seed = args.random_seed
     config = update_config_dirs(AttributeHashmap(config))
 
     # Update checkpoint dir.
