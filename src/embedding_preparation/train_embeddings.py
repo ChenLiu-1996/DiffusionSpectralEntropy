@@ -470,16 +470,16 @@ def infer(config: AttributeHashmap) -> None:
                       small_image=config.small_image).to(device)
 
     checkpoint_paths = sorted(
-        glob('%s/%s-%s-%s-%s*.pth' %
+        glob('%s/%s-%s-%s-seed%s*.pth' %
              (config.checkpoint_dir, config.dataset, config.contrastive,
               config.model, config.random_seed)))
-    log_path = '%s/%s-%s-%s-%s.log' % (config.log_dir, config.dataset,
+    log_path = '%s/%s-%s-%s-seed%s.log' % (config.log_dir, config.dataset,
                                        config.contrastive, config.model,
                                        config.random_seed)
 
     for checkpoint in tqdm(checkpoint_paths):
         checkpoint_name = checkpoint.split('/')[-1].replace('.pth', '')
-        model.load_state_dict(torch.load(checkpoint))
+        model.load_state_dict(torch.load(checkpoint, map_location=device))
         model.eval()
 
         total_by_class = {}

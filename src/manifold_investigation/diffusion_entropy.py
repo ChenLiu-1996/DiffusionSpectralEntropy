@@ -6,7 +6,6 @@ from glob import glob
 import numpy as np
 import seaborn as sns
 import yaml
-from diffusion_curvature.core import DiffusionMatrix
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
@@ -19,6 +18,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
+from diffusion import DiffusionMatrix
 from log_utils import log
 from path_utils import update_config_dirs
 from seed import seed_everything
@@ -37,7 +37,7 @@ cifar10_int2name = {
 }
 
 
-def von_neumann_entropy(eigs, trivial_thr: float = 0.9):
+def von_neumann_entropy(eigs, trivial_thr: float = 0.9, eps: float = 1e-3):
     eigenvalues = eigs.copy()
 
     eigenvalues = np.array(sorted(eigenvalues)[::-1])
@@ -48,6 +48,8 @@ def von_neumann_entropy(eigs, trivial_thr: float = 0.9):
     # Shift the negative eigenvalue(s).
     if eigenvalues.min() < 0:
         eigenvalues -= eigenvalues.min()
+    # Remove the close-to-zero eigenvalue(s).
+    eigenvalues = eigenvalues[eigenvalues >= eps]
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps
@@ -61,44 +63,50 @@ if __name__ == '__main__':
                         help='Path to config yaml file.',
                         required=True)
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
-    parser.add_argument('--seed', help='random seed.', type=int, default=0)
+    parser.add_argument(
+        '--random_seed',
+        help='Only enter if you want to override the config!!!',
+        type=int,
+        default=None)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
     args = AttributeHashmap(args)
     config = AttributeHashmap(yaml.safe_load(open(args.config)))
     config = update_config_dirs(AttributeHashmap(config))
+    if args.random_seed is not None:
+        config.random_seed = args.random_seed
 
-    seed_everything(args.seed)
+    seed_everything(config.random_seed)
 
     if 'contrastive' in config.keys():
         method_str = config.contrastive
-        x_axis_title = 'model validation accuracy'
     elif 'bad_method' in config.keys():
         method_str = config.bad_method
-        x_axis_title = 'model train/validation divergence'
 
+    # NOTE: Take all the checkpoints for all epochs. Ignore the fixed percentage checkpoints.
     embedding_folders = sorted(
-        glob('%s/embeddings/*%s-%s-*' %
-             (config.output_save_path, config.dataset, method_str)))
+        glob('%s/embeddings/*%s-%s-%s-seed%s-epoch-*' %
+             (config.output_save_path, config.dataset, method_str,
+              config.model, config.random_seed)))
 
     save_root = './results_diffusion_entropy/'
     os.makedirs(save_root, exist_ok=True)
-    save_path_fig_DiffusionEigenvalues = '%s/diffusion-eigenvalues-%s-%s-knn-%s.png' % (
-        save_root, config.dataset, method_str, args.knn)
-    save_path_fig_vne = '%s/diffusion-entropy-%s-%s-knn-%s.png' % (
-        save_root, config.dataset, method_str, args.knn)
-    log_path = '%s/log-%s-%s-knn-%s.txt' % (save_root, config.dataset,
-                                            method_str, args.knn)
+    save_path_fig_vne = '%s/diffusion-entropy-%s-%s-%s-seed%s-knn%s.png' % (
+        save_root, config.dataset, method_str, config.model,
+        config.random_seed, args.knn)
+    log_path = '%s/log-%s-%s-%s-seed%s-knn%s.txt' % (
+        save_root, config.dataset, method_str, config.model,
+        config.random_seed, args.knn)
 
     num_rows = len(embedding_folders)
     vne_thr_list = [0.8, 0.9, 0.95, 0.99, 1.00]
-    x_axis_text, x_axis_value = [], []
+    x_axis_value = []
     vne_stats = {}
-    fig_DiffusionEigenvalues = plt.figure(figsize=(8, 6 * num_rows))
-    fig_vne = plt.figure(figsize=(6, 6))
 
     for i, embedding_folder in enumerate(embedding_folders):
+        x_axis_value.append(int(embedding_folder.split('epoch-')[-1]) + 1)
+
         files = sorted(glob(embedding_folder + '/*'))
         checkpoint_name = os.path.basename(embedding_folder)
         log(checkpoint_name, log_path)
@@ -132,26 +140,23 @@ if __name__ == '__main__':
 
         #
         '''Diffusion Matrix'''
-        save_path_diffusion = '%s/numpy_files/diffusion/diffusion-%s-%s-knn-%s-%s.npz' % (
-            save_root, config.dataset, method_str, args.knn,
-            checkpoint_name.split('_')[-1])
+        save_path_diffusion = '%s/numpy_files/diffusion/diffusion-%s.npz' % (
+            save_root, checkpoint_name)
         os.makedirs(os.path.dirname(save_path_diffusion), exist_ok=True)
         if os.path.exists(save_path_diffusion):
             data_numpy = np.load(save_path_diffusion)
             diffusion_matrix = data_numpy['diffusion_matrix']
             print('Pre-computed diffusion matrix loaded.')
         else:
-            diffusion_matrix = DiffusionMatrix(
-                embeddings, kernel_type="adaptive anisotropic", k=args.knn)
+            diffusion_matrix = DiffusionMatrix(embeddings, k=args.knn)
             with open(save_path_diffusion, 'wb+') as f:
                 np.savez(f, diffusion_matrix=diffusion_matrix)
             print('Diffusion matrix computed.')
 
         #
         '''Diffusion Eigenvalues'''
-        save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s-%s-knn-%s-%s.npz' % (
-            save_root, config.dataset, method_str, args.knn,
-            checkpoint_name.split('_')[-1])
+        save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s.npz' % (
+            save_root, checkpoint_name)
         os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
         if os.path.exists(save_path_eigenvalues):
             data_numpy = np.load(save_path_eigenvalues)
@@ -162,15 +167,6 @@ if __name__ == '__main__':
             with open(save_path_eigenvalues, 'wb+') as f:
                 np.savez(f, eigenvalues_P=eigenvalues_P)
             print('Eigenvalues computed.')
-
-        ax = fig_DiffusionEigenvalues.add_subplot(2 * num_rows, 1, 2 * i + 1)
-        ax.set_title('%s (diffcur adaptive anisotropic P matrix)' %
-                     checkpoint_name)
-        ax.hist(eigenvalues_P, color='w', edgecolor='k')
-        ax = fig_DiffusionEigenvalues.add_subplot(2 * num_rows, 1, 2 * i + 2)
-        sns.boxplot(x=eigenvalues_P, color='skyblue', ax=ax)
-        fig_DiffusionEigenvalues.tight_layout()
-        fig_DiffusionEigenvalues.savefig(save_path_fig_DiffusionEigenvalues)
 
         #
         '''von Neumann Entropy'''
@@ -187,24 +183,20 @@ if __name__ == '__main__':
             else:
                 vne_stats[trivial_thr].append(vne)
 
-        x_axis_text.append(checkpoint_name.split('_')[-1])
-        if '%' in x_axis_text[-1]:
-            x_axis_value.append(int(x_axis_text[-1].split('%')[0]) / 100)
-        else:
-            x_axis_value.append(x_axis_value[-1] + 0.1)
-
-    ax = fig_vne.add_subplot(1, 1, 1)
-    for trivial_thr in vne_thr_list:
-        ax.scatter(x_axis_value, vne_stats[trivial_thr])
-    ax.set_xticks(x_axis_value)
-    ax.set_xticklabels(x_axis_text)
-    ax.spines[['right', 'top']].set_visible(False)
-    # Plot separately to avoid legend mismatch.
-    for trivial_thr in vne_thr_list:
-        ax.plot(x_axis_value, vne_stats[trivial_thr])
-    ax.legend(vne_thr_list, bbox_to_anchor=(1.00, 0.48))
-    fig_vne.suptitle(
-        'von Neumann Entropy at different eigenvalue removal thresholds')
-    fig_vne.supxlabel(x_axis_title)
-    fig_vne.tight_layout()
-    fig_vne.savefig(save_path_fig_vne)
+        fig_vne = plt.figure(figsize=(6, 6))
+        ax = fig_vne.add_subplot(1, 1, 1)
+        for trivial_thr in vne_thr_list:
+            ax.scatter(x_axis_value, vne_stats[trivial_thr])
+        ax.set_xticks(x_axis_value)
+        ax.spines[['right', 'top']].set_visible(False)
+        # Plot separately to avoid legend mismatch.
+        for trivial_thr in vne_thr_list:
+            ax.plot(x_axis_value, vne_stats[trivial_thr])
+        ax.legend(vne_thr_list, bbox_to_anchor=(1.00, 0.48))
+        fig_vne.suptitle(
+            'von Neumann Entropy at different eigenvalue removal thresholds')
+        fig_vne.supxlabel('Epochs trained')
+        fig_vne.supylabel('Diffusion Entropy')
+        fig_vne.tight_layout()
+        fig_vne.savefig(save_path_fig_vne)
+        plt.close(fig=fig_vne)
