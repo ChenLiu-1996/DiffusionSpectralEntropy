@@ -5,8 +5,8 @@ dataset_dir: '$ROOT_DIR/data/cifar10/'
 max_epoch: 500
 patience: 50
 batch_size: 128
-learning_rate: 1e-3
-learning_rate_probing: 1e-6
+learning_rate: 2e-5
+learning_rate_probing: 1e-3
 probing_epoch: 1
 weight_decay: 1e-6
 num_workers: 1
@@ -14,3 +14,6 @@ dataset: 'cifar10'
 contrastive: 'autoencoder'
 random_seed: 2022
 imsize: 32
+code_dim: 30
+gap: 5e-3
+num_saves: 10
