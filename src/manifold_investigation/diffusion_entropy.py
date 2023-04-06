@@ -2,11 +2,13 @@ import argparse
 import os
 import sys
 from glob import glob
+from typing import List
 
 import numpy as np
 import seaborn as sns
 import yaml
 from matplotlib import pyplot as plt
+from scipy.stats import pearsonr, spearmanr
 from tqdm import tqdm
 
 os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
@@ -37,17 +39,25 @@ cifar10_int2name = {
 }
 
 
-def von_neumann_entropy(eigs, trivial_thr: float = 0.9, eps: float = 1e-3):
+def mutual_information(eigs: np.array,
+                       eigs_by_class: List[np.array],
+                       n_by_class: List[int],
+                       eps: float = 1e-3):
+    return NotImplementedError
+
+
+def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
     eigenvalues = eigs.copy()
 
     eigenvalues = np.array(sorted(eigenvalues)[::-1])
 
-    # Drop the biggest eigenvalue(s).
-    eigenvalues = eigenvalues[eigenvalues <= trivial_thr]
+    # Drop the trivial eigenvalue(s).
+    eigenvalues = eigenvalues[eigenvalues <= 1 - eps]
 
-    # Shift the negative eigenvalue(s).
+    # Shift the negative eigenvalue(s) that occurred due to rounding errors.
     if eigenvalues.min() < 0:
         eigenvalues -= eigenvalues.min()
+
     # Remove the close-to-zero eigenvalue(s).
     eigenvalues = eigenvalues[eigenvalues >= eps]
 
@@ -86,7 +96,7 @@ if __name__ == '__main__':
 
     # NOTE: Take all the checkpoints for all epochs. Ignore the fixed percentage checkpoints.
     embedding_folders = sorted(
-        glob('%s/embeddings/*%s-%s-%s-seed%s-epoch-*' %
+        glob('%s/embeddings/%s-%s-%s-seed%s-epoch*' %
              (config.output_save_path, config.dataset, method_str,
               config.model, config.random_seed)))
 
@@ -95,17 +105,20 @@ if __name__ == '__main__':
     save_path_fig_vne = '%s/diffusion-entropy-%s-%s-%s-seed%s-knn%s.png' % (
         save_root, config.dataset, method_str, config.model,
         config.random_seed, args.knn)
+    save_path_fig_vne_corr = '%s/diffusion-entropy-corr-%s-%s-%s-seed%s-knn%s.png' % (
+        save_root, config.dataset, method_str, config.model,
+        config.random_seed, args.knn)
     log_path = '%s/log-%s-%s-%s-seed%s-knn%s.txt' % (
         save_root, config.dataset, method_str, config.model,
         config.random_seed, args.knn)
 
     num_rows = len(embedding_folders)
-    vne_thr_list = [0.8, 0.9, 0.95, 0.99, 1.00]
-    x_axis_value = []
-    vne_stats = {}
+    epoch_list, acc_list, vne_list = [], [], []
 
     for i, embedding_folder in enumerate(embedding_folders):
-        x_axis_value.append(int(embedding_folder.split('epoch-')[-1]) + 1)
+        epoch_list.append(
+            int(embedding_folder.split('epoch')[-1].split('-valAcc')[0]) + 1)
+        acc_list.append(float(embedding_folder.split('-valAcc')[1]))
 
         files = sorted(glob(embedding_folder + '/*'))
         checkpoint_name = os.path.basename(embedding_folder)
@@ -169,34 +182,48 @@ if __name__ == '__main__':
             print('Eigenvalues computed.')
 
         #
-        '''von Neumann Entropy'''
+        '''Diffusion Entropy'''
         log('von Neumann Entropy (diffcur adaptive anisotropic P matrix): ',
             log_path)
-        for trivial_thr in vne_thr_list:
-            vne = von_neumann_entropy(eigenvalues_P, trivial_thr=trivial_thr)
-            log(
-                '    removing eigenvalues > %.2f: entropy = %.4f' %
-                (trivial_thr, vne), log_path)
+        vne = von_neumann_entropy(eigenvalues_P)
+        vne_list.append(vne)
 
-            if trivial_thr not in vne_stats.keys():
-                vne_stats[trivial_thr] = [vne]
-            else:
-                vne_stats[trivial_thr].append(vne)
+        #
+        '''Plotting'''
+        plt.rcParams['font.family'] = 'serif'
 
-        fig_vne = plt.figure(figsize=(6, 6))
+        # Plot of Diffusion Entropy vs. epoch.
+        fig_vne = plt.figure(figsize=(20, 20))
         ax = fig_vne.add_subplot(1, 1, 1)
-        for trivial_thr in vne_thr_list:
-            ax.scatter(x_axis_value, vne_stats[trivial_thr])
-        ax.set_xticks(x_axis_value)
         ax.spines[['right', 'top']].set_visible(False)
-        # Plot separately to avoid legend mismatch.
-        for trivial_thr in vne_thr_list:
-            ax.plot(x_axis_value, vne_stats[trivial_thr])
-        ax.legend(vne_thr_list, bbox_to_anchor=(1.00, 0.48))
-        fig_vne.suptitle(
-            'von Neumann Entropy at different eigenvalue removal thresholds')
-        fig_vne.supxlabel('Epochs trained')
-        fig_vne.supylabel('Diffusion Entropy')
-        fig_vne.tight_layout()
+        ax.scatter(epoch_list, vne_list, c='firebrick', s=120)
+        ax.plot(epoch_list, vne_list, c='firebrick')
+        fig_vne.supylabel('Diffusion Entropy', fontsize=40)
+        fig_vne.supxlabel('Epochs Trained', fontsize=40)
+        ax.tick_params(axis='both', which='major', labelsize=30)
         fig_vne.savefig(save_path_fig_vne)
         plt.close(fig=fig_vne)
+
+        # Plot of Diffusion Entropy vs. Val. Acc.
+        fig_vne_corr = plt.figure(figsize=(20, 20))
+        ax = fig_vne_corr.add_subplot(1, 1, 1)
+        ax.spines[['right', 'top']].set_visible(False)
+        ax.scatter(acc_list, vne_list, c='firebrick', s=120)
+        coef = np.polyfit(acc_list, vne_list, deg=1)
+        poly1d_fn = np.poly1d(coef)
+        fit_x = np.linspace(np.min(acc_list), np.max(acc_list), num=1000)
+        ax.plot(fit_x, poly1d_fn(fit_x), 'k--')
+        fig_vne_corr.supylabel('Diffusion Entropy', fontsize=40)
+        fig_vne_corr.supxlabel('Downstream Classification Accuracy',
+                               fontsize=40)
+        ax.tick_params(axis='both', which='major', labelsize=30)
+        # Display correlation.
+        if len(acc_list) > 1:
+            fig_vne_corr.suptitle(
+                'Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f)' %
+                (pearsonr(acc_list, vne_list)[0], pearsonr(
+                    acc_list, vne_list)[1], spearmanr(acc_list, vne_list)[0],
+                 spearmanr(acc_list, vne_list)[1]),
+                fontsize=40)
+        fig_vne_corr.savefig(save_path_fig_vne_corr)
+        plt.close(fig=fig_vne_corr)

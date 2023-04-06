@@ -310,9 +310,9 @@ def train(config: AttributeHashmap) -> None:
             filepath=log_path,
             to_console=False)
 
-        model_save_path = '%s/%s-%s-%s-seed%s-epoch-%s%s' % (
+        model_save_path = '%s/%s-%s-%s-seed%s-epoch%s-valAcc%.3f%s' % (
             config.checkpoint_dir, config.dataset, config.contrastive,
-            config.model, config.random_seed, str(epoch_idx).zfill(4), '.pth')
+            config.model, config.random_seed, str(epoch_idx).zfill(4), state_dict['val_acc'], '.pth')
         torch.save(model.state_dict(), model_save_path)
         if state_dict['val_acc'] > best_val_acc:
             best_val_acc = state_dict['val_acc']
@@ -474,8 +474,8 @@ def infer(config: AttributeHashmap) -> None:
              (config.checkpoint_dir, config.dataset, config.contrastive,
               config.model, config.random_seed)))
     log_path = '%s/%s-%s-%s-seed%s.log' % (config.log_dir, config.dataset,
-                                       config.contrastive, config.model,
-                                       config.random_seed)
+                                           config.contrastive, config.model,
+                                           config.random_seed)
 
     for checkpoint in tqdm(checkpoint_paths):
         checkpoint_name = checkpoint.split('/')[-1].replace('.pth', '')
@@ -513,7 +513,7 @@ def infer(config: AttributeHashmap) -> None:
 
                 save_numpy(config=config,
                            batch_idx=batch_idx,
-                           checkpoint_name=checkpoint_name,
+                           numpy_filename=checkpoint_name,
                            image_batch=x,
                            label_true_batch=y_true,
                            embedding_batch=h)
@@ -529,7 +529,7 @@ def infer(config: AttributeHashmap) -> None:
     return
 
 
-def save_numpy(config: AttributeHashmap, batch_idx: int, checkpoint_name: str,
+def save_numpy(config: AttributeHashmap, batch_idx: int, numpy_filename: str,
                image_batch: torch.Tensor, label_true_batch: torch.Tensor,
                embedding_batch: torch.Tensor):
 
@@ -540,8 +540,8 @@ def save_numpy(config: AttributeHashmap, batch_idx: int, checkpoint_name: str,
     image_batch = np.moveaxis(image_batch, 1, -1)
 
     # Save the images, labels, and predictions as numpy files for future reference.
-    save_path_numpy = '%s/%s/' % (config.output_save_path, 'embeddings/%s/' %
-                                  (checkpoint_name))
+    save_path_numpy = '%s/embeddings/%s/' % (config.output_save_path,
+                                             numpy_filename)
     os.makedirs(save_path_numpy, exist_ok=True)
 
     with open(

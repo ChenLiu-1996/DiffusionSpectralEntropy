@@ -259,9 +259,10 @@ def train(config: AttributeHashmap) -> None:
             filepath=log_path,
             to_console=False)
 
-        model_save_path = '%s/%s-%s-%s-seed%s-epoch-%s%s' % (
+        model_save_path = '%s/%s-%s-%s-seed%s-epoch%s-valAcc%.3f%s' % (
             config.checkpoint_dir, config.dataset, config.bad_method,
-            config.model, config.random_seed, str(epoch_idx).zfill(4), '.pth')
+            config.model, config.random_seed, str(epoch_idx).zfill(4),
+            state_dict['val_acc'], '.pth')
         torch.save(model.state_dict(), model_save_path)
         if state_dict['divergence'] > biggest_acc_divergence:
             biggest_acc_divergence = state_dict['divergence']
