@@ -13,3 +13,7 @@ testing
 **/*.pkl
 **/*.pth
 **/*.pth.tar
+
+# Slurm
+**/slurm*
+**/bash_*.sh

@@ -35,6 +35,7 @@ conda activate $OUR_CONDA_ENV
 conda install -c anaconda scikit-image pillow matplotlib seaborn tqdm
 python -m pip install -U giotto-tda
 python -m pip install POT torch-optimizer
+python -m pip install tinyimagenet
 cd diffusion_curvature
 python -m pip install .
 ```
@@ -52,6 +53,17 @@ python test_run_model.py --model swav
 python test_run_model.py --model vicreg
 ```
 </details>
+
+### Dataset
+Most datasets (MNIST, CIFAR10, CIFAR100, STL10) can be directly downloaded via the torchvision API as you run the training code. However, for the following datasets, additional effort is required.
+
+### ImageNet data
+```
+cd data/
+mkdir imagenet && cd imagenet
+wget https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_train.tar
+wget https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar
+```
 
 ### Preparing pretrained weights of external models.
 <details> <summary>Barlow Twins</summary>
