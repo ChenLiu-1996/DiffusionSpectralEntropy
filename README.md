@@ -36,36 +36,38 @@ conda install -c anaconda scikit-image pillow matplotlib seaborn tqdm
 python -m pip install -U giotto-tda
 python -m pip install POT torch-optimizer
 python -m pip install tinyimagenet
+python -m pip install natsort
 cd diffusion_curvature
 python -m pip install .
 ```
 
 ### Usage.
-<details> <summary>Unit Test. Run the pretrained models.</summary>
-
-```
-$OUR_CONDA_ENV
-cd src/unit_test/
-python test_run_model.py --model barlowtwins
-python test_run_model.py --model moco
-python test_run_model.py --model simsiam
-python test_run_model.py --model swav
-python test_run_model.py --model vicreg
-```
-</details>
 
 ### Dataset
 Most datasets (MNIST, CIFAR10, CIFAR100, STL10) can be directly downloaded via the torchvision API as you run the training code. However, for the following datasets, additional effort is required.
 
 ### ImageNet data
+NOTE: In order to download the images using wget, you need to first request access from http://image-net.org/download-images.
 ```
 cd data/
 mkdir imagenet && cd imagenet
 wget https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_train.tar
 wget https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar
+wget https://image-net.org/data/ILSVRC/2012/ILSVRC2012_devkit_t12.tar.gz
+
+#### The following lines are instructions from Facebook Research. https://github.com/facebookarchive/fb.resnet.torch/blob/master/INSTALL.md#download-the-imagenet-dataset.
+mkdir train && mv ILSVRC2012_img_train.tar train/ && cd train
+tar -xvf ILSVRC2012_img_train.tar && rm -f ILSVRC2012_img_train.tar
+find . -name "*.tar" | while read NAME ; do mkdir -p "${NAME%.tar}"; tar -xvf "${NAME}" -C "${NAME%.tar}"; rm -f "${NAME}"; done
+cd ..
+
+mkdir val && mv ILSVRC2012_img_val.tar val/ && cd val && tar -xvf ILSVRC2012_img_val.tar
+wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/valprep.sh | bash
+
 ```
 
 ### Preparing pretrained weights of external models.
+NOTE: This is no longer very relevant. We prepared these but we later shifted our research focus.
 <details> <summary>Barlow Twins</summary>
 
 ```
@@ -124,6 +126,20 @@ wget -O vicreg_bs2048_ep100.pth.tar https://dl.fbaipublicfiles.com/vicreg/resnet
 ```
 </details>
 
+<details> <summary>Unit Test. Run the pretrained models.</summary>
+
+```
+$OUR_CONDA_ENV
+cd src/unit_test/
+python test_run_model.py --model barlowtwins
+python test_run_model.py --model moco
+python test_run_model.py --model simsiam
+python test_run_model.py --model swav
+python test_run_model.py --model vicreg
+```
+</details>
+
+
 ### Train our Supervised vs Contrastive encoders.
 Using (MNIST + Supervised) as an example.
 ```
@@ -132,15 +148,13 @@ python train_embeddings.py --mode train --config ./config/mnist_supervised.yaml
 ```
 
 ### Analysis
-Using (MNIST + Supervised) as an example.
+Using (MNIST + Supervised + ResNet50) as an example.
 ```
 cd src/manifold_investigation
 
-python visualize_embeddings.py --config ../embedding_preparation/config/mnist_supervised.yaml
-
-python diffusion_characteristics.py --config ../embedding_preparation/config/mnist_supervised.yaml
-
-python diffusion_entropy.py --config ../embedding_preparation/config/mnist_supervised.yaml
+python diffusion_entropy.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml
 
 python diffusion_entropy_PublicModels.py --dataset mnist
+
+python extrema_distance.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml
 ```

@@ -5,8 +5,8 @@ dataset_dir: '$ROOT_DIR/data/tinyimagenet/'
 model: 'resnet50'
 max_epoch: 500
 patience: 50
-batch_size: 16
-learning_rate: 1e-2
+batch_size: 128
+learning_rate: 2e-2
 weight_decay: 1e-4
 num_workers: 4
 dataset: 'tinyimagenet'
