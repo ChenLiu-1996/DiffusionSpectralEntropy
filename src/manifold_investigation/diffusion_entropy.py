@@ -196,8 +196,8 @@ if __name__ == '__main__':
         fig_vne = plt.figure(figsize=(20, 20))
         ax = fig_vne.add_subplot(1, 1, 1)
         ax.spines[['right', 'top']].set_visible(False)
-        ax.scatter(epoch_list, vne_list, c='firebrick', s=120)
-        ax.plot(epoch_list, vne_list, c='firebrick')
+        ax.scatter(epoch_list, vne_list, c='mediumblue', s=120)
+        ax.plot(epoch_list, vne_list, c='mediumblue')
         fig_vne.supylabel('Diffusion Entropy', fontsize=40)
         fig_vne.supxlabel('Epochs Trained', fontsize=40)
         ax.tick_params(axis='both', which='major', labelsize=30)
@@ -208,11 +208,12 @@ if __name__ == '__main__':
         fig_vne_corr = plt.figure(figsize=(20, 20))
         ax = fig_vne_corr.add_subplot(1, 1, 1)
         ax.spines[['right', 'top']].set_visible(False)
-        ax.scatter(acc_list, vne_list, c='firebrick', s=120)
-        coef = np.polyfit(acc_list, vne_list, deg=1)
-        poly1d_fn = np.poly1d(coef)
-        fit_x = np.linspace(np.min(acc_list), np.max(acc_list), num=1000)
-        ax.plot(fit_x, poly1d_fn(fit_x), 'k--')
+        ax.scatter(acc_list,
+                   vne_list,
+                   facecolors='none',
+                   edgecolors='mediumblue',
+                   s=500,
+                   linewidths=5)
         fig_vne_corr.supylabel('Diffusion Entropy', fontsize=40)
         fig_vne_corr.supxlabel('Downstream Classification Accuracy',
                                fontsize=40)
