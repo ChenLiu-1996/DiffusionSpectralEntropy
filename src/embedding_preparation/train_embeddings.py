@@ -127,73 +127,50 @@ def get_dataloaders(
                                                 mean=dataset_mean,
                                                 std=dataset_std)
 
-    if config.dataset in ['mnist', 'cifar10', 'cifar100', 'tinyimagenet']:
-        # Fixed image resolution
-        transform_val = torchvision.transforms.Compose([
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(mean=dataset_mean,
-                                             std=dataset_std)
-        ])
-    elif config.dataset in ['imagenet']:
-        # Variable image resolution
-        transform_val = torchvision.transforms.Compose([
-            torchvision.transforms.CenterCrop(imsize),
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(mean=dataset_mean,
-                                             std=dataset_std)
-        ])
+    transform_val = torchvision.transforms.Compose([
+        torchvision.transforms.CenterCrop(imsize),
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize(mean=dataset_mean, std=dataset_std)
+    ])
 
     if config.dataset in ['mnist', 'cifar10', 'cifar100']:
-        train_loader = torch.utils.data.DataLoader(
-            torchvision_dataset(config.dataset_dir,
-                                train=True,
-                                download=True,
-                                transform=transform_train),
-            batch_size=config.batch_size,
-            num_workers=config.num_workers,
-            shuffle=True)
-        val_loader = torch.utils.data.DataLoader(
-            torchvision_dataset(config.dataset_dir,
-                                train=False,
-                                download=True,
-                                transform=transform_val),
-            batch_size=config.batch_size,
-            num_workers=config.num_workers,
-            shuffle=False)
+        train_dataset = torchvision_dataset(config.dataset_dir,
+                                            train=True,
+                                            download=True,
+                                            transform=transform_train)
+        val_dataset = torchvision_dataset(config.dataset_dir,
+                                          train=False,
+                                          download=True,
+                                          transform=transform_val)
 
     elif config.dataset in ['stl10']:
-        train_loader = torch.utils.data.DataLoader(
-            torchvision_dataset(config.dataset_dir,
-                                split='train',
-                                download=True,
-                                transform=transform_train),
-            batch_size=config.batch_size,
-            num_workers=config.num_workers,
-            shuffle=True)
-        val_loader = torch.utils.data.DataLoader(
-            torchvision_dataset(config.dataset_dir,
-                                split='test',
-                                download=True,
-                                transform=transform_val),
-            batch_size=config.batch_size,
-            num_workers=config.num_workers,
-            shuffle=False)
+        train_dataset = torchvision_dataset(config.dataset_dir,
+                                            split='train',
+                                            download=True,
+                                            transform=transform_train)
+        val_dataset = torchvision_dataset(config.dataset_dir,
+                                          split='test',
+                                          download=True,
+                                          transform=transform_val)
 
     elif config.dataset in ['tinyimagenet', 'imagenet']:
-        train_loader = torch.utils.data.DataLoader(
-            torchvision_dataset(config.dataset_dir,
-                                split='train',
-                                transform=transform_train),
-            batch_size=config.batch_size,
-            num_workers=config.num_workers,
-            shuffle=True)
-        val_loader = torch.utils.data.DataLoader(
-            torchvision_dataset(config.dataset_dir,
-                                split='val',
-                                transform=transform_val),
-            batch_size=config.batch_size,
-            num_workers=config.num_workers,
-            shuffle=False)
+        train_dataset = torchvision_dataset(config.dataset_dir,
+                                            split='train',
+                                            transform=transform_train)
+        val_dataset = torchvision_dataset(config.dataset_dir,
+                                          split='val',
+                                          transform=transform_val)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=config.batch_size,
+                                               num_workers=config.num_workers,
+                                               shuffle=True,
+                                               pin_memory=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset,
+                                             batch_size=config.batch_size,
+                                             num_workers=config.num_workers,
+                                             shuffle=False,
+                                             pin_memory=True)
 
     return (train_loader, val_loader), config
 
