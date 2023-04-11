@@ -5,7 +5,6 @@ from glob import glob
 from typing import List
 
 import numpy as np
-import seaborn as sns
 import yaml
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr, spearmanr
@@ -187,6 +186,7 @@ if __name__ == '__main__':
             log_path)
         vne = von_neumann_entropy(eigenvalues_P)
         vne_list.append(vne)
+        log('Diffusion Entropy = %.4f' % vne, log_path)
 
         #
         '''Plotting'''
