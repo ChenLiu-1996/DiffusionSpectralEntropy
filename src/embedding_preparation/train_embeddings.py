@@ -21,6 +21,7 @@ from models import get_model
 from path_utils import update_config_dirs
 from seed import seed_everything
 from simclr import NTXentLoss, SingleInstanceTwoView
+from save_utils import save_numpy
 
 
 def print_state_dict(state_dict: dict) -> str:
@@ -552,32 +553,6 @@ def infer(config: AttributeHashmap) -> None:
             log('#correct by class:', filepath=log_path, to_console=True)
             log(str(correct_by_class), filepath=log_path, to_console=True)
 
-    return
-
-
-def save_numpy(config: AttributeHashmap, batch_idx: int, numpy_filename: str,
-               image_batch: torch.Tensor, label_true_batch: torch.Tensor,
-               embedding_batch: torch.Tensor):
-
-    image_batch = image_batch.cpu().detach().numpy()
-    label_true_batch = label_true_batch.cpu().detach().numpy()
-    embedding_batch = embedding_batch.cpu().detach().numpy()
-    # channel-first to channel-last
-    image_batch = np.moveaxis(image_batch, 1, -1)
-
-    # Save the images, labels, and predictions as numpy files for future reference.
-    save_path_numpy = '%s/embeddings/%s/' % (config.output_save_path,
-                                             numpy_filename)
-    os.makedirs(save_path_numpy, exist_ok=True)
-
-    with open(
-            '%s/%s' %
-        (save_path_numpy, 'batch_%s.npz' % str(batch_idx).zfill(5)),
-            'wb+') as f:
-        np.savez(f,
-                 image=image_batch,
-                 label_true=label_true_batch,
-                 embedding=embedding_batch)
     return
 
 

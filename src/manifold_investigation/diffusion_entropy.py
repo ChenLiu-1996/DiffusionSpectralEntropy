@@ -158,9 +158,15 @@ if __name__ == '__main__':
         if os.path.exists(save_path_diffusion):
             data_numpy = np.load(save_path_diffusion)
             diffusion_matrix = data_numpy['diffusion_matrix']
+            print(checkpoint_name)
             print('Pre-computed diffusion matrix loaded.')
+            diffusion_matrix = diffusion_matrix.astype(np.float16)
+            with open(save_path_diffusion, 'wb+') as f:
+                np.savez(f, diffusion_matrix=diffusion_matrix)
+            print('Diffusion matrix re-saved.')
         else:
             diffusion_matrix = DiffusionMatrix(embeddings, k=args.knn)
+            diffusion_matrix = diffusion_matrix.astype(np.float16)
             with open(save_path_diffusion, 'wb+') as f:
                 np.savez(f, diffusion_matrix=diffusion_matrix)
             print('Diffusion matrix computed.')
@@ -174,8 +180,13 @@ if __name__ == '__main__':
             data_numpy = np.load(save_path_eigenvalues)
             eigenvalues_P = data_numpy['eigenvalues_P']
             print('Pre-computed eigenvalues loaded.')
+            eigenvalues_P = eigenvalues_P.astype(np.float16)
+            with open(save_path_eigenvalues, 'wb+') as f:
+                np.savez(f, eigenvalues_P=eigenvalues_P)
+            print('Eigenvalues re-saved.')
         else:
             eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+            eigenvalues_P = eigenvalues_P.astype(np.float16)
             with open(save_path_eigenvalues, 'wb+') as f:
                 np.savez(f, eigenvalues_P=eigenvalues_P)
             print('Eigenvalues computed.')

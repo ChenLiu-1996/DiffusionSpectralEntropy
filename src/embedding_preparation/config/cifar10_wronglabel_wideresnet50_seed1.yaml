@@ -3,8 +3,8 @@ log_dir: '$ROOT_DIR/src/embedding_preparation/logs/'
 output_save_path: '$ROOT_DIR/src/embedding_preparation/results/'
 dataset_dir: '$ROOT_DIR/data/cifar10/'
 model: 'wideresnet50'
-max_epoch: 500
-patience: 50
+max_epoch: 300
+patience: 30
 batch_size: 256
 learning_rate: 1e-4
 weight_decay: 1e-8
