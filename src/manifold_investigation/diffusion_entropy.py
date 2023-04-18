@@ -2,7 +2,6 @@ import argparse
 import os
 import sys
 from glob import glob
-from typing import List
 
 import numpy as np
 import yaml
@@ -23,6 +22,7 @@ from diffusion import DiffusionMatrix
 from log_utils import log
 from path_utils import update_config_dirs
 from seed import seed_everything
+from characteristics import von_neumann_entropy
 
 cifar10_int2name = {
     0: 'airplane',
@@ -38,6 +38,7 @@ cifar10_int2name = {
 }
 
 
+<<<<<<< HEAD
 def mutual_information(eigs: np.array,
                        eigs_by_class: List[np.array],
                        n_by_class: List[int],
@@ -77,6 +78,8 @@ def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
     return -np.sum(prob * np.log(prob))
 
 
+=======
+>>>>>>> 6134a2a (refactoring and updated public models)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
@@ -84,7 +87,7 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
     parser.add_argument(
-        '--random_seed',
+        '--random-seed',
         help='Only enter if you want to override the config!!!',
         type=int,
         default=None)

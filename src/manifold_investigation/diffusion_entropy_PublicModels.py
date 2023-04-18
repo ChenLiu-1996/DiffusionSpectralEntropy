@@ -4,10 +4,10 @@ import sys
 from typing import List, Tuple, Union
 
 import numpy as np
-import seaborn as sns
 import torch
 import torchvision
 from diffusion_curvature.core import DiffusionMatrix
+from matplotlib import cm
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr, spearmanr
 from tqdm import tqdm
@@ -23,34 +23,17 @@ sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
 from seed import seed_everything
 
-sys.path.insert(0, import_dir + '/external_model_loader/')
+sys.path.insert(0, import_dir + '/nn/external_model_loader/')
 from barlowtwins_model import BarlowTwinsModel
+from characteristics import von_neumann_entropy
 from moco_model import MoCoModel
 from simsiam_model import SimSiamModel
 from swav_model import SwavModel
 from vicreg_model import VICRegModel
 
 
-def von_neumann_entropy(eigs, trivial_thr: float = 0.9):
-    eigenvalues = eigs.copy()
-
-    eigenvalues = np.array(sorted(eigenvalues)[::-1])
-
-    # Drop the biggest eigenvalue(s).
-    eigenvalues = eigenvalues[eigenvalues <= trivial_thr]
-
-    # Shift the negative eigenvalue(s).
-    if eigenvalues.min() < 0:
-        eigenvalues -= eigenvalues.min()
-
-    prob = eigenvalues / eigenvalues.sum()
-    prob = prob + np.finfo(float).eps
-
-    return -np.sum(prob * np.log(prob))
-
-
 def compute_diffusion_entropy(embeddings: torch.Tensor, args: AttributeHashmap,
-                              vne_thr_list: List[float], eig_npy_path: str):
+                              eig_npy_path: str) -> float:
 
     if os.path.exists(eig_npy_path):
         data_numpy = np.load(eig_npy_path)
@@ -71,12 +54,9 @@ def compute_diffusion_entropy(embeddings: torch.Tensor, args: AttributeHashmap,
             np.savez(f, eigenvalues_P=eigenvalues_P)
 
     # von Neumann Entropy
-    vne_list = []
-    for trivial_thr in vne_thr_list:
-        vne = von_neumann_entropy(eigenvalues_P, trivial_thr=trivial_thr)
-        vne_list.append(vne)
+    vne = von_neumann_entropy(eigenvalues_P)
 
-    return vne_list
+    return vne
 
 
 def get_dataloaders(
@@ -191,13 +171,12 @@ def probe_model(args: AttributeHashmap,
                 model: torch.nn.Module, device: torch.device,
                 loss_fn_classification: torch.nn.Module, model_path: str):
 
+    model.train()
     model.freeze_all()
     model.init_and_unfreeze_linear()
 
     opt_probing = torch.optim.AdamW(list(model.linear_parameters()),
                                     lr=float(args.learning_rate_probing))
-    scheduler_probing = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt_probing, T_max=args.probing_epoch, eta_min=0)
 
     for epoch_idx in range(args.probing_epoch):
         probing_acc = linear_probing_epoch(
@@ -207,7 +186,6 @@ def probe_model(args: AttributeHashmap,
             device=device,
             opt_probing=opt_probing,
             loss_fn_classification=loss_fn_classification)
-        scheduler_probing.step()
         print('Probing epoch: %d, acc: %.3f' % (epoch_idx, probing_acc))
 
     model.eval()
@@ -220,7 +198,6 @@ def linear_probing_epoch(args: AttributeHashmap,
                          model: torch.nn.Module, device: torch.device,
                          opt_probing: torch.optim.Optimizer,
                          loss_fn_classification: torch.nn.Module):
-    model.train()
     correct, total_count = 0, 0
     for _, (x, y_true) in enumerate(tqdm(train_loader)):
         B = x.shape[0]
@@ -230,9 +207,7 @@ def linear_probing_epoch(args: AttributeHashmap,
             x = x.repeat(1, 3, 1, 1)
         x, y_true = x.to(device), y_true.to(device)
 
-        with torch.no_grad():
-            h = model.encode(x)
-        y_pred = model.linear(h)
+        y_pred = model.forward(x)
         loss = loss_fn_classification(y_pred, y_true)
         correct += torch.sum(torch.argmax(y_pred, dim=-1) == y_true).item()
         total_count += B
@@ -262,8 +237,7 @@ def infer_model(val_loader: torch.utils.data.DataLoader,
                 x = x.repeat(1, 3, 1, 1)
             x, y_true = x.to(device), y_true.to(device)
 
-            h = model.encode(x)
-            y_pred = model.linear(h)
+            y_pred = model.forward(x)
             correct += torch.sum(torch.argmax(y_pred, dim=-1) == y_true).item()
             total_count += B
 
@@ -309,7 +283,7 @@ def diffusion_entropy(args: AttributeHashmap):
         'swav': [72.7, 74.3, 72.1, 73.9, 74.6, 75.3],
         'vicreg': [73.2],
     }
-    summary = {'vne_thr_list': [0.5, 0.7, 0.9, 0.95, 0.99, 1.00]}
+    summary = {}
 
     for model_name in __models:
         for i, version in enumerate(__versions[model_name]):
@@ -362,27 +336,22 @@ def diffusion_entropy(args: AttributeHashmap):
                             x = x.repeat(1, 3, 1, 1)
                         x, y_true = x.to(device), y_true.to(device)
 
-                        _ = model.forward(x)
-                        embedding_dict = model.fetch_latent()
                         # shape: [B, d, 1, 1]
-                        embedding_vec = embedding_dict['avgpool'].cpu().detach(
-                        ).numpy()
+                        embedding_vec = model.encode(x).cpu().detach().numpy()
                         # shape: [B, d]
                         embedding_vec = embedding_vec.reshape(
                             embedding_vec.shape[:2])
                         embeddings.append(embedding_vec)
 
                 embeddings = np.concatenate(embeddings)
+                embeddings = embeddings.astype(np.float16)
                 print('Embeddings computed.')
 
                 with open(embedding_npy_path, 'wb+') as f:
                     np.savez(f, embeddings=embeddings)
 
-            summary[version]['vne_list'] = compute_diffusion_entropy(
-                embeddings,
-                args,
-                summary['vne_thr_list'],
-                eig_npy_path=eig_npy_path)
+            summary[version]['vne'] = compute_diffusion_entropy(
+                embeddings=embeddings, args=args, eig_npy_path=eig_npy_path)
 
             linear_probing_model_path = '%s/%s_LinearProbeModel.pt' % (
                 pt_folder, version)
@@ -435,22 +404,24 @@ def normalize(
 
 def plot_summary(summary: dict, fig_prefix: str = None):
     version_list, vne_list, acc_list_nominal, acc_list_actual = [], [], [], []
-    vne_thr_list = summary['vne_thr_list']
 
     fig_vne = plt.figure(figsize=(10, 8))
-    fig_corr = plt.figure(figsize=(8, 6 * len(vne_thr_list)))
-
     ax = fig_vne.add_subplot(1, 1, 1)
     for key in summary.keys():
-        if key == 'vne_thr_list':
-            continue
         version = key
         version_list.append(version)
-        vne_list.append(summary[version]['vne_list'])
+        vne_list.append(summary[version]['vne'])
         acc_list_nominal.append(summary[version]['top1_acc_nominal'])
         acc_list_actual.append(summary[version]['top1_acc_actual'])
 
-    vne_array = np.array(vne_list)
+    # This hashmap ensures the same model (different epochs) share the same color.
+    model_color_map = {}
+    unique_model_names = np.unique(
+        [item.split('_ep')[0] for item in version_list])
+    for i, name in enumerate(unique_model_names):
+        model_color_map[name] = cm.rainbow(i / len(unique_model_names))
+
+    vne_list = np.array(vne_list)
     acc_list_nominal = np.array(acc_list_nominal)
     acc_list_actual = np.array(acc_list_actual)
     scaled_acc_nominal = normalize(
@@ -460,10 +431,10 @@ def plot_summary(summary: dict, fig_prefix: str = None):
         acc_list_actual, dynamic_range=[np.min(vne_list),
                                         np.max(vne_list)])
 
-    ax.plot(version_list, vne_array)
-    ax.legend(vne_thr_list)
-    ax.scatter(version_list, scaled_acc_nominal, color='grey')
-    ax.scatter(version_list, scaled_acc_actual, color='skyblue')
+    ax.scatter(version_list, scaled_acc_nominal, color='mediumblue')
+    ax.scatter(version_list, scaled_acc_actual, color='firebrick')
+    ax.legend(['nominal acc', 'classifier finetune acc'])
+    ax.plot(version_list, vne_list, 'k--')
     ax.set_xticks(np.arange(len(version_list)))
     ax.set_xticklabels(version_list, rotation=90)
     ax.spines[['right', 'top']].set_visible(False)
@@ -471,26 +442,43 @@ def plot_summary(summary: dict, fig_prefix: str = None):
     fig_vne.tight_layout()
     fig_vne.savefig(fig_prefix + '-vne.png')
 
-    for thr_idx in range(len(vne_thr_list)):
-        ax = fig_corr.add_subplot(len(vne_thr_list), 1, thr_idx + 1)
-        ax.scatter(acc_list_actual, vne_array[..., thr_idx])
-        pearson_r, pearson_p = pearsonr(acc_list_actual, vne_array[...,
-                                                                   thr_idx])
-        spearman_r, spearman_p = spearmanr(acc_list_actual, vne_array[...,
-                                                                      thr_idx])
-        ax.set_title(
-            '[Diffusion Entropy] removing eigenvalues > %s \nP.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)'
-            % (vne_thr_list[thr_idx], pearson_r, pearson_p, spearman_r,
-               spearman_p))
-        # ax.set_xticks(acc_list_actual)
-        # ax.set_xticklabels(version_list, rotation=90)
-        for i in range(len(version_list)):
-            ax.annotate(
-                version_list[i], (acc_list_actual[i], vne_array[i, thr_idx]),
-                xytext=(acc_list_actual[i] - 5.0, vne_array[i, thr_idx] - 0.5),
-                arrowprops=dict(arrowstyle="->",
-                                connectionstyle="angle3,angleA=0,angleB=-90"))
-        ax.spines[['right', 'top']].set_visible(False)
+    fig_corr = plt.figure(figsize=(16, 8))
+    ax = fig_corr.add_subplot(1, 2, 1)
+    pearson_r, pearson_p = pearsonr(vne_list, acc_list_actual)
+    spearman_r, spearman_p = spearmanr(vne_list, acc_list_actual)
+    ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
+                 (pearson_r, pearson_p, spearman_r, spearman_p))
+    ax.set_xlabel('Diffusion Entropy')
+    ax.set_ylabel('Linear Probing Accuracy')
+
+    # Plot the performances:
+    # same model name: same color
+    # different epochs trained : different size
+    for i in range(len(version_list)):
+        ax.scatter(vne_list[i],
+                   acc_list_actual[i],
+                   c=model_color_map[version_list[i].split('_ep')[0]],
+                   s=int(version_list[i].split('_ep')[1]) / 5,
+                   cmap='tab20')
+    ax.legend(version_list)
+    ax.spines[['right', 'top']].set_visible(False)
+
+    ax = fig_corr.add_subplot(1, 2, 2)
+    pearson_r, pearson_p = pearsonr(acc_list_nominal, acc_list_actual)
+    spearman_r, spearman_p = spearmanr(acc_list_nominal, acc_list_actual)
+    ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
+                 (pearson_r, pearson_p, spearman_r, spearman_p))
+    ax.set_xlabel('Nominal Accuracy')
+    ax.set_ylabel('Linear Probing Accuracy')
+
+    for i in range(len(version_list)):
+        ax.scatter(acc_list_nominal[i],
+                   acc_list_actual[i],
+                   c=model_color_map[version_list[i].split('_ep')[0]],
+                   s=int(version_list[i].split('_ep')[1]) / 5,
+                   cmap='tab20')
+    ax.legend(version_list)
+    ax.spines[['right', 'top']].set_visible(False)
 
     fig_corr.tight_layout()
     fig_corr.savefig(fig_prefix + '-correlation.png')
@@ -509,9 +497,9 @@ if __name__ == '__main__':
                         default='mnist')
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
     parser.add_argument('--seed', help='random seed.', type=int, default=0)
-    parser.add_argument('--batch-size', type=int, default=256)
+    parser.add_argument('--batch-size', type=int, default=512)
     parser.add_argument('--num-workers', type=int, default=1)
-    parser.add_argument('--learning_rate_probing', type=float, default=1e-1)
+    parser.add_argument('--learning_rate_probing', type=float, default=5e-4)
     parser.add_argument('--probing_epoch', type=int, default=100)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)

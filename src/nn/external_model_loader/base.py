@@ -1,11 +1,11 @@
 import os
 import sys
-from typing import List
+from typing import Dict, List
 
 import torch
 import torchvision.models as models
 
-import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
+import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-3])
 sys.path.insert(0, import_dir + '/utils')
 from log_utils import log
 
@@ -53,7 +53,7 @@ class BaseModel(object):
                 (version, self.__versions))
 
         # Define pretrained model path and some hyperparams.
-        root = '/'.join(os.path.realpath(__file__).split('/')[:-3])
+        root = '/'.join(os.path.realpath(__file__).split('/')[:-4])
         self.pretrained = root + \
             '/external_src/%s/checkpoints/ImageNet/%s.pth.tar' % (
                 self.model_name, version)
@@ -63,59 +63,52 @@ class BaseModel(object):
         log('`%s.__init__()`: creating model %s' %
             (self.model_class_name, self.arch),
             to_console=True)
-        self.model = models.__dict__[self.arch]()
-        self.model.to(self.device)
+        self.encoder = models.__dict__[self.arch]()
+        self.encoder.to(self.device)
 
-        # Register hook to allow accessing of latent outputs.
-        self.track_latent()
-
-        # Add a linear layer for linear probing.
-        self.model.linear = torch.nn.Linear(
-            in_features=self.model.fc.in_features,
-            out_features=self.num_classes).to(self.device)
-        for name, param in self.model.named_parameters():
-            if name in ['linear.weight', 'linear.bias']:
-                param.requires_grad = False
+        # Add a new linear layer for linear probing.
+        # Then remove the original final linear layer.
+        self.linear = torch.nn.Linear(in_features=self.encoder.fc.in_features,
+                                      out_features=self.num_classes).to(
+                                          self.device)
+        self.encoder.fc = torch.nn.Identity()
 
     def freeze_all(self) -> None:
         '''
         Freeze all layers.
         '''
-        for _, param in self.model.named_parameters():
+        for _, param in self.encoder.named_parameters():
+            param.requires_grad = False
+        for _, param in self.linear.named_parameters():
             param.requires_grad = False
 
     def unfreeze_all(self) -> None:
         '''
         Unfreeze all layers.
         '''
-        for _, param in self.model.named_parameters():
+        for _, param in self.encoder.named_parameters():
+            param.requires_grad = True
+        for _, param in self.linear.named_parameters():
             param.requires_grad = True
 
     def init_and_unfreeze_linear(self) -> None:
 
-        self.model.linear.weight.data.normal_(mean=0.0, std=0.01)
-        self.model.linear.bias.data.zero_()
-        for name, param in self.model.named_parameters():
-            if name in ['linear.weight', 'linear.bias']:
-                param.requires_grad = True
+        self.linear.weight.data.normal_(mean=0.0, std=0.01)
+        self.linear.bias.data.zero_()
+        self.linear.weight.requires_grad = True
+        self.linear.bias.requires_grad = True
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         '''
         Forwards through network, except for the final linear layer.
         '''
-        x = self.__transform_inputs(x)
-        _ = self.model(x)
-        latent_outputs = self.fetch_latent()
-        h = latent_outputs['avgpool']
+        h = self.encoder(x)
         h = h.view(h.shape[0], -1)
         return h
 
-    def linear(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model.linear(x)
-
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
-        Forwards input through network
+        Forwards input through network, including the added linear layer.
 
         Arg(s):
             x : torch.Tensor[float32]
@@ -123,89 +116,29 @@ class BaseModel(object):
         Returns:
             torch.Tensor[float32] : B x C' x H' x W'
         '''
-        x = self.__transform_inputs(x)
-        h = self.model.encoder(x)
-        z = self.model.fc(h)
+        h = self.encode(x)
+        z = self.linear(h)
         return z
 
-    def __transform_inputs(self, _in: torch.Tensor) -> torch.Tensor:
+    def encoder_parameters(self) -> List[torch.Tensor]:
         '''
-        Transforms the inputs based on specified by model
-
-        Arg(s):
-            _in : torch.Tensor[float32]
-                B x C x H x W input tensor
-        Returns:
-            torch.Tensor[float32] : B x C x H x W tensor
-        '''
-        return _in
-
-    def __track_latent(self, name: str) -> torch.utils.hooks.RemovableHandle:
-        '''
-        Extracting Intermediate Layer Outputs.
-        Code adapted from
-        https://www.kaggle.com/code/mohammaddehghan/pytorch-extracting-intermediate-layer-outputs
-        https://kozodoi.me/python/deep%20learning/pytorch/tutorial/2021/05/27/extracting-features.html
-        '''
-
-        if not hasattr(self, 'latent_embeddings'):
-            # A hashmap (key, value) to store the latent outputs.
-            # key: layer name; value: layer output.
-            self.latent_embeddings = {}
-
-        def hook(model, input, output):
-            self.latent_embeddings[name] = output.detach()
-
-        return hook
-
-    def track_latent(self) -> None:
-        '''
-        Register hook to allow accessing of latent outputs.
-        '''
-        # ResNet has the following sequential layers.
-        # [conv1. bn1, relu, maxpool, layer1, layer2, layer3, layer4,
-        #  avgpool, flatten, fc]
-        # We will take latents from `layer4` and `avgpool`.
-        # Note `layer4` is a composite layer itself.
-        for name, module in self.model.layer4._modules.items():
-            module.register_forward_hook(
-                self.__track_latent('layer4_%s' % name))
-        for name, module in self.model._modules.items():
-            if 'avgpool' in name:
-                module.register_forward_hook(self.__track_latent(name))
-
-    def fetch_latent(self) -> torch.Tensor:
-        '''
-        Fetches latent from network
-
-        Returns:
-            torch.Tensor[float32]: latent vector
-        '''
-
-        return self.latent_embeddings
-
-    def parameters(self) -> List[torch.Tensor]:
-        '''
-        Returns the list of parameters in the model
+        Returns the list of parameters in the encoder
 
         Returns:
             list[torch.Tensor[float32]] : list of parameters
         '''
 
-        return self.model.parameters()
+        return list(self.encoder.parameters())
 
     def linear_parameters(self) -> List[torch.Tensor]:
-        return self.model.linear.parameters()
-
-    def named_parameters(self) -> dict[str, torch.Tensor]:
         '''
-        Returns the list of named parameters in the model
+        Returns the list of parameters in the linear layer
 
         Returns:
-            dict[str, torch.Tensor[float32]] : list of parameters
+            list[torch.Tensor[float32]] : list of parameters
         '''
 
-        return self.model.named_parameters()
+        return list(self.linear.parameters())
 
     def train(self) -> None:
         '''
@@ -216,14 +149,16 @@ class BaseModel(object):
                 if set, then only sets the train flag, but not mode
         '''
 
-        return self.model.train()
+        self.encoder.train()
+        self.linear.train()
 
     def eval(self) -> None:
         '''
         Sets model to evaluation mode
         '''
 
-        return self.model.eval()
+        self.encoder.eval()
+        self.linear.eval()
 
     def save_model(self, save_path: str) -> None:
         '''
@@ -233,8 +168,18 @@ class BaseModel(object):
             save_path : str
                 path to model weights
         '''
+        if isinstance(self.model, torch.nn.DataParallel):
+            checkpoint = {
+                'state_dict_encoder': self.encoder.module.state_dict(),
+                'state_dict_linear': self.linear.module.state_dict(),
+            }
+        else:
+            checkpoint = {
+                'state_dict_encoder': self.encoder.state_dict(),
+                'state_dict_linear': self.linear.state_dict(),
+            }
 
-        torch.save(self.model.state_dict(), save_path)
+        torch.save(checkpoint, save_path)
 
     def restore_model(self,
                       restore_path: str = None,
@@ -268,7 +213,7 @@ class BaseModel(object):
             else:
                 state_dict = checkpoint
 
-            # Rename pre-trained keys.
+            # Rename pre-trained keys for some models.
             if rename_key is not None:
                 for k in list(state_dict.keys()):
                     # Retain only encoder_q up to before the embedding layer
@@ -279,19 +224,15 @@ class BaseModel(object):
                     # Delete renamed or unused k
                     del state_dict[k]
 
-            msg = self.model.load_state_dict(state_dict, strict=False)
-            assert set(msg.missing_keys) == {
-                "fc.weight", "fc.bias", "linear.weight", "linear.bias"
-            }
+            self.encoder.load_state_dict(state_dict, strict=False)
 
             log('`%s.restore_model()`: loaded pre-trained model %s' %
                 (self.model_class_name, restore_path),
                 to_console=True)
         else:
             # Loading from our saved checkpoints.
-            self.model.load_state_dict(
-                torch.load(restore_path, map_location='cpu'))
-            self.model.to(self.device)
-
-        # Need to re-track latent after redefining model.
-        self.track_latent()
+            checkpoint = torch.load(restore_path, map_location='cpu')
+            self.encoder.load_state_dict(checkpoint['state_dict_encoder'])
+            self.linear.load_state_dict(checkpoint['state_dict_linear'])
+            self.encoder.to(self.device)
+            self.linear.to(self.device)

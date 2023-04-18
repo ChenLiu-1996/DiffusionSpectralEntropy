@@ -53,10 +53,7 @@ def run_model(
     with torch.no_grad():
         _ = model.forward(noise)
 
-    print('\n\nFetched Latent Features:')
-    latent_outputs = model.fetch_latent()
-    for key in latent_outputs.keys():
-        print(key, latent_outputs[key].shape)
+    print('Success')
 
 
 if __name__ == '__main__':
