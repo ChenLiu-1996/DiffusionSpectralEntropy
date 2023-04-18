@@ -41,8 +41,19 @@ cifar10_int2name = {
 def mutual_information(eigs: np.array,
                        eigs_by_class: List[np.array],
                        n_by_class: List[int],
+                       unconditioned_entropy: float = None,
                        eps: float = 1e-3):
-    return NotImplementedError
+    # H(Y)
+    if unconditioned_entropy is None:
+        unconditioned_entropy = von_neumann_entropy(eigs)
+    
+    # H(Y|X), X is the class
+    conditioned_entropy_list = [von_neumann_entropy(eig) for eig in eigs_by_class]
+    conditioned_entropy = np.sum(np.array(n_by_class) / np.sum(n_by_class) * np.array(conditioned_entropy_list))
+
+    mi = unconditioned_entropy - conditioned_entropy
+
+    return mi
 
 
 def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
@@ -107,12 +118,18 @@ if __name__ == '__main__':
     save_path_fig_vne_corr = '%s/diffusion-entropy-corr-%s-%s-%s-seed%s-knn%s.png' % (
         save_root, config.dataset, method_str, config.model,
         config.random_seed, args.knn)
+    save_path_fig_mi = '%s/class-mutual-information-%s-%s-%s-seed%s-knn%s.png' % (
+        save_root, config.dataset, method_str, config.model,
+        config.random_seed, args.knn)
+    save_path_fig_mi_corr = '%s/class-mutual-information-corr-%s-%s-%s-seed%s-knn%s.png' % (
+        save_root, config.dataset, method_str, config.model,
+        config.random_seed, args.knn)
     log_path = '%s/log-%s-%s-%s-seed%s-knn%s.txt' % (
         save_root, config.dataset, method_str, config.model,
         config.random_seed, args.knn)
 
     num_rows = len(embedding_folders)
-    epoch_list, acc_list, vne_list = [], [], []
+    epoch_list, acc_list, vne_list, mi_list = [], [], [], []
 
     for i, embedding_folder in enumerate(embedding_folders):
         epoch_list.append(
@@ -200,6 +217,29 @@ if __name__ == '__main__':
         log('Diffusion Entropy = %.4f' % vne, log_path)
 
         #
+        '''Mutual Information between Diffusion Entropy and Class'''
+        log('Mutual Information between Diffusion Entropy and Class: ',
+            log_path)
+        classes_list, classes_cnts = np.unique(labels, return_counts=True)
+        eigs_by_classes = []
+        for class_idx in tqdm(len(classes_list)):
+            inds = (labels == class_idx).reshape(-1)
+            samples = embeddings[inds, :]
+
+            # Diffusion Matrix
+            s_diffusion_matrix = DiffusionMatrix(samples, k=args.knn)
+            # Eigenvalues
+            s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
+            # Von Neumann Entropy
+            s_vne = von_neumann_entropy(s_eigenvalues_P)
+
+            eigs_by_classes.append(s_vne)
+        
+        mi = mutual_information(
+            eigenvalues_P, eigs_by_classes, classes_cnts.tolist(), unconditioned_entropy=vne)
+        mi_list.append(mi)
+
+        #
         '''Plotting'''
         plt.rcParams['font.family'] = 'serif'
 
@@ -239,3 +279,40 @@ if __name__ == '__main__':
                 fontsize=40)
         fig_vne_corr.savefig(save_path_fig_vne_corr)
         plt.close(fig=fig_vne_corr)
+
+        # Plot of Mutual Information vs. epoch.
+        fig_mi = plt.figure(figsize=(20, 20))
+        ax = fig_mi.add_subplot(1, 1, 1)
+        ax.spines[['right', 'top']].set_visible(False)
+        ax.scatter(epoch_list, mi_list, c='mediumblue', s=120)
+        ax.plot(epoch_list, mi_list, c='mediumblue')
+        fig_mi.supylabel('Mutual Information', fontsize=40)
+        fig_mi.supxlabel('Epochs Trained', fontsize=40)
+        ax.tick_params(axis='both', which='major', labelsize=30)
+        fig_mi.savefig(save_path_fig_mi)
+        plt.close(fig=fig_mi)
+
+        # Plot of Mutual Information vs. Val. Acc.
+        fig_mi_corr = plt.figure(figsize=(20, 20))
+        ax = fig_mi_corr.add_subplot(1, 1, 1)
+        ax.spines[['right', 'top']].set_visible(False)
+        ax.scatter(acc_list,
+                   mi_list,
+                   facecolors='none',
+                   edgecolors='mediumblue',
+                   s=500,
+                   linewidths=5)
+        fig_mi_corr.supylabel('Mutual Information', fontsize=40)
+        fig_mi_corr.supxlabel('Downstream Classification Accuracy',
+                               fontsize=40)
+        ax.tick_params(axis='both', which='major', labelsize=30)
+        # Display correlation.
+        if len(acc_list) > 1:
+            fig_mi_corr.suptitle(
+                'Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f)' %
+                (pearsonr(acc_list, mi_list)[0], pearsonr(
+                    acc_list, mi_list)[1], spearmanr(acc_list, mi_list)[0],
+                 spearmanr(acc_list, mi_list)[1]),
+                fontsize=40)
+        fig_mi_corr.savefig(save_path_fig_mi_corr)
+        plt.close(fig=fig_mi_corr)
