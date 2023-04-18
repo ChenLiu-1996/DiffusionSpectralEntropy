@@ -168,16 +168,10 @@ class BaseModel(object):
             save_path : str
                 path to model weights
         '''
-        if isinstance(self.model, torch.nn.DataParallel):
-            checkpoint = {
-                'state_dict_encoder': self.encoder.module.state_dict(),
-                'state_dict_linear': self.linear.module.state_dict(),
-            }
-        else:
-            checkpoint = {
-                'state_dict_encoder': self.encoder.state_dict(),
-                'state_dict_linear': self.linear.state_dict(),
-            }
+        checkpoint = {
+            'state_dict_encoder': self.encoder.state_dict(),
+            'state_dict_linear': self.linear.state_dict(),
+        }
 
         torch.save(checkpoint, save_path)
 
