@@ -41,7 +41,7 @@ def plot_helper(ax: plt.Axes, epoch_list: List[float], acc_list: List[float],
                 act_corr_mean_list: List[float],
                 act_corr_std_list: List[float],
                 act_corr_25pctl_list: List[float],
-                act_corr_75pctl_list: List[float]) -> None:
+                act_corr_75pctl_list: List[float], ylabel_str: str) -> None:
 
     ax.spines[['right', 'top']].set_visible(False)
 
@@ -60,15 +60,23 @@ def plot_helper(ax: plt.Axes, epoch_list: List[float], acc_list: List[float],
                     color='k',
                     alpha=0.2)
 
+    ax.set_xlabel('Epochs Trained', fontsize=40)
+    ax.set_ylabel(ylabel_str, fontsize=38)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+
     # Right axis: Accuracy
     ax_secondary = ax.twinx()
-    ax_secondary.plot(epoch_list, acc_list, 'firebrick--')
+    ax_secondary.plot(epoch_list, acc_list, c='firebrick')
+    ax_secondary.set_ylabel('Downstream Classification Accuracy', fontsize=38)
+
     ax.tick_params(axis='both', which='major', labelsize=30)
+
     return
 
 
 def compute_act_stats(sampled_embeddings: np.array,
                       log_path: str,
+                      log_str: str,
                       binary: bool = False) -> List[float]:
     if binary:
         correlation_matrix = np.corrcoef(sampled_embeddings, rowvar=False)
@@ -90,7 +98,7 @@ def compute_act_stats(sampled_embeddings: np.array,
     _25pctl = np.percentile(correlations, 25)
     _75pctl = np.percentile(correlations, 75)
 
-    log('Final layer neuron activation (Output) correlation stats:', log_path)
+    log('%s:' % log_str, log_path)
     log('    Mean \u00B1 std: %.3f \u00B1 %.3f' % (_mean, _std), log_path)
     log('    Median: %.3f' % _median, log_path)
 
@@ -149,6 +157,9 @@ if __name__ == '__main__':
         save_root, config.dataset, method_str, config.model,
         config.random_seed)
     os.makedirs(os.path.dirname(save_path_act_stats), exist_ok=True)
+
+    act_description = 'Final Encoder Layer Neuron Activation (Continuous) Correlation'
+    act_bin_description = 'Final Encoder Layer Neuron Activation (On/Off) Correlation'
 
     if os.path.exists(save_path_act_stats):
         data_numpy = np.load(save_path_act_stats)
@@ -222,6 +233,7 @@ if __name__ == '__main__':
             _mean, _std, _median, _25pctl, _75pctl = compute_act_stats(
                 sampled_embeddings=sampled_embeddings,
                 log_path=log_path,
+                log_str=act_description,
                 binary=False)
 
             act_corr_mean_list.append(_mean)
@@ -233,6 +245,7 @@ if __name__ == '__main__':
             _mean, _std, _median, _25pctl, _75pctl = compute_act_stats(
                 sampled_embeddings=sampled_embeddings,
                 log_path=log_path,
+                log_str=act_bin_description,
                 binary=True)
 
             act_bin_corr_mean_list.append(_mean)
@@ -264,29 +277,26 @@ if __name__ == '__main__':
     #
     ''' Figure for Neuron Activation (Output) '''
     fig_act_corr = plt.figure(figsize=(40, 20))
-    fig_act_corr.supylabel(
-        'Final Encoder Layer Neuron Activation (Output) Correlation',
-        fontsize=38)
-    fig_act_corr.supylabel('Downstream Classification Accuracy',
-                           loc='right',
-                           fontsize=38)
-    fig_act_corr.supxlabel('Epochs Trained', fontsize=40)
 
     # Plot entire history.
     plot_helper(ax=fig_act_corr.add_subplot(1, 2, 1),
+                epoch_list=epoch_list,
                 acc_list=acc_list,
                 act_corr_mean_list=act_corr_mean_list,
                 act_corr_std_list=act_corr_std_list,
                 act_corr_25pctl_list=act_corr_25pctl_list,
-                act_corr_75pctl_list=act_corr_75pctl_list)
+                act_corr_75pctl_list=act_corr_75pctl_list,
+                ylabel_str=act_description)
     # Plot up to the highest accuracy.
     best_acc_idx = np.argmax(acc_list)
     plot_helper(ax=fig_act_corr.add_subplot(1, 2, 2),
+                epoch_list=epoch_list[:best_acc_idx],
                 acc_list=acc_list[:best_acc_idx],
                 act_corr_mean_list=act_corr_mean_list[:best_acc_idx],
                 act_corr_std_list=act_corr_std_list[:best_acc_idx],
                 act_corr_25pctl_list=act_corr_25pctl_list[:best_acc_idx],
-                act_corr_75pctl_list=act_corr_75pctl_list[:best_acc_idx])
+                act_corr_75pctl_list=act_corr_75pctl_list[:best_acc_idx],
+                ylabel_str=act_description)
 
     fig_act_corr.savefig(save_path_fig_act_corr)
     plt.close(fig=fig_act_corr)
@@ -294,29 +304,25 @@ if __name__ == '__main__':
     #
     ''' Figure for Binary Activation (On/Off) '''
     fig_act_bin_corr = plt.figure(figsize=(40, 20))
-    fig_act_bin_corr.supylabel(
-        'Final Encoder Layer Neuron Activation (On/Off) Correlation',
-        fontsize=38)
-    fig_act_bin_corr.supylabel('Downstream Classification Accuracy',
-                               loc='right',
-                               fontsize=38)
-    fig_act_bin_corr.supxlabel('Epochs Trained', fontsize=40)
-
     # Plot entire history.
     plot_helper(ax=fig_act_bin_corr.add_subplot(1, 2, 1),
+                epoch_list=epoch_list,
                 acc_list=acc_list,
                 act_corr_mean_list=act_bin_corr_mean_list,
                 act_corr_std_list=act_bin_corr_std_list,
                 act_corr_25pctl_list=act_bin_corr_25pctl_list,
-                act_corr_75pctl_list=act_bin_corr_75pctl_list)
+                act_corr_75pctl_list=act_bin_corr_75pctl_list,
+                ylabel_str=act_bin_description)
     # Plot up to the highest accuracy.
     best_acc_idx = np.argmax(acc_list)
     plot_helper(ax=fig_act_bin_corr.add_subplot(1, 2, 2),
+                epoch_list=epoch_list[:best_acc_idx],
                 acc_list=acc_list[:best_acc_idx],
                 act_corr_mean_list=act_bin_corr_mean_list[:best_acc_idx],
                 act_corr_std_list=act_bin_corr_std_list[:best_acc_idx],
                 act_corr_25pctl_list=act_bin_corr_25pctl_list[:best_acc_idx],
-                act_corr_75pctl_list=act_bin_corr_75pctl_list[:best_acc_idx])
+                act_corr_75pctl_list=act_bin_corr_75pctl_list[:best_acc_idx],
+                ylabel_str=act_bin_description)
 
     fig_act_bin_corr.savefig(save_path_fig_act_bin_corr)
     plt.close(fig=fig_act_bin_corr)
