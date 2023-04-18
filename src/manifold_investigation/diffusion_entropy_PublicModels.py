@@ -329,6 +329,7 @@ def diffusion_entropy(args: AttributeHashmap):
             else:
                 raise ValueError('model_name: %s not supported.' % model_name)
 
+            # Load the pretrained model. We only care about the encoder.
             model.restore_model()
             model.eval()
 
