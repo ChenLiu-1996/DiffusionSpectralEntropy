@@ -21,6 +21,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
+from log_utils import log
 from seed import seed_everything
 
 sys.path.insert(0, import_dir + '/nn/external_model_loader/')
@@ -48,6 +49,7 @@ def compute_diffusion_entropy(embeddings: torch.Tensor, args: AttributeHashmap,
 
         # Diffusion Eigenvalues
         eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+        eigenvalues_P = eigenvalues_P.astype(np.float16)
         print('Eigenvalues computed.')
 
         with open(eig_npy_path, 'wb+') as f:
@@ -169,7 +171,8 @@ def get_dataloaders(
 def probe_model(args: AttributeHashmap,
                 train_loader: torch.utils.data.DataLoader,
                 model: torch.nn.Module, device: torch.device,
-                loss_fn_classification: torch.nn.Module, model_path: str):
+                loss_fn_classification: torch.nn.Module, model_path: str,
+                log_path: str):
 
     model.train()
     model.freeze_all()
@@ -186,7 +189,8 @@ def probe_model(args: AttributeHashmap,
             device=device,
             opt_probing=opt_probing,
             loss_fn_classification=loss_fn_classification)
-        print('Probing epoch: %d, acc: %.3f' % (epoch_idx, probing_acc))
+        log('Probing epoch: %d, acc: %.3f' % (epoch_idx, probing_acc),
+            log_path)
 
     model.eval()
     model.save_model(model_path)
@@ -223,8 +227,8 @@ def linear_probing_epoch(args: AttributeHashmap,
 
 
 def infer_model(val_loader: torch.utils.data.DataLoader,
-                model: torch.nn.Module, device: torch.device,
-                model_path: str) -> float:
+                model: torch.nn.Module, device: torch.device, model_path: str,
+                log_path: str) -> float:
     model.restore_model(restore_path=model_path)
     model.eval()
     correct, total_count = 0, 0
@@ -242,7 +246,7 @@ def infer_model(val_loader: torch.utils.data.DataLoader,
             total_count += B
 
     val_acc_actual = correct / total_count * 100
-    print('\n\n val acc actual %.2f' % val_acc_actual)
+    log('\n\n val acc actual %.2f' % val_acc_actual, log_path)
     return val_acc_actual
 
 
@@ -256,6 +260,9 @@ def diffusion_entropy(args: AttributeHashmap):
     save_folder = './results_diffusion_entropy_PublicModels/%s' % args.dataset
     npy_folder = '%s/%s/' % (save_folder, 'numpy_files')
     pt_folder = '%s/%s/' % (save_folder, 'linear_probed_models')
+    log_path = '%s/log-%s-seed%s-knn%s.txt' % (save_folder, args.dataset,
+                                               args.random_seed, args.knn)
+
     os.makedirs(npy_folder, exist_ok=True)
     os.makedirs(pt_folder, exist_ok=True)
 
@@ -287,7 +294,7 @@ def diffusion_entropy(args: AttributeHashmap):
 
     for model_name in __models:
         for i, version in enumerate(__versions[model_name]):
-            print('model: %s, version: %s' % (model_name, version))
+            log('model: %s, version: %s' % (model_name, version), log_path)
 
             summary[version] = {
                 'top1_acc_nominal': top1_acc_nominal[model_name][i]
@@ -325,7 +332,7 @@ def diffusion_entropy(args: AttributeHashmap):
             if os.path.exists(embedding_npy_path):
                 data_numpy = np.load(embedding_npy_path)
                 embeddings = data_numpy['embeddings']
-                print('Pre-computed embeddings loaded.')
+                log('Pre-computed embeddings loaded.', log_path)
             else:
                 embeddings = []
                 with torch.no_grad():
@@ -345,7 +352,7 @@ def diffusion_entropy(args: AttributeHashmap):
 
                 embeddings = np.concatenate(embeddings)
                 embeddings = embeddings.astype(np.float16)
-                print('Embeddings computed.')
+                log('Embeddings computed.', log_path)
 
                 with open(embedding_npy_path, 'wb+') as f:
                     np.savez(f, embeddings=embeddings)
@@ -356,25 +363,27 @@ def diffusion_entropy(args: AttributeHashmap):
             linear_probing_model_path = '%s/%s_LinearProbeModel.pt' % (
                 pt_folder, version)
             if os.path.exists(linear_probing_model_path):
-                print('Loading probed model: %s' % version)
+                log('Loading probed model: %s' % version, log_path)
                 val_acc_actual = infer_model(
                     val_loader=val_loader,
                     model=model,
                     device=device,
                     model_path=linear_probing_model_path)
             else:
-                print('Probing model: %s ...' % version)
+                log('Probing model: %s ...' % version, log_path)
                 probe_model(args=args,
                             train_loader=train_loader,
                             model=model,
                             device=device,
                             loss_fn_classification=torch.nn.CrossEntropyLoss(),
-                            model_path=linear_probing_model_path)
+                            model_path=linear_probing_model_path,
+                            log_path=log_path)
                 val_acc_actual = infer_model(
                     val_loader=val_loader,
                     model=model,
                     device=device,
-                    model_path=linear_probing_model_path)
+                    model_path=linear_probing_model_path,
+                    log_path=log_path)
 
             summary[version]['top1_acc_actual'] = val_acc_actual
 
