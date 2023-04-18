@@ -1,15 +1,13 @@
 import argparse
 import os
+import random
 import sys
 from glob import glob
 from typing import List
 
 import numpy as np
-import seaborn as sns
 import yaml
 from matplotlib import pyplot as plt
-from scipy.stats import pearsonr, spearmanr
-import random
 from tqdm import tqdm
 
 os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
@@ -21,7 +19,6 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
-from diffusion import DiffusionMatrix
 from log_utils import log
 from path_utils import update_config_dirs
 from seed import seed_everything
@@ -39,6 +36,67 @@ cifar10_int2name = {
     9: 'truck',
 }
 
+
+def plot_helper(ax: plt.Axes, epoch_list: List[float], acc_list: List[float],
+                act_corr_mean_list: List[float],
+                act_corr_std_list: List[float],
+                act_corr_25pctl_list: List[float],
+                act_corr_75pctl_list: List[float]) -> None:
+
+    ax.spines[['right', 'top']].set_visible(False)
+
+    # Left Axis: Activation statistics.
+    ax.plot(epoch_list, act_corr_mean_list, c='mediumblue')
+    ax.plot(epoch_list, act_corr_median_list, c='k')
+    ax.legend(['mean \u00B1 std', 'median \u00B1 25 percentiles'], fontsize=30)
+    ax.fill_between(epoch_list,
+                    np.array(act_corr_mean_list) - np.array(act_corr_std_list),
+                    np.array(act_corr_mean_list) + np.array(act_corr_std_list),
+                    color='mediumblue',
+                    alpha=0.2)
+    ax.fill_between(epoch_list,
+                    act_corr_25pctl_list,
+                    act_corr_75pctl_list,
+                    color='k',
+                    alpha=0.2)
+
+    # Right axis: Accuracy
+    ax_secondary = ax.twinx()
+    ax_secondary.plot(epoch_list, acc_list, 'firebrick--')
+    ax.tick_params(axis='both', which='major', labelsize=30)
+    return
+
+
+def compute_act_stats(sampled_embeddings: np.array,
+                      log_path: str,
+                      binary: bool = False) -> List[float]:
+    if binary:
+        correlation_matrix = np.corrcoef(sampled_embeddings, rowvar=False)
+    else:
+        correlation_matrix = np.corrcoef(sampled_embeddings > 0, rowvar=False)
+
+    correlations = np.array([
+        correlation_matrix[i, j] for i in range(len(correlation_matrix) - 1)
+        for j in range(i + 1, len(correlation_matrix))
+    ])
+    # Correlation might have occasional NaN or inf values.
+    correlations = np.array([
+        item for item in correlations
+        if (not np.isnan(item) and not np.isinf(item))
+    ])
+    _mean = np.mean(correlations)
+    _std = np.std(correlations)
+    _median = np.median(correlations)
+    _25pctl = np.percentile(correlations, 25)
+    _75pctl = np.percentile(correlations, 75)
+
+    log('Final layer neuron activation (Output) correlation stats:', log_path)
+    log('    Mean \u00B1 std: %.3f \u00B1 %.3f' % (_mean, _std), log_path)
+    log('    Median: %.3f' % _median, log_path)
+
+    return _mean, _std, _25pctl, _25pctl, _75pctl
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
@@ -49,7 +107,7 @@ if __name__ == '__main__':
         help='Only enter if you want to override the config!!!',
         type=int,
         default=None)
-    parser.add_argument('--sampled-observations', type=int, default=None)
+    parser.add_argument('--num-observation-samples', type=int, default=500)
 
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
@@ -78,121 +136,187 @@ if __name__ == '__main__':
     save_path_fig_act_corr = '%s/neuron-activation-corr-%s-%s-%s-seed%s.png' % (
         save_root, config.dataset, method_str, config.model,
         config.random_seed)
+    save_path_fig_act_bin_corr = '%s/neuron-activation-bin-corr-%s-%s-%s-seed%s.png' % (
+        save_root, config.dataset, method_str, config.model,
+        config.random_seed)
     log_path = '%s/log-%s-%s-%s-seed%s.txt' % (save_root, config.dataset,
                                                method_str, config.model,
                                                config.random_seed)
 
-    num_rows = len(embedding_folders)
-    epoch_list, acc_list = [], []
-    act_corr_mean_list, act_corr_std_list = [], []
-    act_corr_median_list, act_corr_25pctl_list, act_corr_75_pctl_list = [], [], []
-
     random.seed(config.random_seed)
 
-    for i, embedding_folder in enumerate(embedding_folders):
+    save_path_act_stats = '%s/numpy_files/activation-stats-%s-%s-%s-seed%s.npz' % (
+        save_root, config.dataset, method_str, config.model,
+        config.random_seed)
+    os.makedirs(os.path.dirname(save_path_act_stats), exist_ok=True)
 
-        epoch_list.append(
-            int(embedding_folder.split('epoch')[-1].split('-valAcc')[0]) + 1)
-        acc_list.append(float(embedding_folder.split('-valAcc')[1]))
+    if os.path.exists(save_path_act_stats):
+        data_numpy = np.load(save_path_act_stats)
+        epoch_list = data_numpy['epoch_list']
+        acc_list = data_numpy['acc_list']
+        act_corr_mean_list = data_numpy['act_corr_mean_list']
+        act_corr_std_list = data_numpy['act_corr_std_list']
+        act_corr_median_list = data_numpy['act_corr_median_list']
+        act_corr_25pctl_list = data_numpy['act_corr_25pctl_list']
+        act_corr_75pctl_list = data_numpy['act_corr_75pctl_list']
+        act_bin_corr_mean_list = data_numpy['act_bin_corr_mean_list']
+        act_bin_corr_std_list = data_numpy['act_bin_corr_std_list']
+        act_bin_corr_median_list = data_numpy['act_bin_corr_median_list']
+        act_bin_corr_25pctl_list = data_numpy['act_bin_corr_25pctl_list']
+        act_bin_corr_75pctl_list = data_numpy['act_bin_corr_75pctl_list']
+        print('Pre-computed activation stats loaded.')
 
-        files = sorted(glob(embedding_folder + '/*'))
-        checkpoint_name = os.path.basename(embedding_folder)
-        log(checkpoint_name, log_path)
+    else:
+        epoch_list, acc_list = [], []
+        act_corr_mean_list, act_corr_std_list = [], []
+        act_corr_median_list, act_corr_25pctl_list, act_corr_75pctl_list = [], [], []
+        act_bin_corr_mean_list, act_bin_corr_std_list = [], []
+        act_bin_corr_median_list, act_bin_corr_25pctl_list, act_bin_corr_75pctl_list = [], [], []
 
-        labels, embeddings = None, None
+        for embedding_folder in embedding_folders:
+            epoch_list.append(
+                int(embedding_folder.split('epoch')[-1].split('-valAcc')[0]) +
+                1)
+            acc_list.append(float(embedding_folder.split('-valAcc')[1]))
 
-        for file in tqdm(files):
-            np_file = np.load(file)
-            curr_label = np_file['label_true']
-            curr_embedding = np_file['embedding']
+            files = sorted(glob(embedding_folder + '/*'))
+            checkpoint_name = os.path.basename(embedding_folder)
+            log(checkpoint_name, log_path)
 
-            if labels is None:
-                labels = curr_label[:, None]  # expand dim to [B, 1]
-                embeddings = curr_embedding
+            labels, embeddings = None, None
+
+            for file in tqdm(files):
+                np_file = np.load(file)
+                curr_label = np_file['label_true']
+                curr_embedding = np_file['embedding']
+
+                if labels is None:
+                    labels = curr_label[:, None]  # expand dim to [B, 1]
+                    embeddings = curr_embedding
+                else:
+                    labels = np.vstack((labels, curr_label[:, None]))
+                    embeddings = np.vstack((embeddings, curr_embedding))
+
+            # This is the matrix of N embedding vectors each at dim [1, D].
+            N, D = embeddings.shape
+
+            assert labels.shape[0] == N
+            assert labels.shape[1] == 1
+
+            if config.dataset == 'cifar10':
+                labels_updated = np.zeros(labels.shape, dtype='object')
+                for k in range(N):
+                    labels_updated[k] = cifar10_int2name[labels[k].item()]
+                labels = labels_updated
+                del labels_updated
+
+            # NOTE: This time we only consider the "activation" of neurons in the
+            # last layer before the final fully-connected classifier.
+            if args.num_observation_samples is not None:
+                obs_ids = random.choices(np.arange(N),
+                                         k=args.num_observation_samples)
+                sampled_embeddings = embeddings[obs_ids, :]
             else:
-                labels = np.vstack((labels, curr_label[:, None]))
-                embeddings = np.vstack((embeddings, curr_embedding))
+                sampled_embeddings = embeddings
 
-        # This is the matrix of N embedding vectors each at dim [1, D].
-        N, D = embeddings.shape
+            _mean, _std, _median, _25pctl, _75pctl = compute_act_stats(
+                sampled_embeddings=sampled_embeddings,
+                log_path=log_path,
+                binary=False)
 
-        assert labels.shape[0] == N
-        assert labels.shape[1] == 1
+            act_corr_mean_list.append(_mean)
+            act_corr_std_list.append(_std)
+            act_corr_median_list.append(_median)
+            act_corr_25pctl_list.append(_25pctl)
+            act_corr_75pctl_list.append(_75pctl)
 
-        if config.dataset == 'cifar10':
-            labels_updated = np.zeros(labels.shape, dtype='object')
-            for k in range(N):
-                labels_updated[k] = cifar10_int2name[labels[k].item()]
-            labels = labels_updated
-            del labels_updated
+            _mean, _std, _median, _25pctl, _75pctl = compute_act_stats(
+                sampled_embeddings=sampled_embeddings,
+                log_path=log_path,
+                binary=True)
 
-        # NOTE: This time we only consider the "activation" of neurons in the
-        # last layer before the final fully-connected classifier.
-        #
-        # Random downsampling of observations
-        obs_ids = random.choices(np.arange(N),
-                                 k=500 if args.sampled_observations is None
-                                 else args.sampled_observations)
-        sampled_embeddings = embeddings[obs_ids, :]
+            act_bin_corr_mean_list.append(_mean)
+            act_bin_corr_std_list.append(_std)
+            act_bin_corr_median_list.append(_median)
+            act_bin_corr_25pctl_list.append(_25pctl)
+            act_bin_corr_75pctl_list.append(_75pctl)
 
-        correlation_matrix = np.corrcoef(sampled_embeddings,
-                                         rowvar=False,
-                                         dtype=np.float16)
-        correlations = np.array([
-            correlation_matrix[i, j]
-            for i in range(len(correlation_matrix) - 1)
-            for j in range(i + 1, len(correlation_matrix))
-        ],
-                                dtype=np.float32)
-        # Correlation might have occasional NaN or inf values.
-        correlations = np.array([
-            item for item in correlations
-            if (not np.isnan(item) and not np.isinf(item))
-        ])
-        act_corr_mean = np.mean(correlations)
-        act_corr_std = np.std(correlations)
-        act_corr_median = np.median(correlations)
-        act_corr_25pctl = np.percentile(correlations, 25)
-        act_corr_75pctl = np.percentile(correlations, 75)
+        with open(save_path_act_stats, 'wb+') as f:
+            np.savez(
+                f,
+                epoch_list=np.array(epoch_list),
+                acc_list=np.array(acc_list),
+                act_corr_mean_list=np.array(act_corr_mean_list),
+                act_corr_std_list=np.array(act_corr_std_list),
+                act_corr_median_list=np.array(act_corr_median_list),
+                act_corr_25pctl_list=np.array(act_corr_25pctl_list),
+                act_corr_75pctl_list=np.array(act_corr_75pctl_list),
+                act_bin_corr_mean_list=np.array(act_bin_corr_mean_list),
+                act_bin_corr_std_list=np.array(act_bin_corr_std_list),
+                act_bin_corr_median_list=np.array(act_bin_corr_median_list),
+                act_bin_corr_25pctl_list=np.array(act_bin_corr_25pctl_list),
+                act_bin_corr_75pctl_list=np.array(act_bin_corr_75pctl_list))
 
-        log('Finaly layer neuron activation (Output) correlation stats:',
-            log_path)
-        log(
-            '    Mean \u00B1 std: %.3f \u00B1 %.3f' %
-            (act_corr_mean, act_corr_std), log_path)
-        log('    Median: %.3f' % act_corr_median, log_path)
+    #
+    ''' Plotting '''
+    plt.rcParams['font.family'] = 'serif'
 
-        act_corr_mean_list.append(act_corr_mean)
-        act_corr_std_list.append(act_corr_std)
-        act_corr_median_list.append(act_corr_median)
-        act_corr_25pctl_list.append(act_corr_25pctl)
-        act_corr_75_pctl_list.append(act_corr_75pctl)
+    #
+    ''' Figure for Neuron Activation (Output) '''
+    fig_act_corr = plt.figure(figsize=(40, 20))
+    fig_act_corr.supylabel(
+        'Final Encoder Layer Neuron Activation (Output) Correlation',
+        fontsize=38)
+    fig_act_corr.supylabel('Downstream Classification Accuracy',
+                           loc='right',
+                           fontsize=38)
+    fig_act_corr.supxlabel('Epochs Trained', fontsize=40)
 
-        #
-        '''Plotting'''
-        plt.rcParams['font.family'] = 'serif'
-        fig_act_corr = plt.figure(figsize=(20, 20))
-        ax = fig_act_corr.add_subplot(1, 1, 1)
-        ax.spines[['right', 'top']].set_visible(False)
-        ax.plot(epoch_list, act_corr_mean_list, c='mediumblue')
-        ax.plot(epoch_list, act_corr_median_list, c='k')
-        ax.legend(['mean \u00B1 std', 'median \u00B1 25 percentiles'],
-                  fontsize=30)
-        ax.fill_between(
-            epoch_list,
-            np.array(act_corr_mean_list) - np.array(act_corr_std_list),
-            np.array(act_corr_mean_list) + np.array(act_corr_std_list),
-            color='mediumblue',
-            alpha=0.2)
-        ax.fill_between(epoch_list,
-                        act_corr_25pctl_list,
-                        act_corr_75_pctl_list,
-                        color='k',
-                        alpha=0.2)
-        fig_act_corr.supylabel(
-            'Final Encoder Layer Neuron Activation (Output) Correlation',
-            fontsize=38)
-        fig_act_corr.supxlabel('Epochs Trained', fontsize=40)
-        ax.tick_params(axis='both', which='major', labelsize=30)
-        fig_act_corr.savefig(save_path_fig_act_corr)
-        plt.close(fig=fig_act_corr)
+    # Plot entire history.
+    plot_helper(ax=fig_act_corr.add_subplot(1, 2, 1),
+                acc_list=acc_list,
+                act_corr_mean_list=act_corr_mean_list,
+                act_corr_std_list=act_corr_std_list,
+                act_corr_25pctl_list=act_corr_25pctl_list,
+                act_corr_75pctl_list=act_corr_75pctl_list)
+    # Plot up to the highest accuracy.
+    best_acc_idx = np.argmax(acc_list)
+    plot_helper(ax=fig_act_corr.add_subplot(1, 2, 2),
+                acc_list=acc_list[:best_acc_idx],
+                act_corr_mean_list=act_corr_mean_list[:best_acc_idx],
+                act_corr_std_list=act_corr_std_list[:best_acc_idx],
+                act_corr_25pctl_list=act_corr_25pctl_list[:best_acc_idx],
+                act_corr_75pctl_list=act_corr_75pctl_list[:best_acc_idx])
+
+    fig_act_corr.savefig(save_path_fig_act_corr)
+    plt.close(fig=fig_act_corr)
+
+    #
+    ''' Figure for Binary Activation (On/Off) '''
+    fig_act_bin_corr = plt.figure(figsize=(40, 20))
+    fig_act_bin_corr.supylabel(
+        'Final Encoder Layer Neuron Activation (On/Off) Correlation',
+        fontsize=38)
+    fig_act_bin_corr.supylabel('Downstream Classification Accuracy',
+                               loc='right',
+                               fontsize=38)
+    fig_act_bin_corr.supxlabel('Epochs Trained', fontsize=40)
+
+    # Plot entire history.
+    plot_helper(ax=fig_act_bin_corr.add_subplot(1, 2, 1),
+                acc_list=acc_list,
+                act_corr_mean_list=act_bin_corr_mean_list,
+                act_corr_std_list=act_bin_corr_std_list,
+                act_corr_25pctl_list=act_bin_corr_25pctl_list,
+                act_corr_75pctl_list=act_bin_corr_75pctl_list)
+    # Plot up to the highest accuracy.
+    best_acc_idx = np.argmax(acc_list)
+    plot_helper(ax=fig_act_bin_corr.add_subplot(1, 2, 2),
+                acc_list=acc_list[:best_acc_idx],
+                act_corr_mean_list=act_bin_corr_mean_list[:best_acc_idx],
+                act_corr_std_list=act_bin_corr_std_list[:best_acc_idx],
+                act_corr_25pctl_list=act_bin_corr_25pctl_list[:best_acc_idx],
+                act_corr_75pctl_list=act_bin_corr_75pctl_list[:best_acc_idx])
+
+    fig_act_bin_corr.savefig(save_path_fig_act_bin_corr)
+    plt.close(fig=fig_act_bin_corr)
