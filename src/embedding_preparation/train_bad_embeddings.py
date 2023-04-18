@@ -418,7 +418,7 @@ def infer(config: AttributeHashmap) -> None:
 
                 save_numpy(config=config,
                            batch_idx=batch_idx,
-                           checkpoint_name=checkpoint_name,
+                           numpy_filename=checkpoint_name,
                            image_batch=x,
                            label_true_batch=y_true,
                            embedding_batch=h)
