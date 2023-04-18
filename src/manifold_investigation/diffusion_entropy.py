@@ -128,28 +128,7 @@ if __name__ == '__main__':
             del labels_updated
 
         #
-        '''Diffusion Matrix'''
-        save_path_diffusion = '%s/numpy_files/diffusion/diffusion-%s.npz' % (
-            save_root, checkpoint_name)
-        os.makedirs(os.path.dirname(save_path_diffusion), exist_ok=True)
-        if os.path.exists(save_path_diffusion):
-            data_numpy = np.load(save_path_diffusion)
-            diffusion_matrix = data_numpy['diffusion_matrix']
-            print(checkpoint_name)
-            print('Pre-computed diffusion matrix loaded.')
-            diffusion_matrix = diffusion_matrix.astype(np.float16)
-            with open(save_path_diffusion, 'wb+') as f:
-                np.savez(f, diffusion_matrix=diffusion_matrix)
-            print('Diffusion matrix re-saved.')
-        else:
-            diffusion_matrix = DiffusionMatrix(embeddings, k=args.knn)
-            diffusion_matrix = diffusion_matrix.astype(np.float16)
-            with open(save_path_diffusion, 'wb+') as f:
-                np.savez(f, diffusion_matrix=diffusion_matrix)
-            print('Diffusion matrix computed.')
-
-        #
-        '''Diffusion Eigenvalues'''
+        '''Diffusion Matrix and Diffusion Eigenvalues'''
         save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s.npz' % (
             save_root, checkpoint_name)
         os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
@@ -157,12 +136,11 @@ if __name__ == '__main__':
             data_numpy = np.load(save_path_eigenvalues)
             eigenvalues_P = data_numpy['eigenvalues_P']
             print('Pre-computed eigenvalues loaded.')
-            eigenvalues_P = eigenvalues_P.astype(np.float16)
-            with open(save_path_eigenvalues, 'wb+') as f:
-                np.savez(f, eigenvalues_P=eigenvalues_P)
-            print('Eigenvalues re-saved.')
         else:
+            diffusion_matrix = DiffusionMatrix(embeddings, k=args.knn)
+            print('Diffusion matrix computed.')
             eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+            # Lower precision to save disk space.
             eigenvalues_P = eigenvalues_P.astype(np.float16)
             with open(save_path_eigenvalues, 'wb+') as f:
                 np.savez(f, eigenvalues_P=eigenvalues_P)
