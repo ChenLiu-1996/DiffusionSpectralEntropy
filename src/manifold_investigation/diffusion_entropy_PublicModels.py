@@ -178,6 +178,7 @@ def probe_model(args: AttributeHashmap,
     model.freeze_all()
     model.init_and_unfreeze_linear()
 
+    best_probing_acc = 0
     opt_probing = torch.optim.AdamW(list(model.linear_parameters()),
                                     lr=float(args.learning_rate_probing))
 
@@ -191,9 +192,11 @@ def probe_model(args: AttributeHashmap,
             loss_fn_classification=loss_fn_classification)
         log('Probing epoch: %d, acc: %.3f' % (epoch_idx, probing_acc),
             log_path)
+        if probing_acc > best_probing_acc:
+            best_probing_acc = probing_acc
+            model.save_model(model_path)
 
     model.eval()
-    model.save_model(model_path)
     return
 
 
@@ -505,7 +508,10 @@ if __name__ == '__main__':
                         type=str,
                         default='mnist')
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
-    parser.add_argument('--random-seed', help='random seed.', type=int, default=0)
+    parser.add_argument('--random-seed',
+                        help='random seed.',
+                        type=int,
+                        default=0)
     parser.add_argument('--batch-size', type=int, default=512)
     parser.add_argument('--num-workers', type=int, default=1)
     parser.add_argument('--learning_rate_probing', type=float, default=5e-4)
