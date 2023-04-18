@@ -375,7 +375,7 @@ def infer(config: AttributeHashmap) -> None:
                       small_image=config.small_image).to(device)
 
     checkpoint_paths = sorted(
-        glob('%s/%s-%s-%s-%s*.pth' %
+        glob('%s/%s-%s-%s-seed%s*.pth' %
              (config.checkpoint_dir, config.dataset, config.bad_method,
               config.model, config.random_seed)))
     log_path = '%s/%s-%s-%s-%s.log' % (config.log_dir, config.dataset,
