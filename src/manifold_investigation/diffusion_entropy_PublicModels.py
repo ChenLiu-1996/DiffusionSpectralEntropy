@@ -505,7 +505,7 @@ if __name__ == '__main__':
                         type=str,
                         default='mnist')
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
-    parser.add_argument('--seed', help='random seed.', type=int, default=0)
+    parser.add_argument('--random-seed', help='random seed.', type=int, default=0)
     parser.add_argument('--batch-size', type=int, default=512)
     parser.add_argument('--num-workers', type=int, default=1)
     parser.add_argument('--learning_rate_probing', type=float, default=5e-4)
@@ -514,6 +514,6 @@ if __name__ == '__main__':
     args = AttributeHashmap(args)
 
     args = AttributeHashmap(args)
-    seed_everything(args.seed)
+    seed_everything(args.random_seed)
 
     diffusion_entropy(args=args)
