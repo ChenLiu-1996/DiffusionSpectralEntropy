@@ -18,11 +18,11 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
+from characteristics import mutual_information, von_neumann_entropy
 from diffusion import DiffusionMatrix
 from log_utils import log
 from path_utils import update_config_dirs
 from seed import seed_everything
-from characteristics import von_neumann_entropy
 
 cifar10_int2name = {
     0: 'airplane',
@@ -37,49 +37,6 @@ cifar10_int2name = {
     9: 'truck',
 }
 
-
-<<<<<<< HEAD
-def mutual_information(eigs: np.array,
-                       eigs_by_class: List[np.array],
-                       n_by_class: List[int],
-                       unconditioned_entropy: float = None,
-                       eps: float = 1e-3):
-    # H(Y)
-    if unconditioned_entropy is None:
-        unconditioned_entropy = von_neumann_entropy(eigs)
-    
-    # H(Y|X), X is the class
-    conditioned_entropy_list = [von_neumann_entropy(eig) for eig in eigs_by_class]
-    conditioned_entropy = np.sum(np.array(n_by_class) / np.sum(n_by_class) * np.array(conditioned_entropy_list))
-
-    mi = unconditioned_entropy - conditioned_entropy
-
-    return mi
-
-
-def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
-    eigenvalues = eigs.copy()
-
-    eigenvalues = np.array(sorted(eigenvalues)[::-1])
-
-    # Drop the trivial eigenvalue(s).
-    eigenvalues = eigenvalues[eigenvalues <= 1 - eps]
-
-    # Shift the negative eigenvalue(s) that occurred due to rounding errors.
-    if eigenvalues.min() < 0:
-        eigenvalues -= eigenvalues.min()
-
-    # Remove the close-to-zero eigenvalue(s).
-    eigenvalues = eigenvalues[eigenvalues >= eps]
-
-    prob = eigenvalues / eigenvalues.sum()
-    prob = prob + np.finfo(float).eps
-
-    return -np.sum(prob * np.log(prob))
-
-
-=======
->>>>>>> 6134a2a (refactoring and updated public models)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
@@ -237,9 +194,11 @@ if __name__ == '__main__':
             s_vne = von_neumann_entropy(s_eigenvalues_P)
 
             eigs_by_classes.append(s_vne)
-        
-        mi = mutual_information(
-            eigenvalues_P, eigs_by_classes, classes_cnts.tolist(), unconditioned_entropy=vne)
+
+        mi = mutual_information(eigenvalues_P,
+                                eigs_by_classes,
+                                classes_cnts.tolist(),
+                                unconditioned_entropy=vne)
         mi_list.append(mi)
 
         #
@@ -307,7 +266,7 @@ if __name__ == '__main__':
                    linewidths=5)
         fig_mi_corr.supylabel('Mutual Information', fontsize=40)
         fig_mi_corr.supxlabel('Downstream Classification Accuracy',
-                               fontsize=40)
+                              fontsize=40)
         ax.tick_params(axis='both', which='major', labelsize=30)
         # Display correlation.
         if len(acc_list) > 1:
