@@ -249,7 +249,7 @@ def infer_model(val_loader: torch.utils.data.DataLoader,
             total_count += B
 
     val_acc_actual = correct / total_count * 100
-    log('\n\n val acc actual %.2f' % val_acc_actual, log_path)
+    log('val acc actual %.2f\n\n' % val_acc_actual, log_path)
     return val_acc_actual
 
 
