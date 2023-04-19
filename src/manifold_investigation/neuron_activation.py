@@ -328,7 +328,7 @@ if __name__ == '__main__':
                 acc_list=acc_list,
                 _mean_list=act_bin_corr_mean_list,
                 _std_list=act_bin_corr_std_list,
-                _median_list=act_corr_median_list,
+                _median_list=act_bin_corr_median_list,
                 _25pctl_list=act_bin_corr_25pctl_list,
                 _75pctl_list=act_bin_corr_75pctl_list,
                 ylabel_str=act_bin_description)
@@ -338,7 +338,7 @@ if __name__ == '__main__':
                 acc_list=acc_list[:plateau_idx],
                 _mean_list=act_bin_corr_mean_list[:plateau_idx],
                 _std_list=act_bin_corr_std_list[:plateau_idx],
-                _median_list=act_corr_median_list[:plateau_idx],
+                _median_list=act_bin_corr_median_list[:plateau_idx],
                 _25pctl_list=act_bin_corr_25pctl_list[:plateau_idx],
                 _75pctl_list=act_bin_corr_75pctl_list[:plateau_idx],
                 ylabel_str=act_bin_description)
