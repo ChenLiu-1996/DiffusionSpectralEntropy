@@ -230,8 +230,17 @@ class BaseModel(object):
                 to_console=True)
         else:
             # Loading from our saved checkpoints.
+            assert os.path.isfile(restore_path)
+            log('`%s.restore_model()`: loading checkpoint %s' %
+                (self.model_class_name, restore_path),
+                to_console=True)
+
             checkpoint = torch.load(restore_path, map_location='cpu')
             self.encoder.load_state_dict(checkpoint['state_dict_encoder'])
             self.linear.load_state_dict(checkpoint['state_dict_linear'])
             self.encoder.to(self.device)
             self.linear.to(self.device)
+
+            log('`%s.restore_model()`: loaded pre-trained model %s' %
+                (self.model_class_name, restore_path),
+                to_console=True)

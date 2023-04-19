@@ -193,25 +193,30 @@ def get_dataloaders(
 def tune_model(args: AttributeHashmap,
                train_loader: torch.utils.data.DataLoader,
                model: torch.nn.Module, device: torch.device, model_path: str,
-               log_path: str, num_tuning_epoch: int, full_fine_tune: bool):
+               log_path: str):
 
+    # Load the pretrained model.
+    model.restore_model()
     model.train()
-    if full_fine_tune is True:
+
+    if args.full_fine_tune is True:
         model.unfreeze_all()
+        if args.learning_rate_tuning is None:
+            args.learning_rate_tuning = 1e-4
         opt_probing = torch.optim.AdamW(model.encoder_parameters() +
                                         model.linear_parameters(),
-                                        lr=float(args.learning_rate_tuning),
-                                        weight_decay=0)
+                                        lr=float(args.learning_rate_tuning))
     else:
         model.freeze_all()
         model.unfreeze_linear()
         model.init_linear()
+        if args.learning_rate_tuning is None:
+            args.learning_rate_tuning = 1e-2
         opt_probing = torch.optim.AdamW(model.linear_parameters(),
-                                        lr=float(args.learning_rate_tuning),
-                                        weight_decay=0)
+                                        lr=float(args.learning_rate_tuning))
 
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt_probing, T_max=num_tuning_epoch // 4)
+        optimizer=opt_probing, T_max=args.num_tuning_epoch // 4)
 
     best_probing_acc = 0
     for epoch_idx in range(args.num_tuning_epoch):
@@ -363,43 +368,13 @@ def diffusion_entropy(args: AttributeHashmap):
             else:
                 raise ValueError('model_name: %s not supported.' % model_name)
 
-            # Load the pretrained model.
-            model.restore_model()
-            model.eval()
-
             #
-            ''' 1. Tune the model. We can either linear probe or full fine tune. '''
-            if args.full_fine_tune is True:
-                tuned_model_path = '%s/%s_FineTuneModel.pt' % (pt_folder,
-                                                               version)
-            else:
-                tuned_model_path = '%s/%s_LinearProbeModel.pt' % (pt_folder,
-                                                                  version)
-
-            if os.path.exists(tuned_model_path):
-                log('Loading tuned model: %s' % version, log_path)
-                val_acc_actual = infer_model(val_loader=val_loader,
-                                             model=model,
-                                             device=device,
-                                             model_path=tuned_model_path,
-                                             log_path=log_path)
-            else:
-                log('Tuning model: %s ...' % version, log_path)
-                tune_model(args=args,
-                           train_loader=train_loader,
-                           model=model,
-                           device=device,
-                           model_path=tuned_model_path,
-                           log_path=log_path,
-                           num_tuning_epoch=args.num_tuning_epoch,
-                           full_fine_tune=args.full_fine_tune)
-                val_acc_actual = infer_model(val_loader=val_loader,
-                                             model=model,
-                                             device=device,
-                                             model_path=tuned_model_path,
-                                             log_path=log_path)
-            summary[version]['top1_acc_actual'] = val_acc_actual
-            ''' 2. Run through encoder and save embeddings. '''
+            '''
+            1. Run through encoder and save embeddings.
+               We have to do this prior to tuning, because we want to
+               see if the manifold characteristics extracted prior to tuning
+               can give us enough information on how good the pretraining is.
+            '''
             if os.path.exists(embedding_npy_path):
                 data_numpy = np.load(embedding_npy_path)
                 embeddings = data_numpy['embeddings']
@@ -430,6 +405,42 @@ def diffusion_entropy(args: AttributeHashmap):
 
             summary[version]['vne'] = compute_diffusion_entropy(
                 embeddings=embeddings, args=args, eig_npy_path=eig_npy_path)
+
+            #
+            ''' 2. Tune the model. We can either linear probe or full fine tune. '''
+            if args.full_fine_tune is True:
+                tuned_model_path = '%s/%s_FineTuneModel.pt' % (pt_folder,
+                                                               version)
+            else:
+                tuned_model_path = '%s/%s_LinearProbeModel.pt' % (pt_folder,
+                                                                  version)
+
+            if os.path.exists(tuned_model_path):
+                log('Loading tuned model: %s' % version, log_path)
+                val_acc_actual = infer_model(val_loader=val_loader,
+                                             model=model,
+                                             device=device,
+                                             model_path=tuned_model_path,
+                                             log_path=log_path)
+            else:
+                log('Tuning model: %s ...' % version, log_path)
+                if args.full_fine_tune is True:
+                    log('NOTE: We are performing a full fine tune!', log_path)
+                else:
+                    log('NOTE: We are performing a linear probing!', log_path)
+
+                tune_model(args=args,
+                           train_loader=train_loader,
+                           model=model,
+                           device=device,
+                           model_path=tuned_model_path,
+                           log_path=log_path)
+                val_acc_actual = infer_model(val_loader=val_loader,
+                                             model=model,
+                                             device=device,
+                                             model_path=tuned_model_path,
+                                             log_path=log_path)
+            summary[version]['top1_acc_actual'] = val_acc_actual
 
     fig_prefix = '%s/diffusion-entropy-PublicModels-%s-%s' % (
         save_folder, args.dataset,
@@ -554,12 +565,12 @@ if __name__ == '__main__':
                         help='random seed.',
                         type=int,
                         default=0)
-    parser.add_argument('--batch-size', type=int, default=256)
+    parser.add_argument('--batch-size', type=int, default=512)
     parser.add_argument('--num-workers', type=int, default=1)
     parser.add_argument('--full-fine-tune',
                         help='If True, full fine tune. Else, linear probe.',
                         action='store_true')
-    parser.add_argument('--learning_rate_tuning', type=float, default=1e-2)
+    parser.add_argument('--learning_rate_tuning', type=float, default=None)
     parser.add_argument('--num_tuning_epoch', type=int, default=100)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
