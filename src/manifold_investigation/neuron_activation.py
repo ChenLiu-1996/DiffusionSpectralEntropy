@@ -84,8 +84,8 @@ def plot_helper(ax: plt.Axes, epoch_list: List[float], acc_list: List[float],
     ax.spines[['right', 'top']].set_visible(False)
 
     # Left Axis: Activation statistics.
-    ax.plot(epoch_list, _mean_list, c='mediumblue')
-    ax.plot(epoch_list, _median_list, c='k')
+    ax.plot(epoch_list, _mean_list, c='mediumblue', lw=5)
+    ax.plot(epoch_list, _median_list, c='k', lw=5)
     ax.legend(['mean \u00B1 std', 'median \u00B1 25 percentiles'],
               fontsize=30,
               loc='lower right')
@@ -106,7 +106,7 @@ def plot_helper(ax: plt.Axes, epoch_list: List[float], acc_list: List[float],
 
     # Right axis: Accuracy
     ax_secondary = ax.twinx()
-    ax_secondary.plot(epoch_list, acc_list, c='firebrick')
+    ax_secondary.plot(epoch_list, acc_list, c='firebrick', lw=5)
     ax_secondary.yaxis.set_label_coords(1.1, 0.5)
     ax_secondary.set_ylabel('Downstream Classification Accuracy',
                             fontsize=38,
