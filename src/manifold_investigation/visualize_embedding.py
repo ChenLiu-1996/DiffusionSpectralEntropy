@@ -14,53 +14,71 @@ import phate
 import scprep
 import yaml
 from matplotlib import pyplot as plt
-from sklearn.decomposition import PCA
 from tqdm import tqdm
 
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
+from laplacian_extrema import get_laplacian_extrema
 from path_utils import update_config_dirs
-
-cifar10_int2name = {
-    0: 'airplane',
-    1: 'automobile',
-    2: 'bird',
-    3: 'cat',
-    4: 'deer',
-    5: 'dog',
-    6: 'frog',
-    7: 'horse',
-    8: 'ship',
-    9: 'truck',
-}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
+    parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
+    parser.add_argument(
+        '--random-seed',
+        help='Only enter if you want to override the config!!!',
+        type=int,
+        default=None)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
     args = AttributeHashmap(args)
     config = AttributeHashmap(yaml.safe_load(open(args.config)))
     config = update_config_dirs(AttributeHashmap(config))
+    if args.random_seed is not None:
+        config.random_seed = args.random_seed
 
+    if 'contrastive' in config.keys():
+        method_str = config.contrastive
+    elif 'bad_method' in config.keys():
+        method_str = config.bad_method
+
+    # NOTE: Take the fixed percentage checkpoints.
     embedding_folders = sorted(
-        glob('%s/embeddings/%s-%s-*' %
-             (config.output_save_path, config.dataset, config.contrastive)))
+        glob('%s/embeddings/%s-%s-%s-seed%s-*acc_*' %
+             (config.output_save_path, config.dataset, method_str,
+              config.model, config.random_seed)))
 
-    save_root = './figures_PHATE/'
+    save_root = './results_visualize/'
     os.makedirs(save_root, exist_ok=True)
-    save_path = '%s/PHATE-%s-%s.png' % (save_root, config.dataset,
-                                        config.contrastive)
+    save_path_fig = '%s/visualize-%s-%s-%seed%s.png' % (
+        save_root, config.dataset, method_str, config.model,
+        config.random_seed)
 
-    num_rows = len(embedding_folders)
-    fig = plt.figure(figsize=(10, 3 * num_rows))
+    plt.rcParams['font.family'] = 'serif'
+    num_cols = len(embedding_folders)
+    fig = plt.figure(figsize=(3 * num_cols, 6))
+
+    if config.dataset in ['mnist', 'cifar10', 'stl10']:
+        num_classes = 10
+    elif config.dataset in ['cifar100']:
+        num_classes = 100
+    elif config.dataset in ['tinyimagenet']:
+        num_classes = 200
+    elif config.dataset in ['imagenet']:
+        num_classes = 1000
+    else:
+        raise ValueError('Unsupported value for `config.dataset`: %s.' %
+                         config.dataset)
 
     for i, embedding_folder in enumerate(embedding_folders):
         files = sorted(glob(embedding_folder + '/*'))
+        checkpoint_name = os.path.basename(embedding_folder)
+        checkpoint_acc = checkpoint_name.split('acc_')[1]
 
         labels, embeddings = None, None
 
@@ -81,29 +99,29 @@ if __name__ == '__main__':
         assert labels.shape[0] == N
         assert labels.shape[1] == 1
 
-        if config.dataset == 'cifar10':
-            labels_updated = np.zeros(labels.shape, dtype='object')
-            for k in range(N):
-                labels_updated[k] = cifar10_int2name[labels[k].item()]
-            labels = labels_updated
-            del labels_updated
+        #
+        ''' Laplacian extrema '''
+        save_path_extrema = '%s/numpy_files/laplacian-extrema/laplacian-extrema-%s.npz' % (
+            save_root, checkpoint_name)
+        os.makedirs(os.path.dirname(save_path_extrema), exist_ok=True)
+        if os.path.exists(save_path_extrema):
+            data_numpy = np.load(save_path_extrema)
+            extrema_inds = data_numpy['extrema_inds']
+            print('Pre-computed Laplacian extrema loaded.')
+        else:
+            n_extrema = num_classes
+            extrema_inds = get_laplacian_extrema(data=embeddings,
+                                                 n_extrema=n_extrema,
+                                                 knn=args.knn)
+            with open(save_path_extrema, 'wb+') as f:
+                np.savez(f, extrema_inds=extrema_inds)
+            print('Laplacian extrema computed.')
 
-        # PCA plot.
-        ax = fig.add_subplot(num_rows, 2, 2 * i + 1)
-        pca = PCA(n_components=2, random_state=0)
-        data_pca = pca.fit_transform(embeddings)
-        scprep.plot.scatter2d(data_pca,
-                              c=labels,
-                              legend_anchor=(1, 1),
-                              ax=ax,
-                              title=os.path.basename(embedding_folder),
-                              xticks=False,
-                              yticks=False,
-                              label_prefix='PCA',
-                              fontsize=10,
-                              s=3)
-        # PHATE plot.
-        ax = fig.add_subplot(num_rows, 2, 2 * i + 2)
+        #
+        ''' Plotting '''
+        #
+        ''' PHATE plot, colored by class. '''
+        ax = fig.add_subplot(2, num_cols, i + 1)
         phate_op = phate.PHATE(random_state=0,
                                n_jobs=1,
                                n_components=2,
@@ -111,14 +129,41 @@ if __name__ == '__main__':
         data_phate = phate_op.fit_transform(embeddings)
         scprep.plot.scatter2d(data_phate,
                               c=labels,
-                              legend_anchor=(1, 1),
+                              legend=False,
                               ax=ax,
-                              title=os.path.basename(embedding_folder),
+                              title=checkpoint_acc,
                               xticks=False,
                               yticks=False,
                               label_prefix='PHATE',
                               fontsize=10,
                               s=3)
 
+        #
+        ''' PHATE plot, annotated by Laplacian extrema. '''
+        ax = fig.add_subplot(2, num_cols, i + 1 + num_cols)
+
+        colors_extrema = np.empty((N), dtype=object)
+        colors_extrema.fill('Embedding\nVectors')
+        colors_extrema[extrema_inds] = 'Laplacian\nExtrema'
+        cmap_extrema = {
+            'Embedding\nVectors': 'gray',
+            'Laplacian\nExtrema': 'firebrick'
+        }
+        sizes = np.empty((N), dtype=int)
+        sizes.fill(1)
+        sizes[extrema_inds] = 50
+
+        scprep.plot.scatter2d(data_phate,
+                              c=colors_extrema,
+                              cmap=cmap_extrema,
+                              title=checkpoint_acc,
+                              legend=False,
+                              ax=ax,
+                              xticks=False,
+                              yticks=False,
+                              label_prefix='PHATE',
+                              fontsize=10,
+                              s=sizes)
+
         fig.tight_layout()
-        fig.savefig(save_path)
+        fig.savefig(save_path_fig)
