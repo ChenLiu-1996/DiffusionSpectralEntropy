@@ -193,7 +193,7 @@ def get_dataloaders(
 def probe_model(args: AttributeHashmap,
                 train_loader: torch.utils.data.DataLoader,
                 model: torch.nn.Module, device: torch.device, model_path: str,
-                log_path: str):
+                log_path: str, probing_epoch: int):
 
     model.train()
     model.freeze_all()
@@ -203,6 +203,8 @@ def probe_model(args: AttributeHashmap,
     opt_probing = torch.optim.AdamW(list(model.linear_parameters()),
                                     lr=float(args.learning_rate_probing),
                                     weight_decay=0)
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer=opt_probing, T_max=probing_epoch, eta_min=0)
 
     for epoch_idx in range(args.probing_epoch):
         probing_acc = linear_probing_epoch(args=args,
@@ -210,6 +212,7 @@ def probe_model(args: AttributeHashmap,
                                            model=model,
                                            device=device,
                                            opt_probing=opt_probing)
+        lr_scheduler.step()
         log('Probing epoch: %d, acc: %.3f' % (epoch_idx, probing_acc),
             log_path)
         if probing_acc > best_probing_acc:
@@ -402,7 +405,8 @@ def diffusion_entropy(args: AttributeHashmap):
                             model=model,
                             device=device,
                             model_path=linear_probing_model_path,
-                            log_path=log_path)
+                            log_path=log_path,
+                            probing_epoch=args.probing_epoch)
                 val_acc_actual = infer_model(
                     val_loader=val_loader,
                     model=model,
