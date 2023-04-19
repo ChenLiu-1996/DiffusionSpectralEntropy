@@ -55,11 +55,19 @@ def compute_act_stats(sampled_embeddings: np.array,
         item for item in correlations
         if (not np.isnan(item) and not np.isinf(item))
     ])
-    _mean = np.mean(correlations)
-    _std = np.std(correlations)
-    _median = np.median(correlations)
-    _25pctl = np.percentile(correlations, 25)
-    _75pctl = np.percentile(correlations, 75)
+
+    if len(correlations) == 0:
+        _mean = None
+        _std = None
+        _median = None
+        _25pctl = None
+        _75pctl = None
+    else:
+        _mean = np.mean(correlations)
+        _std = np.std(correlations)
+        _median = np.median(correlations)
+        _25pctl = np.percentile(correlations, 25)
+        _75pctl = np.percentile(correlations, 75)
 
     log('%s:' % log_str, log_path)
     log('    Mean \u00B1 std: %.3f \u00B1 %.3f' % (_mean, _std), log_path)
