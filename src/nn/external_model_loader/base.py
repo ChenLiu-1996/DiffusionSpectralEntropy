@@ -89,12 +89,19 @@ class BaseModel(object):
         for _, param in self.linear.named_parameters():
             param.requires_grad = True
 
-    def init_and_unfreeze_linear(self) -> None:
-
-        self.linear.weight.data.normal_(mean=0.0, std=0.01)
-        self.linear.bias.data.zero_()
+    def unfreeze_linear(self) -> None:
+        '''
+        Unfreeze the final linear layer.
+        '''
         self.linear.weight.requires_grad = True
         self.linear.bias.requires_grad = True
+
+    def init_linear(self) -> None:
+        '''
+        Initialize the final linear layer.
+        '''
+        self.linear.weight.data.normal_(mean=0.0, std=0.01)
+        self.linear.bias.data.zero_()
 
     def encode(self, x: torch.Tensor) -> torch.Tensor:
         '''
