@@ -57,11 +57,11 @@ def compute_act_stats(sampled_embeddings: np.array,
     ])
 
     if len(correlations) == 0:
-        _mean = None
-        _std = None
-        _median = None
-        _25pctl = None
-        _75pctl = None
+        _mean = 1
+        _std = 1
+        _median = 1
+        _25pctl = 1
+        _75pctl = 1
     else:
         _mean = np.mean(correlations)
         _std = np.std(correlations)
