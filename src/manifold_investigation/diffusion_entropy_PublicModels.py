@@ -372,7 +372,8 @@ def diffusion_entropy(args: AttributeHashmap):
                     val_loader=val_loader,
                     model=model,
                     device=device,
-                    model_path=linear_probing_model_path)
+                    model_path=linear_probing_model_path,
+                    log_path=log_path)
             else:
                 log('Probing model: %s ...' % version, log_path)
                 probe_model(args=args,
@@ -470,7 +471,7 @@ def plot_summary(summary: dict, fig_prefix: str = None):
     for i in range(len(version_list)):
         ax.scatter(vne_list[i],
                    acc_list_actual[i],
-                   c=model_color_map[version_list[i].split('_ep')[0]],
+                   color=model_color_map[version_list[i].split('_ep')[0]],
                    s=int(version_list[i].split('_ep')[1]) / 5,
                    cmap='tab20')
     ax.legend(version_list)
@@ -487,7 +488,7 @@ def plot_summary(summary: dict, fig_prefix: str = None):
     for i in range(len(version_list)):
         ax.scatter(acc_list_nominal[i],
                    acc_list_actual[i],
-                   c=model_color_map[version_list[i].split('_ep')[0]],
+                   color=model_color_map[version_list[i].split('_ep')[0]],
                    s=int(version_list[i].split('_ep')[1]) / 5,
                    cmap='tab20')
     ax.legend(version_list)
