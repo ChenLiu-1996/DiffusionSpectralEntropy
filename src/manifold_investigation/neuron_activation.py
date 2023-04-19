@@ -287,8 +287,8 @@ if __name__ == '__main__':
     }
 
     # Find where accuracy plateaus.
-    plateau_acc = acc_list.max() * 0.98
-    plateau_idx = np.argwhere(acc_list > plateau_acc)[0][0]
+    plateau_acc = np.max(acc_list) * 0.98
+    plateau_idx = np.argwhere(np.array(acc_list) > plateau_acc)[0][0]
 
     #
     ''' Figure for Neuron Activation (Output) '''
