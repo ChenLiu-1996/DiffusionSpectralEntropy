@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import Dict, List
+from typing import List
 
 import torch
 import torchvision.models as models
@@ -18,12 +18,10 @@ class BaseModel(object):
     def __init__(
         self,
         device: torch.device = torch.device('cpu'),
-        model_name: str = 'moco',
-        model_class_name: str = 'MoCoModel',
-        version: str = 'moco_v1_ep200',
-        versions: List[str] = [
-            'moco_v1_ep200', 'moco_v2_ep200', 'moco_v2_ep800'
-        ],
+        model_name: str = None,
+        model_class_name: str = None,
+        version: str = None,
+        versions: List[str] = [],
         num_classes: int = 10,
     ) -> None:
         '''

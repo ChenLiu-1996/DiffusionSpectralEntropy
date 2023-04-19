@@ -10,6 +10,7 @@ from diffusion_curvature.core import DiffusionMatrix
 from matplotlib import cm
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr, spearmanr
+from tinyimagenet import TinyImageNet
 from tqdm import tqdm
 
 os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
@@ -73,7 +74,7 @@ def get_dataloaders(
         imsize = 28
         dataset_mean = (0.1307, )
         dataset_std = (0.3081, )
-        torchvision_dataset_loader = torchvision.datasets.MNIST
+        torchvision_dataset = torchvision.datasets.MNIST
 
     elif args.dataset == 'cifar10':
         args.in_channels = 3
@@ -81,7 +82,7 @@ def get_dataloaders(
         imsize = 32
         dataset_mean = (0.4914, 0.4822, 0.4465)
         dataset_std = (0.2023, 0.1994, 0.2010)
-        torchvision_dataset_loader = torchvision.datasets.CIFAR10
+        torchvision_dataset = torchvision.datasets.CIFAR10
 
     elif args.dataset == 'cifar100':
         args.in_channels = 3
@@ -89,7 +90,7 @@ def get_dataloaders(
         imsize = 32
         dataset_mean = (0.4914, 0.4822, 0.4465)
         dataset_std = (0.2023, 0.1994, 0.2010)
-        torchvision_dataset_loader = torchvision.datasets.CIFAR100
+        torchvision_dataset = torchvision.datasets.CIFAR100
 
     elif args.dataset == 'stl10':
         args.in_channels = 3
@@ -97,12 +98,23 @@ def get_dataloaders(
         imsize = 96
         dataset_mean = (0.4467, 0.4398, 0.4066)
         dataset_std = (0.2603, 0.2566, 0.2713)
-        torchvision_dataset_loader = torchvision.datasets.STL10
+        torchvision_dataset = torchvision.datasets.STL10
 
-    else:
-        raise ValueError(
-            '`config.dataset` value not supported. Value provided: %s.' %
-            args.dataset)
+    elif args.dataset == 'tinyimagenet':
+        args.in_channels = 3
+        args.num_classes = 200
+        imsize = 64
+        dataset_mean = (0.485, 0.456, 0.406)
+        dataset_std = (0.229, 0.224, 0.225)
+        torchvision_dataset = TinyImageNet
+
+    elif args.dataset == 'imagenet':
+        args.in_channels = 3
+        args.num_classes = 1000
+        imsize = 224
+        dataset_mean = (0.485, 0.456, 0.406)
+        dataset_std = (0.229, 0.224, 0.225)
+        torchvision_dataset = torchvision.datasets.ImageNet
 
     if args.in_channels == 3:
         transform_train = torchvision.transforms.Compose([
@@ -131,47 +143,56 @@ def get_dataloaders(
         ])
 
     transform_val = torchvision.transforms.Compose([
+        torchvision.transforms.CenterCrop(imsize),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=dataset_mean, std=dataset_std)
     ])
 
     if args.dataset in ['mnist', 'cifar10', 'cifar100']:
-        train_loader = torch.utils.data.DataLoader(
-            torchvision_dataset_loader(dataset_dir,
-                                       train=True,
-                                       download=True,
-                                       transform=transform_train),
-            batch_size=args.batch_size,
-            num_workers=args.num_workers,
-            shuffle=True)
-        val_loader = torch.utils.data.DataLoader(torchvision_dataset_loader(
-            dataset_dir, train=False, download=True, transform=transform_val),
-                                                 batch_size=args.batch_size,
-                                                 num_workers=args.num_workers,
-                                                 shuffle=False)
+        train_dataset = torchvision_dataset(dataset_dir,
+                                            train=True,
+                                            download=True,
+                                            transform=transform_train)
+        val_dataset = torchvision_dataset(dataset_dir,
+                                          train=False,
+                                          download=True,
+                                          transform=transform_val)
 
     elif args.dataset in ['stl10']:
-        train_loader = torch.utils.data.DataLoader(
-            torchvision_dataset_loader(dataset_dir,
-                                       split='train',
-                                       download=True,
-                                       transform=transform_train),
-            batch_size=args.batch_size,
-            num_workers=args.num_workers,
-            shuffle=True)
-        val_loader = torch.utils.data.DataLoader(torchvision_dataset_loader(
-            dataset_dir, split='test', download=True, transform=transform_val),
-                                                 batch_size=args.batch_size,
-                                                 num_workers=args.num_workers,
-                                                 shuffle=False)
+        train_dataset = torchvision_dataset(dataset_dir,
+                                            split='train',
+                                            download=True,
+                                            transform=transform_train)
+        val_dataset = torchvision_dataset(dataset_dir,
+                                          split='test',
+                                          download=True,
+                                          transform=transform_val)
+
+    elif args.dataset in ['tinyimagenet', 'imagenet']:
+        train_dataset = torchvision_dataset(dataset_dir,
+                                            split='train',
+                                            transform=transform_train)
+        val_dataset = torchvision_dataset(dataset_dir,
+                                          split='val',
+                                          transform=transform_val)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=args.batch_size,
+                                               num_workers=args.num_workers,
+                                               shuffle=True,
+                                               pin_memory=True)
+    val_loader = torch.utils.data.DataLoader(val_dataset,
+                                             batch_size=args.batch_size,
+                                             num_workers=args.num_workers,
+                                             shuffle=False,
+                                             pin_memory=True)
 
     return train_loader, val_loader
 
 
 def probe_model(args: AttributeHashmap,
                 train_loader: torch.utils.data.DataLoader,
-                model: torch.nn.Module, device: torch.device,
-                loss_fn_classification: torch.nn.Module, model_path: str,
+                model: torch.nn.Module, device: torch.device, model_path: str,
                 log_path: str):
 
     model.train()
@@ -180,16 +201,15 @@ def probe_model(args: AttributeHashmap,
 
     best_probing_acc = 0
     opt_probing = torch.optim.AdamW(list(model.linear_parameters()),
-                                    lr=float(args.learning_rate_probing))
+                                    lr=float(args.learning_rate_probing),
+                                    weight_decay=0)
 
     for epoch_idx in range(args.probing_epoch):
-        probing_acc = linear_probing_epoch(
-            args=args,
-            train_loader=train_loader,
-            model=model,
-            device=device,
-            opt_probing=opt_probing,
-            loss_fn_classification=loss_fn_classification)
+        probing_acc = linear_probing_epoch(args=args,
+                                           train_loader=train_loader,
+                                           model=model,
+                                           device=device,
+                                           opt_probing=opt_probing)
         log('Probing epoch: %d, acc: %.3f' % (epoch_idx, probing_acc),
             log_path)
         if probing_acc > best_probing_acc:
@@ -203,10 +223,11 @@ def probe_model(args: AttributeHashmap,
 def linear_probing_epoch(args: AttributeHashmap,
                          train_loader: torch.utils.data.DataLoader,
                          model: torch.nn.Module, device: torch.device,
-                         opt_probing: torch.optim.Optimizer,
-                         loss_fn_classification: torch.nn.Module):
+                         opt_probing: torch.optim.Optimizer):
+
     correct, total_count = 0, 0
     for _, (x, y_true) in enumerate(tqdm(train_loader)):
+
         B = x.shape[0]
         assert args.in_channels in [1, 3]
         if args.in_channels == 1:
@@ -215,7 +236,7 @@ def linear_probing_epoch(args: AttributeHashmap,
         x, y_true = x.to(device), y_true.to(device)
 
         y_pred = model.forward(x)
-        loss = loss_fn_classification(y_pred, y_true)
+        loss = torch.nn.functional.cross_entropy(y_pred, y_true)
         correct += torch.sum(torch.argmax(y_pred, dim=-1) == y_true).item()
         total_count += B
 
@@ -380,7 +401,6 @@ def diffusion_entropy(args: AttributeHashmap):
                             train_loader=train_loader,
                             model=model,
                             device=device,
-                            loss_fn_classification=torch.nn.CrossEntropyLoss(),
                             model_path=linear_probing_model_path,
                             log_path=log_path)
                 val_acc_actual = infer_model(
@@ -514,9 +534,9 @@ if __name__ == '__main__':
                         help='random seed.',
                         type=int,
                         default=0)
-    parser.add_argument('--batch-size', type=int, default=512)
+    parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--num-workers', type=int, default=1)
-    parser.add_argument('--learning_rate_probing', type=float, default=5e-4)
+    parser.add_argument('--learning_rate_probing', type=float, default=1e-2)
     parser.add_argument('--probing_epoch', type=int, default=100)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
