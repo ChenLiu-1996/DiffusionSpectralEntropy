@@ -58,7 +58,7 @@ def compute_act_stats(sampled_embeddings: np.array,
 
     if len(correlations) == 0:
         _mean = 1
-        _std = 1
+        _std = 0
         _median = 1
         _25pctl = 1
         _75pctl = 1
@@ -73,7 +73,7 @@ def compute_act_stats(sampled_embeddings: np.array,
     log('    Mean \u00B1 std: %.3f \u00B1 %.3f' % (_mean, _std), log_path)
     log('    Median: %.3f' % _median, log_path)
 
-    return _mean, _std, _25pctl, _25pctl, _75pctl
+    return _mean, _std, _median, _25pctl, _75pctl
 
 
 def plot_helper(ax: plt.Axes, epoch_list: List[float], acc_list: List[float],
