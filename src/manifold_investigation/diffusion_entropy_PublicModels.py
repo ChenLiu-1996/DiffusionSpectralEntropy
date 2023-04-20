@@ -201,8 +201,6 @@ def tune_model(args: AttributeHashmap,
 
     if args.full_fine_tune is True:
         model.unfreeze_all()
-        if args.learning_rate_tuning is None:
-            args.learning_rate_tuning = 1e-4
         opt_probing = torch.optim.AdamW(model.encoder_parameters() +
                                         model.linear_parameters(),
                                         lr=float(args.learning_rate_tuning))
@@ -210,8 +208,6 @@ def tune_model(args: AttributeHashmap,
         model.freeze_all()
         model.unfreeze_linear()
         model.init_linear()
-        if args.learning_rate_tuning is None:
-            args.learning_rate_tuning = 1e-2
         opt_probing = torch.optim.AdamW(model.linear_parameters(),
                                         lr=float(args.learning_rate_tuning))
 
@@ -373,7 +369,7 @@ def diffusion_entropy(args: AttributeHashmap):
             1. Run through encoder and save embeddings.
                We have to do this prior to tuning, because we want to
                see if the manifold characteristics extracted prior to tuning
-               can give us enough information on how good the pretraining is.
+               can give us enough information to estimate tuning performance.
             '''
             if os.path.exists(embedding_npy_path):
                 data_numpy = np.load(embedding_npy_path)
@@ -445,7 +441,9 @@ def diffusion_entropy(args: AttributeHashmap):
     fig_prefix = '%s/diffusion-entropy-PublicModels-%s-%s' % (
         save_folder, args.dataset,
         'FineTune' if args.full_fine_tune else 'LinearProbe')
-    plot_summary(summary, fig_prefix=fig_prefix)
+    plot_summary(summary,
+                 fig_prefix=fig_prefix,
+                 full_fine_tune=args.full_fine_tune)
     return
 
 
@@ -467,7 +465,7 @@ def normalize(
     return data
 
 
-def plot_summary(summary: dict, fig_prefix: str = None):
+def plot_summary(summary: dict, fig_prefix: str = None, full_fine_tune: bool = False):
     version_list, vne_list, acc_list_nominal, acc_list_actual = [], [], [], []
 
     fig_vne = plt.figure(figsize=(10, 8))
@@ -514,7 +512,10 @@ def plot_summary(summary: dict, fig_prefix: str = None):
     ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
                  (pearson_r, pearson_p, spearman_r, spearman_p))
     ax.set_xlabel('Diffusion Entropy')
-    ax.set_ylabel('Linear Probing Accuracy')
+    if full_fine_tune:
+        ax.set_ylabel('Fine Tuning Accuracy')
+    else:
+        ax.set_ylabel('Linear Probing Accuracy')
 
     # Plot the performances:
     # same model name: same color
@@ -570,8 +571,8 @@ if __name__ == '__main__':
     parser.add_argument('--full-fine-tune',
                         help='If True, full fine tune. Else, linear probe.',
                         action='store_true')
-    parser.add_argument('--learning_rate_tuning', type=float, default=None)
-    parser.add_argument('--num_tuning_epoch', type=int, default=100)
+    parser.add_argument('--learning-rate-tuning', type=float, default=1e-3)
+    parser.add_argument('--num-tuning-epoch', type=int, default=50)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
