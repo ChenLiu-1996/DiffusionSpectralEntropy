@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
     save_root = './results_visualize/'
     os.makedirs(save_root, exist_ok=True)
-    save_path_fig = '%s/visualize-%s-%s-%seed%s.png' % (
+    save_path_fig = '%s/visualize-%s-%s-%s-seed%s.png' % (
         save_root, config.dataset, method_str, config.model,
         config.random_seed)
 

@@ -68,6 +68,10 @@ def get_dataloaders(
 
     dataset_dir = '%s/data/%s' % (args.root_dir, args.dataset)
 
+    #NOTE: We do not recommend using the following datasets:
+    # [mnist, cifar10, cifar100]: plenty of data, low resolution, big gap w.r.t imagenet.
+    # [tinyimagenet, imagenet]: meaningless to pretrain on imagenet and finetune on them.
+
     if args.dataset == 'mnist':
         args.in_channels = 1
         args.num_classes = 10
@@ -99,6 +103,14 @@ def get_dataloaders(
         dataset_mean = (0.4467, 0.4398, 0.4066)
         dataset_std = (0.2603, 0.2566, 0.2713)
         torchvision_dataset = torchvision.datasets.STL10
+
+    elif args.dataset == 'stanfordcars':
+        args.in_channels = 3
+        args.num_classes = 196
+        imsize = 352  # (360 x 240)
+        dataset_mean = (0.485, 0.456, 0.406)
+        dataset_std = (0.229, 0.224, 0.225)
+        torchvision_dataset = torchvision.datasets.StanfordCars
 
     elif args.dataset == 'tinyimagenet':
         args.in_channels = 3
@@ -158,7 +170,7 @@ def get_dataloaders(
                                           download=True,
                                           transform=transform_val)
 
-    elif args.dataset in ['stl10']:
+    elif args.dataset in ['stanfordcars', 'stl10']:
         train_dataset = torchvision_dataset(dataset_dir,
                                             split='train',
                                             download=True,
@@ -212,7 +224,7 @@ def tune_model(args: AttributeHashmap,
                                         lr=float(args.learning_rate_tuning))
 
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt_probing, T_max=args.num_tuning_epoch // 4)
+        optimizer=opt_probing, T_max=args.num_tuning_epoch)
 
     best_probing_acc = 0
     for epoch_idx in range(args.num_tuning_epoch):
@@ -465,7 +477,9 @@ def normalize(
     return data
 
 
-def plot_summary(summary: dict, fig_prefix: str = None, full_fine_tune: bool = False):
+def plot_summary(summary: dict,
+                 fig_prefix: str = None,
+                 full_fine_tune: bool = False):
     version_list, vne_list, acc_list_nominal, acc_list_actual = [], [], [], []
 
     fig_vne = plt.figure(figsize=(10, 8))
@@ -566,12 +580,12 @@ if __name__ == '__main__':
                         help='random seed.',
                         type=int,
                         default=0)
-    parser.add_argument('--batch-size', type=int, default=512)
+    parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--num-workers', type=int, default=1)
     parser.add_argument('--full-fine-tune',
                         help='If True, full fine tune. Else, linear probe.',
                         action='store_true')
-    parser.add_argument('--learning-rate-tuning', type=float, default=1e-3)
+    parser.add_argument('--learning-rate-tuning', type=float, default=1e-4)
     parser.add_argument('--num-tuning-epoch', type=int, default=50)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)

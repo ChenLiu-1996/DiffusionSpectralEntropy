@@ -378,9 +378,9 @@ def infer(config: AttributeHashmap) -> None:
         glob('%s/%s-%s-%s-seed%s*.pth' %
              (config.checkpoint_dir, config.dataset, config.bad_method,
               config.model, config.random_seed)))
-    log_path = '%s/%s-%s-%s-%s.log' % (config.log_dir, config.dataset,
-                                       config.bad_method, config.model,
-                                       config.random_seed)
+    log_path = '%s/%s-%s-%s-seed%s.log' % (config.log_dir, config.dataset,
+                                           config.bad_method, config.model,
+                                           config.random_seed)
 
     for checkpoint in tqdm(checkpoint_paths):
         checkpoint_name = checkpoint.split('/')[-1].replace('.pth', '')

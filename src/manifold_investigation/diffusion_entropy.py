@@ -154,30 +154,30 @@ if __name__ == '__main__':
         vne_list.append(vne)
         log('Diffusion Entropy = %.4f' % vne, log_path)
 
-        # #
-        # '''Mutual Information between Diffusion Entropy and Class'''
-        # log('Mutual Information between Diffusion Entropy and Class: ',
-        #     log_path)
-        # classes_list, classes_cnts = np.unique(labels, return_counts=True)
-        # vne_by_classes = []
-        # for class_idx in tqdm(len(classes_list)):
-        #     inds = (labels == class_idx).reshape(-1)
-        #     samples = embeddings[inds, :]
+        #
+        '''Mutual Information between Diffusion Entropy and Class'''
+        log('Mutual Information between Diffusion Entropy and Class: ',
+            log_path)
+        classes_list, classes_cnts = np.unique(labels, return_counts=True)
+        vne_by_classes = []
+        for class_idx in tqdm(classes_list):
+            inds = (labels == class_idx).reshape(-1)
+            samples = embeddings[inds, :]
 
-        #     # Diffusion Matrix
-        #     s_diffusion_matrix = DiffusionMatrix(samples, k=args.knn)
-        #     # Eigenvalues
-        #     s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
-        #     # Von Neumann Entropy
-        #     s_vne = von_neumann_entropy(s_eigenvalues_P)
+            # Diffusion Matrix
+            s_diffusion_matrix = DiffusionMatrix(samples, k=args.knn)
+            # Eigenvalues
+            s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
+            # Von Neumann Entropy
+            s_vne = von_neumann_entropy(s_eigenvalues_P)
 
-        #     vne_by_classes.append(s_vne)
+            vne_by_classes.append(s_vne)
 
-        # mi = mutual_information(eigenvalues_P,
-        #                         vne_by_classes,
-        #                         classes_cnts.tolist(),
-        #                         unconditioned_entropy=vne)
-        # mi_list.append(mi)
+        mi = mutual_information(eigenvalues_P,
+                                vne_by_classes,
+                                classes_cnts.tolist(),
+                                unconditioned_entropy=vne)
+        mi_list.append(mi)
 
         #
         '''Plotting'''
@@ -220,39 +220,39 @@ if __name__ == '__main__':
         fig_vne_corr.savefig(save_path_fig_vne_corr)
         plt.close(fig=fig_vne_corr)
 
-        # # Plot of Mutual Information vs. epoch.
-        # fig_mi = plt.figure(figsize=(20, 20))
-        # ax = fig_mi.add_subplot(1, 1, 1)
-        # ax.spines[['right', 'top']].set_visible(False)
-        # ax.scatter(epoch_list, mi_list, c='mediumblue', s=120)
-        # ax.plot(epoch_list, mi_list, c='mediumblue')
-        # fig_mi.supylabel('Mutual Information', fontsize=40)
-        # fig_mi.supxlabel('Epochs Trained', fontsize=40)
-        # ax.tick_params(axis='both', which='major', labelsize=30)
-        # fig_mi.savefig(save_path_fig_mi)
-        # plt.close(fig=fig_mi)
+        # Plot of Mutual Information vs. epoch.
+        fig_mi = plt.figure(figsize=(20, 20))
+        ax = fig_mi.add_subplot(1, 1, 1)
+        ax.spines[['right', 'top']].set_visible(False)
+        ax.scatter(epoch_list, mi_list, c='mediumblue', s=120)
+        ax.plot(epoch_list, mi_list, c='mediumblue')
+        fig_mi.supylabel('Mutual Information', fontsize=40)
+        fig_mi.supxlabel('Epochs Trained', fontsize=40)
+        ax.tick_params(axis='both', which='major', labelsize=30)
+        fig_mi.savefig(save_path_fig_mi)
+        plt.close(fig=fig_mi)
 
-        # # Plot of Mutual Information vs. Val. Acc.
-        # fig_mi_corr = plt.figure(figsize=(20, 20))
-        # ax = fig_mi_corr.add_subplot(1, 1, 1)
-        # ax.spines[['right', 'top']].set_visible(False)
-        # ax.scatter(acc_list,
-        #            mi_list,
-        #            facecolors='none',
-        #            edgecolors='mediumblue',
-        #            s=500,
-        #            linewidths=5)
-        # fig_mi_corr.supylabel('Mutual Information', fontsize=40)
-        # fig_mi_corr.supxlabel('Downstream Classification Accuracy',
-        #                       fontsize=40)
-        # ax.tick_params(axis='both', which='major', labelsize=30)
-        # # Display correlation.
-        # if len(acc_list) > 1:
-        #     fig_mi_corr.suptitle(
-        #         'Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f)' %
-        #         (pearsonr(acc_list, mi_list)[0], pearsonr(
-        #             acc_list, mi_list)[1], spearmanr(acc_list, mi_list)[0],
-        #          spearmanr(acc_list, mi_list)[1]),
-        #         fontsize=40)
-        # fig_mi_corr.savefig(save_path_fig_mi_corr)
-        # plt.close(fig=fig_mi_corr)
+        # Plot of Mutual Information vs. Val. Acc.
+        fig_mi_corr = plt.figure(figsize=(20, 20))
+        ax = fig_mi_corr.add_subplot(1, 1, 1)
+        ax.spines[['right', 'top']].set_visible(False)
+        ax.scatter(acc_list,
+                   mi_list,
+                   facecolors='none',
+                   edgecolors='mediumblue',
+                   s=500,
+                   linewidths=5)
+        fig_mi_corr.supylabel('Mutual Information', fontsize=40)
+        fig_mi_corr.supxlabel('Downstream Classification Accuracy',
+                              fontsize=40)
+        ax.tick_params(axis='both', which='major', labelsize=30)
+        # Display correlation.
+        if len(acc_list) > 1:
+            fig_mi_corr.suptitle(
+                'Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f)' %
+                (pearsonr(acc_list, mi_list)[0], pearsonr(
+                    acc_list, mi_list)[1], spearmanr(acc_list, mi_list)[0],
+                 spearmanr(acc_list, mi_list)[1]),
+                fontsize=40)
+        fig_mi_corr.savefig(save_path_fig_mi_corr)
+        plt.close(fig=fig_mi_corr)
