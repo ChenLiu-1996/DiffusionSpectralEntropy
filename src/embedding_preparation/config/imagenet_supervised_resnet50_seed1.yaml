@@ -8,7 +8,7 @@ patience: 20
 batch_size: 128
 learning_rate: 1e-2
 weight_decay: 1e-4
-num_workers: 24
+num_workers: 10
 dataset: 'imagenet'
 contrastive: 'NA'
 random_seed: 1
