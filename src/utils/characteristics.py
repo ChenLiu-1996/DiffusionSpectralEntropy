@@ -4,7 +4,7 @@ import numpy as np
 
 
 def mutual_information(eigs: np.array,
-                       eigs_by_class: List[np.array],
+                       vne_by_class: List[np.float64],
                        n_by_class: List[int],
                        unconditioned_entropy: float = None):
     # H(h_m)
@@ -12,12 +12,9 @@ def mutual_information(eigs: np.array,
         unconditioned_entropy = von_neumann_entropy(eigs)
 
     # H(h_m|Y), Y is the class
-    conditioned_entropy_list = [
-        von_neumann_entropy(eig) for eig in eigs_by_class
-    ]
     conditioned_entropy = np.sum(
         np.array(n_by_class) / np.sum(n_by_class) *
-        np.array(conditioned_entropy_list))
+        np.array(vne_by_class))
 
     # I(h_m; Y)
     mi = unconditioned_entropy - conditioned_entropy

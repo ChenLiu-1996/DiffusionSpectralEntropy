@@ -159,7 +159,7 @@ if __name__ == '__main__':
         # log('Mutual Information between Diffusion Entropy and Class: ',
         #     log_path)
         # classes_list, classes_cnts = np.unique(labels, return_counts=True)
-        # eigs_by_classes = []
+        # vne_by_classes = []
         # for class_idx in tqdm(len(classes_list)):
         #     inds = (labels == class_idx).reshape(-1)
         #     samples = embeddings[inds, :]
@@ -171,10 +171,10 @@ if __name__ == '__main__':
         #     # Von Neumann Entropy
         #     s_vne = von_neumann_entropy(s_eigenvalues_P)
 
-        #     eigs_by_classes.append(s_vne)
+        #     vne_by_classes.append(s_vne)
 
         # mi = mutual_information(eigenvalues_P,
-        #                         eigs_by_classes,
+        #                         vne_by_classes,
         #                         classes_cnts.tolist(),
         #                         unconditioned_entropy=vne)
         # mi_list.append(mi)
