@@ -94,7 +94,7 @@ if __name__ == '__main__':
     for i, embedding_folder in enumerate(embedding_folders):
         epoch_list.append(
             int(embedding_folder.split('epoch')[-1].split('-valAcc')[0]) + 1)
-        acc_list.append(float(embedding_folder.split('-valAcc')[1]))
+        acc_list.append(float(embedding_folder.split('-valAcc')[1].split('-divergence')[0]))
 
         files = sorted(glob(embedding_folder + '/*'))
         checkpoint_name = os.path.basename(embedding_folder)
