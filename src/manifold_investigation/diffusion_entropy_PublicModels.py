@@ -69,7 +69,7 @@ def get_dataloaders(
     dataset_dir = '%s/data/%s' % (args.root_dir, args.dataset)
 
     #NOTE: We do not recommend using the following datasets:
-    # [mnist, cifar10, cifar100]: plenty of data, low resolution, big gap w.r.t imagenet.
+    # [mnist, cifar10]: plenty of data, low resolution, big gap w.r.t imagenet.
     # [tinyimagenet, imagenet]: meaningless to pretrain on imagenet and finetune on them.
 
     if args.dataset == 'mnist':
@@ -213,31 +213,32 @@ def tune_model(args: AttributeHashmap,
 
     if args.full_fine_tune is True:
         model.unfreeze_all()
-        opt_probing = torch.optim.AdamW(model.encoder_parameters() +
-                                        model.linear_parameters(),
-                                        lr=float(args.learning_rate_tuning))
+        opt = torch.optim.AdamW(model.encoder_parameters() +
+                                model.linear_parameters(),
+                                lr=float(args.learning_rate_tuning))
     else:
         model.freeze_all()
         model.unfreeze_linear()
         model.init_linear()
-        opt_probing = torch.optim.AdamW(model.linear_parameters(),
-                                        lr=float(args.learning_rate_tuning))
+        opt = torch.optim.AdamW(model.linear_parameters(),
+                                lr=float(args.learning_rate_tuning))
 
     lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt_probing, T_max=args.num_tuning_epoch)
+        optimizer=opt, T_max=args.num_tuning_epoch, eta_min=0)
 
-    best_probing_acc = 0
+    best_tuning_acc = 0
     for epoch_idx in range(args.num_tuning_epoch):
-        probing_acc = tune_model_single_epoch(args=args,
-                                              train_loader=train_loader,
-                                              model=model,
-                                              device=device,
-                                              opt_probing=opt_probing)
-        lr_scheduler.step()
-        log('Probing epoch: %d, acc: %.3f' % (epoch_idx, probing_acc),
-            log_path)
-        if probing_acc > best_probing_acc:
-            best_probing_acc = probing_acc
+        tuning_acc = tune_model_single_epoch(args=args,
+                                             train_loader=train_loader,
+                                             model=model,
+                                             device=device,
+                                             opt=opt)
+        if epoch_idx >= 10:
+            lr_scheduler.step()
+
+        log('Probing epoch: %d, acc: %.3f' % (epoch_idx, tuning_acc), log_path)
+        if tuning_acc > best_tuning_acc:
+            best_tuning_acc = tuning_acc
             model.save_model(model_path)
 
     model.eval()
@@ -247,7 +248,7 @@ def tune_model(args: AttributeHashmap,
 def tune_model_single_epoch(args: AttributeHashmap,
                             train_loader: torch.utils.data.DataLoader,
                             model: torch.nn.Module, device: torch.device,
-                            opt_probing: torch.optim.Optimizer):
+                            opt: torch.optim.Optimizer):
 
     correct, total_count = 0, 0
     for _, (x, y_true) in enumerate(tqdm(train_loader)):
@@ -264,14 +265,14 @@ def tune_model_single_epoch(args: AttributeHashmap,
         correct += torch.sum(torch.argmax(y_pred, dim=-1) == y_true).item()
         total_count += B
 
-        opt_probing.zero_grad()
+        opt.zero_grad()
         loss.backward()
-        opt_probing.step()
+        opt.step()
 
-    probing_acc = correct / total_count * 100
+    tuning_acc = correct / total_count * 100
     model.eval()
 
-    return probing_acc
+    return tuning_acc
 
 
 def infer_model(val_loader: torch.utils.data.DataLoader,
@@ -549,7 +550,10 @@ def plot_summary(summary: dict,
     ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
                  (pearson_r, pearson_p, spearman_r, spearman_p))
     ax.set_xlabel('Nominal Accuracy')
-    ax.set_ylabel('Linear Probing Accuracy')
+    if full_fine_tune:
+        ax.set_ylabel('Fine Tuning Accuracy')
+    else:
+        ax.set_ylabel('Linear Probing Accuracy')
 
     for i in range(len(version_list)):
         ax.scatter(acc_list_nominal[i],
@@ -585,7 +589,7 @@ if __name__ == '__main__':
     parser.add_argument('--full-fine-tune',
                         help='If True, full fine tune. Else, linear probe.',
                         action='store_true')
-    parser.add_argument('--learning-rate-tuning', type=float, default=1e-4)
+    parser.add_argument('--learning-rate-tuning', type=float, default=1e-3)
     parser.add_argument('--num-tuning-epoch', type=int, default=50)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
