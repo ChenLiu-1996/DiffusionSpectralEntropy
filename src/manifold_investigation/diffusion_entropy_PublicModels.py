@@ -6,7 +6,6 @@ from typing import List, Tuple, Union
 import numpy as np
 import torch
 import torchvision
-from diffusion_curvature.core import DiffusionMatrix
 from matplotlib import cm
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr, spearmanr
@@ -22,20 +21,23 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
+from characteristics import mutual_information
 from log_utils import log
 from seed import seed_everything
+from scheduler import LinearWarmupCosineAnnealingLR
 
 sys.path.insert(0, import_dir + '/nn/external_model_loader/')
 from barlowtwins_model import BarlowTwinsModel
 from characteristics import von_neumann_entropy
+from diffusion import DiffusionMatrix
 from moco_model import MoCoModel
 from simsiam_model import SimSiamModel
 from swav_model import SwavModel
 from vicreg_model import VICRegModel
 
 
-def compute_diffusion_entropy(embeddings: torch.Tensor, args: AttributeHashmap,
-                              eig_npy_path: str) -> float:
+def compute_diffusion_entropy(embeddings: torch.Tensor, eig_npy_path: str,
+                              knn: int) -> float:
 
     if os.path.exists(eig_npy_path):
         data_numpy = np.load(eig_npy_path)
@@ -43,9 +45,7 @@ def compute_diffusion_entropy(embeddings: torch.Tensor, args: AttributeHashmap,
         print('Pre-computed eigenvalues loaded.')
     else:
         # Diffusion Matrix
-        diffusion_matrix = DiffusionMatrix(embeddings,
-                                           kernel_type="adaptive anisotropic",
-                                           k=args.knn)
+        diffusion_matrix = DiffusionMatrix(embeddings, k=args.knn)
         print('Diffusion matrix computed.')
 
         # Diffusion Eigenvalues
@@ -60,6 +60,33 @@ def compute_diffusion_entropy(embeddings: torch.Tensor, args: AttributeHashmap,
     vne = von_neumann_entropy(eigenvalues_P)
 
     return vne
+
+
+def compute_mi_class(embeddings: torch.Tensor, labels: np.array, vne: float,
+                     knn: int) -> float:
+
+    classes_list, classes_cnts = np.unique(labels, return_counts=True)
+
+    vne_by_classes = []
+    for class_idx in classes_list:
+        inds = (labels == class_idx).reshape(-1)
+        samples = embeddings[inds, :]
+
+        # Diffusion Matrix
+        s_diffusion_matrix = DiffusionMatrix(samples, k=knn)
+        # Eigenvalues
+        s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
+        # Von Neumann Entropy
+        s_vne = von_neumann_entropy(s_eigenvalues_P)
+
+        vne_by_classes.append(s_vne)
+
+    mi = mutual_information(None,
+                            vne_by_classes,
+                            classes_cnts.tolist(),
+                            unconditioned_entropy=vne)
+
+    return mi
 
 
 def get_dataloaders(
@@ -204,8 +231,8 @@ def get_dataloaders(
 
 def tune_model(args: AttributeHashmap,
                train_loader: torch.utils.data.DataLoader,
-               model: torch.nn.Module, device: torch.device, model_path: str,
-               log_path: str):
+               val_loader: torch.utils.data.DataLoader, model: torch.nn.Module,
+               device: torch.device, model_path: str, log_path: str):
 
     # Load the pretrained model.
     model.restore_model()
@@ -223,13 +250,16 @@ def tune_model(args: AttributeHashmap,
         opt = torch.optim.AdamW(model.linear_parameters(),
                                 lr=float(args.learning_rate_tuning))
 
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt, T_max=args.num_tuning_epoch, eta_min=0)
+    lr_scheduler = LinearWarmupCosineAnnealingLR(
+        optimizer=opt,
+        warmup_epochs=min(10, args.num_tuning_epoch // 5),
+        max_epochs=args.num_tuning_epoch)
 
     best_tuning_acc = 0
     for epoch_idx in range(args.num_tuning_epoch):
         tuning_acc = tune_model_single_epoch(args=args,
                                              train_loader=train_loader,
+                                             val_loader=val_loader,
                                              model=model,
                                              device=device,
                                              opt=opt)
@@ -247,10 +277,10 @@ def tune_model(args: AttributeHashmap,
 
 def tune_model_single_epoch(args: AttributeHashmap,
                             train_loader: torch.utils.data.DataLoader,
+                            val_loader: torch.utils.data.DataLoader,
                             model: torch.nn.Module, device: torch.device,
                             opt: torch.optim.Optimizer):
 
-    correct, total_count = 0, 0
     for _, (x, y_true) in enumerate(tqdm(train_loader)):
 
         B = x.shape[0]
@@ -262,22 +292,35 @@ def tune_model_single_epoch(args: AttributeHashmap,
 
         y_pred = model.forward(x)
         loss = torch.nn.functional.cross_entropy(y_pred, y_true)
-        correct += torch.sum(torch.argmax(y_pred, dim=-1) == y_true).item()
-        total_count += B
 
         opt.zero_grad()
         loss.backward()
         opt.step()
 
-    tuning_acc = correct / total_count * 100
     model.eval()
+
+    correct, total_count = 0, 0
+    with torch.no_grad():
+        for _, (x, y_true) in enumerate(tqdm(val_loader)):
+            B = x.shape[0]
+            assert args.in_channels in [1, 3]
+            if args.in_channels == 1:
+                # Repeat the channel dimension: 1 channel -> 3 channels.
+                x = x.repeat(1, 3, 1, 1)
+            x, y_true = x.to(device), y_true.to(device)
+
+            y_pred = model.forward(x)
+            correct += torch.sum(torch.argmax(y_pred, dim=-1) == y_true).item()
+            total_count += B
+
+    tuning_acc = correct / total_count * 100
 
     return tuning_acc
 
 
 def infer_model(val_loader: torch.utils.data.DataLoader,
-                model: torch.nn.Module, device: torch.device, model_path: str,
-                log_path: str) -> float:
+                model: torch.nn.Module, device: torch.device,
+                model_path: str) -> float:
     model.restore_model(restore_path=model_path)
     model.eval()
     correct, total_count = 0, 0
@@ -295,7 +338,6 @@ def infer_model(val_loader: torch.utils.data.DataLoader,
             total_count += B
 
     val_acc_actual = correct / total_count * 100
-    log('val acc actual %.2f\n\n' % val_acc_actual, log_path)
     return val_acc_actual
 
 
@@ -349,9 +391,7 @@ def diffusion_entropy(args: AttributeHashmap):
                 'top1_acc_nominal': top1_acc_nominal[model_name][i]
             }
 
-            embedding_npy_path = '%s/%s_%s_embeddings.npy' % (
-                npy_folder, version,
-                'FineTune' if args.full_fine_tune else 'LinearProbe')
+            embedding_npy_path = '%s/%s_embeddings.npy' % (npy_folder, version)
             eig_npy_path = '%s/%s_eigP.npy' % (npy_folder, version)
 
             if model_name == 'barlowtwins':
@@ -387,33 +427,45 @@ def diffusion_entropy(args: AttributeHashmap):
             if os.path.exists(embedding_npy_path):
                 data_numpy = np.load(embedding_npy_path)
                 embeddings = data_numpy['embeddings']
+                labels = data_numpy['labels']
                 log('Pre-computed embeddings loaded.', log_path)
             else:
-                embeddings = []
+                embeddings, labels = [], []
                 with torch.no_grad():
                     for i, (x, y_true) in enumerate(tqdm(val_loader)):
                         assert args.in_channels in [1, 3]
                         if args.in_channels == 1:
                             # Repeat the channel dimension: 1 channel -> 3 channels.
                             x = x.repeat(1, 3, 1, 1)
-                        x, y_true = x.to(device), y_true.to(device)
+                        x = x.to(device)
 
                         # shape: [B, d, 1, 1]
                         embedding_vec = model.encode(x).cpu().detach().numpy()
                         # shape: [B, d]
                         embedding_vec = embedding_vec.reshape(
                             embedding_vec.shape[:2])
+
+                        y_true = y_true.detach().numpy()
+
                         embeddings.append(embedding_vec)
+                        labels.append(y_true)
 
                 embeddings = np.concatenate(embeddings)
                 embeddings = embeddings.astype(np.float16)
-                log('Embeddings computed.', log_path)
+                labels = np.concatenate(labels)
+                log('Embeddings and labels computed.', log_path)
 
                 with open(embedding_npy_path, 'wb+') as f:
-                    np.savez(f, embeddings=embeddings)
+                    np.savez(f, embeddings=embeddings, labels=labels)
 
             summary[version]['vne'] = compute_diffusion_entropy(
-                embeddings=embeddings, args=args, eig_npy_path=eig_npy_path)
+                embeddings=embeddings, eig_npy_path=eig_npy_path, knn=args.knn)
+
+            summary[version]['mi_class'] = compute_mi_class(
+                embeddings=embeddings,
+                labels=labels,
+                vne=summary[version]['vne'],
+                knn=args.knn)
 
             #
             ''' 2. Tune the model. We can either linear probe or full fine tune. '''
@@ -429,8 +481,7 @@ def diffusion_entropy(args: AttributeHashmap):
                 val_acc_actual = infer_model(val_loader=val_loader,
                                              model=model,
                                              device=device,
-                                             model_path=tuned_model_path,
-                                             log_path=log_path)
+                                             model_path=tuned_model_path)
             else:
                 log('Tuning model: %s ...' % version, log_path)
                 if args.full_fine_tune is True:
@@ -440,6 +491,7 @@ def diffusion_entropy(args: AttributeHashmap):
 
                 tune_model(args=args,
                            train_loader=train_loader,
+                           val_loader=val_loader,
                            model=model,
                            device=device,
                            model_path=tuned_model_path,
@@ -447,9 +499,9 @@ def diffusion_entropy(args: AttributeHashmap):
                 val_acc_actual = infer_model(val_loader=val_loader,
                                              model=model,
                                              device=device,
-                                             model_path=tuned_model_path,
-                                             log_path=log_path)
+                                             model_path=tuned_model_path)
             summary[version]['top1_acc_actual'] = val_acc_actual
+            log('val acc actual %.2f\n\n' % val_acc_actual, log_path)
 
     fig_prefix = '%s/diffusion-entropy-PublicModels-%s-%s' % (
         save_folder, args.dataset,
@@ -481,14 +533,18 @@ def normalize(
 def plot_summary(summary: dict,
                  fig_prefix: str = None,
                  full_fine_tune: bool = False):
-    version_list, vne_list, acc_list_nominal, acc_list_actual = [], [], [], []
+    version_list, vne_list, mi_class_list, acc_list_nominal, acc_list_actual = [], [], [], [], []
 
-    fig_vne = plt.figure(figsize=(10, 8))
-    ax = fig_vne.add_subplot(1, 1, 1)
+    if full_fine_tune:
+        ylabel = 'Fine Tuning Accuracy'
+    else:
+        ylabel = 'Linear Probing Accuracy'
+
     for key in summary.keys():
         version = key
         version_list.append(version)
         vne_list.append(summary[version]['vne'])
+        mi_class_list.append(summary[version]['mi_class'])
         acc_list_nominal.append(summary[version]['top1_acc_nominal'])
         acc_list_actual.append(summary[version]['top1_acc_actual'])
 
@@ -500,41 +556,39 @@ def plot_summary(summary: dict,
         model_color_map[name] = cm.rainbow(i / len(unique_model_names))
 
     vne_list = np.array(vne_list)
+    mi_class_list = np.array(mi_class_list)
     acc_list_nominal = np.array(acc_list_nominal)
     acc_list_actual = np.array(acc_list_actual)
-    scaled_acc_nominal = normalize(
-        acc_list_nominal, dynamic_range=[np.min(vne_list),
-                                         np.max(vne_list)])
-    scaled_acc_actual = normalize(
-        acc_list_actual, dynamic_range=[np.min(vne_list),
-                                        np.max(vne_list)])
 
-    ax.scatter(version_list, scaled_acc_nominal, color='mediumblue')
-    ax.scatter(version_list, scaled_acc_actual, color='firebrick')
-    ax.legend(['nominal acc', 'classifier finetune acc'])
-    ax.plot(version_list, vne_list, 'k--')
-    ax.set_xticks(np.arange(len(version_list)))
-    ax.set_xticklabels(version_list, rotation=90)
+    fig_corr = plt.figure(figsize=(32, 8))
+    ax = fig_corr.add_subplot(1, 4, 1)
+    pearson_r, pearson_p = pearsonr(acc_list_nominal, acc_list_actual)
+    spearman_r, spearman_p = spearmanr(acc_list_nominal, acc_list_actual)
+    ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
+                 (pearson_r, pearson_p, spearman_r, spearman_p))
+    ax.set_xlabel('Nominal Accuracy')
+    ax.set_ylabel(ylabel)
+
+    # Plot the performances:
+    # same model name: same color
+    # different epochs trained : different size
+    for i in range(len(version_list)):
+        ax.scatter(acc_list_nominal[i],
+                   acc_list_actual[i],
+                   color=model_color_map[version_list[i].split('_ep')[0]],
+                   s=int(version_list[i].split('_ep')[1]) / 5,
+                   cmap='tab20')
+    ax.legend(version_list)
     ax.spines[['right', 'top']].set_visible(False)
 
-    fig_vne.tight_layout()
-    fig_vne.savefig(fig_prefix + '-vne.png')
-
-    fig_corr = plt.figure(figsize=(16, 8))
-    ax = fig_corr.add_subplot(1, 2, 1)
+    ax = fig_corr.add_subplot(1, 4, 2)
     pearson_r, pearson_p = pearsonr(vne_list, acc_list_actual)
     spearman_r, spearman_p = spearmanr(vne_list, acc_list_actual)
     ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
                  (pearson_r, pearson_p, spearman_r, spearman_p))
     ax.set_xlabel('Diffusion Entropy')
-    if full_fine_tune:
-        ax.set_ylabel('Fine Tuning Accuracy')
-    else:
-        ax.set_ylabel('Linear Probing Accuracy')
+    ax.set_ylabel(ylabel)
 
-    # Plot the performances:
-    # same model name: same color
-    # different epochs trained : different size
     for i in range(len(version_list)):
         ax.scatter(vne_list[i],
                    acc_list_actual[i],
@@ -544,19 +598,16 @@ def plot_summary(summary: dict,
     ax.legend(version_list)
     ax.spines[['right', 'top']].set_visible(False)
 
-    ax = fig_corr.add_subplot(1, 2, 2)
-    pearson_r, pearson_p = pearsonr(acc_list_nominal, acc_list_actual)
-    spearman_r, spearman_p = spearmanr(acc_list_nominal, acc_list_actual)
+    ax = fig_corr.add_subplot(1, 4, 3)
+    pearson_r, pearson_p = pearsonr(mi_class_list, acc_list_actual)
+    spearman_r, spearman_p = spearmanr(mi_class_list, acc_list_actual)
     ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
                  (pearson_r, pearson_p, spearman_r, spearman_p))
-    ax.set_xlabel('Nominal Accuracy')
-    if full_fine_tune:
-        ax.set_ylabel('Fine Tuning Accuracy')
-    else:
-        ax.set_ylabel('Linear Probing Accuracy')
+    ax.set_xlabel('Mutual Information (class-conditional)')
+    ax.set_ylabel(ylabel)
 
     for i in range(len(version_list)):
-        ax.scatter(acc_list_nominal[i],
+        ax.scatter(mi_class_list[i],
                    acc_list_actual[i],
                    color=model_color_map[version_list[i].split('_ep')[0]],
                    s=int(version_list[i].split('_ep')[1]) / 5,
