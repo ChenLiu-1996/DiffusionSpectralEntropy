@@ -252,7 +252,7 @@ def tune_model(args: AttributeHashmap,
 
     lr_scheduler = LinearWarmupCosineAnnealingLR(
         optimizer=opt,
-        warmup_epochs=5,
+        warmup_epochs=min(10, args.num_tuning_epoch // 5),
         max_epochs=args.num_tuning_epoch)
 
     best_tuning_acc = 0
@@ -263,8 +263,7 @@ def tune_model(args: AttributeHashmap,
                                              model=model,
                                              device=device,
                                              opt=opt)
-        if epoch_idx >= 10:
-            lr_scheduler.step()
+        lr_scheduler.step()
 
         log('Probing epoch: %d, acc: %.3f' % (epoch_idx, tuning_acc), log_path)
         if tuning_acc > best_tuning_acc:
