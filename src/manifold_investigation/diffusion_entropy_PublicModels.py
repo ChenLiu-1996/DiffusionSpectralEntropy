@@ -639,7 +639,7 @@ if __name__ == '__main__':
     parser.add_argument('--full-fine-tune',
                         help='If True, full fine tune. Else, linear probe.',
                         action='store_true')
-    parser.add_argument('--learning-rate-tuning', type=float, default=1e-3)
+    parser.add_argument('--learning-rate-tuning', type=float, default=1e-4)
     parser.add_argument('--num-tuning-epoch', type=int, default=50)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
