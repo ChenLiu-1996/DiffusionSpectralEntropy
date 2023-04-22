@@ -253,6 +253,7 @@ def tune_model(args: AttributeHashmap,
     lr_scheduler = LinearWarmupCosineAnnealingLR(
         optimizer=opt,
         warmup_epochs=min(10, args.num_tuning_epoch // 5),
+        warmup_start_lr=args.num_tuning_epoch * 1e-4,
         max_epochs=args.num_tuning_epoch)
 
     best_tuning_acc = 0
