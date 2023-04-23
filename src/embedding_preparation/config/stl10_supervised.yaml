@@ -2,12 +2,12 @@ checkpoint_dir: '$ROOT_DIR/src/embedding_preparation/checkpoints/'
 log_dir: '$ROOT_DIR/src/embedding_preparation/logs/'
 output_save_path: '$ROOT_DIR/src/embedding_preparation/results/'
 dataset_dir: '$ROOT_DIR/data/stl10/'
-max_epoch: 500
-patience: 50
+max_epoch: 300
+patience: 15
 batch_size: 128
-learning_rate: 1e-2
+learning_rate: 1e-3
 weight_decay: 1e-6
-num_workers: 12
+num_workers: 8
 dataset: 'stl10'
 contrastive: 'NA'
 random_seed: 2022

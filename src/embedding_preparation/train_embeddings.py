@@ -22,6 +22,7 @@ from path_utils import update_config_dirs
 from seed import seed_everything
 from simclr import NTXentLoss, SingleInstanceTwoView
 from save_utils import save_numpy
+from scheduler import LinearWarmupCosineAnnealingLR
 
 
 def print_state_dict(state_dict: dict) -> str:
@@ -117,7 +118,13 @@ def get_dataloaders(
             ])
         else:
             transform_train = torchvision.transforms.Compose([
+                torchvision.transforms.RandomResizedCrop(
+                    imsize,
+                    scale=(0.5, 2.0),
+                    interpolation=torchvision.transforms.InterpolationMode.
+                    BICUBIC),
                 torchvision.transforms.RandomHorizontalFlip(p=0.5),
+                torchvision.transforms.RandomRotation(30),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize(mean=dataset_mean,
                                                  std=dataset_std)
@@ -215,8 +222,11 @@ def train(config: AttributeHashmap) -> None:
                                 lr=float(config.learning_rate),
                                 weight_decay=float(config.weight_decay))
 
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt, T_max=config.max_epoch, eta_min=0)
+    lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer=opt,
+                                                 warmup_epochs=min(
+                                                     10,
+                                                     config.max_epoch // 5),
+                                                 max_epochs=config.max_epoch)
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
@@ -303,8 +313,7 @@ def train(config: AttributeHashmap) -> None:
             state_dict['train_acc'] = correct / total_count_acc * 100
         state_dict['train_loss'] /= total_count_loss
 
-        if epoch_idx >= 10:
-            lr_scheduler.step()
+        lr_scheduler.step()
 
         #
         '''

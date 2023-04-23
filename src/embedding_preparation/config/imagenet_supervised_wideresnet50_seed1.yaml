@@ -4,11 +4,11 @@ output_save_path: '$ROOT_DIR/src/embedding_preparation/results/'
 dataset_dir: '$ROOT_DIR/data/imagenet/'
 model: 'wideresnet50'
 max_epoch: 200
-patience: 20
-batch_size: 128
+patience: 10
+batch_size: 64
 learning_rate: 1e-2
-weight_decay: 1e-4
-num_workers: 10
+weight_decay: 1e-8
+num_workers: 8
 dataset: 'imagenet'
 contrastive: 'NA'
 random_seed: 1

@@ -27,6 +27,7 @@ from models import get_model
 from path_utils import update_config_dirs
 from seed import seed_everything
 from save_utils import save_numpy
+from scheduler import LinearWarmupCosineAnnealingLR
 
 
 def print_state_dict(state_dict: dict) -> str:
@@ -215,8 +216,11 @@ def train(config: AttributeHashmap) -> None:
                             lr=float(config.learning_rate),
                             weight_decay=float(config.weight_decay))
 
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer=opt, T_max=config.max_epoch, eta_min=0)
+    lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer=opt,
+                                                 warmup_epochs=min(
+                                                     10,
+                                                     config.max_epoch // 5),
+                                                 max_epochs=config.max_epoch)
 
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     early_stopper = EarlyStopping(mode='max',
@@ -267,8 +271,7 @@ def train(config: AttributeHashmap) -> None:
         state_dict['train_acc'] = correct / total_count * 100
         state_dict['train_loss'] /= total_count
 
-        if epoch_idx >= 10:
-            lr_scheduler.step()
+        lr_scheduler.step()
 
         #
         '''
