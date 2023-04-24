@@ -265,7 +265,7 @@ def tune_model(args: AttributeHashmap,
                                              opt=opt)
         lr_scheduler.step()
 
-        log('Probing epoch: %d, acc: %.3f' % (epoch_idx, tuning_acc), log_path)
+        log('Tuning epoch: %d, acc: %.3f' % (epoch_idx, tuning_acc), log_path)
         if tuning_acc > best_tuning_acc:
             best_tuning_acc = tuning_acc
             model.save_model(model_path)
