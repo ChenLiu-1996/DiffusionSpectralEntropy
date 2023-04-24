@@ -24,7 +24,6 @@ from diffusion import DiffusionMatrix
 from log_utils import log
 from path_utils import update_config_dirs
 from seed import seed_everything
-from train_infer import get_dataloaders
 
 cifar10_int2name = {
     0: 'airplane',
@@ -113,6 +112,7 @@ if __name__ == '__main__':
             if labels is None:
                 labels = curr_label[:, None]  # expand dim to [B, 1]
                 embeddings = curr_embedding
+                orig_input = curr_input
             else:
                 labels = np.vstack((labels, curr_label[:, None]))
                 embeddings = np.vstack((embeddings, curr_embedding))
@@ -243,8 +243,8 @@ if __name__ == '__main__':
         ax.scatter(epoch_list, mi_list, c='mediumblue', s=120)
         ax.plot(epoch_list, mi_list, c='mediumblue')
         # MI wrt Input
-        ax.scatter(epoch_list, mi_input_list, c='mediumgreen', s=120)
-        ax.plot(epoch_list, mi_input_list, c='mediumgreen')
+        ax.scatter(epoch_list, mi_input_list, c='green', s=120)
+        ax.plot(epoch_list, mi_input_list, c='green')
         ax.legend(['I(h_m;Y)','I(h_m;X)'], bbox_to_anchor=(1.00, 0.48))
         fig_mi.supylabel('Mutual Information', fontsize=40)
         fig_mi.supxlabel('Epochs Trained', fontsize=40)
@@ -265,7 +265,7 @@ if __name__ == '__main__':
         ax.scatter(acc_list,
             mi_input_list,
             facecolors='none',
-            edgecolors='mediumgreen',
+            edgecolors='green',
             s=500,
             linewidths=5)
         ax.legend(['I(h_m;Y)','I(h_m;X)'], bbox_to_anchor=(1.00, 0.48))

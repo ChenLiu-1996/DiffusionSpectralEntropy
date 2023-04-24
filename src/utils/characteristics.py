@@ -1,9 +1,9 @@
 from typing import List
 
 import numpy as np
-import tqdm
+from tqdm import tqdm
 
-import diffusion.DiffusionMatrix as DiffusionMatrix
+from diffusion import DiffusionMatrix
 
 
 def mutual_information(orig_x: np.array,
@@ -39,28 +39,34 @@ def mutual_information(orig_x: np.array,
          # turn d_2 feature vector to 1-dim [N x d_2] -> [N x 1], for the purpose of using np.unique
         cond_rows = np.ascontiguousarray(digitized_cond_x).view(np.dtype(
             (np.void, digitized_cond_x.dtype.itemsize * digitized_cond_x.shape[1])))
-        classes_list, cond_classes, classes_cnts = np.unique(
+        _, cond_classes, classes_cnts = np.unique(
             cond_rows, return_index=False, return_inverse=True, return_counts=True)
     elif class_method == 'spectral_bin':
         return NotImplementedError
     elif class_method == 'kmeans':
         return NotImplementedError
     
+    classes_list = np.unique(cond_classes, return_counts=False)
+    print('classes_list len :', len(classes_list), ' cond_x.shape[1]: ', cond_x.shape[1], type(classes_list))
     assert cond_classes.shape[0] == orig_x.shape[0]
-    assert cond_classes.shape[1] == 1
-    
+    #assert cond_classes.shape[1] == 1
     # Compute VNE of subgraphs of orig_x according to cond_classes
     vne_by_classes = []
     for class_idx in tqdm(classes_list):
+        #print(class_idx, cond_classes[:20])
         inds = (cond_classes == class_idx).reshape(-1)
         samples = orig_x[inds, :]
-
-        # Diffusion Matrix
-        s_diffusion_matrix = DiffusionMatrix(samples, k=knn)
-        # Eigenvalues
-        s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
-        # Von Neumann Entropy
-        s_vne = von_neumann_entropy(s_eigenvalues_P)
+        #print('samples.s ', samples.shape)
+        #TODO: what if samples.shape[0] < knn?
+        if samples.shape[0] < knn:
+            s_vne = 0.0
+        else:
+            # Diffusion Matrix
+            s_diffusion_matrix = DiffusionMatrix(samples, k=knn)
+            # Eigenvalues
+            s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
+            # Von Neumann Entropy
+            s_vne = von_neumann_entropy(s_eigenvalues_P)
 
         vne_by_classes.append(s_vne)
 
@@ -68,7 +74,7 @@ def mutual_information(orig_x: np.array,
     conditioned_entropy = np.sum(
         np.array(classes_cnts) / np.sum(classes_cnts) *
         np.array(vne_by_classes))
-    
+    print('h cond: ', conditioned_entropy) 
     if orig_entropy is None:
         # Diffusion Matrix
         diffusion_matrix = DiffusionMatrix(samples, k=knn)
