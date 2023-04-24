@@ -433,6 +433,11 @@ def linear_probing(config: AttributeHashmap,
                                     lr=float(config.learning_rate_probing),
                                     weight_decay=float(config.weight_decay))
 
+    lr_scheduler_probing = LinearWarmupCosineAnnealingLR(
+        optimizer=opt_probing,
+        warmup_epochs=min(10, config.probing_epoch // 5),
+        max_epochs=config.probing_epoch)
+
     for _ in range(config.probing_epoch):
         probing_acc = linear_probing_epoch(
             config=config,
@@ -441,6 +446,7 @@ def linear_probing(config: AttributeHashmap,
             device=device,
             opt_probing=opt_probing,
             loss_fn_classification=loss_fn_classification)
+        lr_scheduler_probing.step()
 
     _, val_acc = validate_epoch(config=config,
                                 val_loader=val_loader,
