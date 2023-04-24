@@ -24,7 +24,6 @@ from diffusion import DiffusionMatrix
 from log_utils import log
 from path_utils import update_config_dirs
 from seed import seed_everything
-from train_infer import get_dataloaders
 
 cifar10_int2name = {
     0: 'airplane',
@@ -96,7 +95,9 @@ if __name__ == '__main__':
     for i, embedding_folder in enumerate(embedding_folders):
         epoch_list.append(
             int(embedding_folder.split('epoch')[-1].split('-valAcc')[0]) + 1)
-        acc_list.append(float(embedding_folder.split('-valAcc')[1].split('-divergence')[0]))
+        acc_list.append(
+            float(
+                embedding_folder.split('-valAcc')[1].split('-divergence')[0]))
 
         files = sorted(glob(embedding_folder + '/*'))
         checkpoint_name = os.path.basename(embedding_folder)
@@ -113,6 +114,7 @@ if __name__ == '__main__':
             if labels is None:
                 labels = curr_label[:, None]  # expand dim to [B, 1]
                 embeddings = curr_embedding
+                orig_input = curr_input
             else:
                 labels = np.vstack((labels, curr_label[:, None]))
                 embeddings = np.vstack((embeddings, curr_embedding))
@@ -160,8 +162,7 @@ if __name__ == '__main__':
 
         #
         '''Mutual Information between h_m and Output Class'''
-        log('Mutual Information between h_m and Output Class: ',
-            log_path)
+        log('Mutual Information between h_m and Output Class: ', log_path)
         classes_list, classes_cnts = np.unique(labels, return_counts=True)
         vne_by_classes = []
         for class_idx in tqdm(classes_list):
@@ -178,19 +179,23 @@ if __name__ == '__main__':
             vne_by_classes.append(s_vne)
 
         mi = mutual_information_per_class(eigenvalues_P,
-                                vne_by_classes,
-                                classes_cnts.tolist(),
-                                unconditioned_entropy=vne)
+                                          vne_by_classes,
+                                          classes_cnts.tolist(),
+                                          unconditioned_entropy=vne)
         mi_list.append(mi)
 
-         #
+        #
         '''Mutual Information between h_m and Input'''
-        log('Mutual Information between h_m and Input: ',
-            log_path)
-        orig_input = np.reshape(orig_input, (N, -1)) # [N, W, H, C] -> [N, W*H*C]
+        log('Mutual Information between h_m and Input: ', log_path)
+        orig_input = np.reshape(orig_input,
+                                (N, -1))  # [N, W, H, C] -> [N, W*H*C]
         # MI with input H(h_m) - H(h_m|input)
-        mi_input = mutual_information(
-            orig_x=embeddings, cond_x=orig_input, knn=args.knn, class_method='bin', num_class=100, orig_entropy=vne)
+        mi_input = mutual_information(orig_x=embeddings,
+                                      cond_x=orig_input,
+                                      knn=args.knn,
+                                      class_method='bin',
+                                      num_class=100,
+                                      orig_entropy=vne)
 
         mi_input_list.append(mi_input)
 
@@ -245,7 +250,7 @@ if __name__ == '__main__':
         # MI wrt Input
         ax.scatter(epoch_list, mi_input_list, c='mediumgreen', s=120)
         ax.plot(epoch_list, mi_input_list, c='mediumgreen')
-        ax.legend(['I(h_m;Y)','I(h_m;X)'], bbox_to_anchor=(1.00, 0.48))
+        ax.legend(['I(h_m;Y)', 'I(h_m;X)'], bbox_to_anchor=(1.00, 0.48))
         fig_mi.supylabel('Mutual Information', fontsize=40)
         fig_mi.supxlabel('Epochs Trained', fontsize=40)
         ax.tick_params(axis='both', which='major', labelsize=30)
@@ -263,12 +268,12 @@ if __name__ == '__main__':
                    s=500,
                    linewidths=5)
         ax.scatter(acc_list,
-            mi_input_list,
-            facecolors='none',
-            edgecolors='mediumgreen',
-            s=500,
-            linewidths=5)
-        ax.legend(['I(h_m;Y)','I(h_m;X)'], bbox_to_anchor=(1.00, 0.48))
+                   mi_input_list,
+                   facecolors='none',
+                   edgecolors='mediumgreen',
+                   s=500,
+                   linewidths=5)
+        ax.legend(['I(h_m;Y)', 'I(h_m;X)'], bbox_to_anchor=(1.00, 0.48))
         fig_mi_corr.supylabel('Mutual Information', fontsize=40)
         fig_mi_corr.supxlabel('Downstream Classification Accuracy',
                               fontsize=40)
@@ -276,14 +281,15 @@ if __name__ == '__main__':
         # Display correlation.
         if len(acc_list) > 1:
             fig_mi_corr.suptitle(
-                'I(h_m;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);' %
-                (pearsonr(acc_list, mi_list)[0], pearsonr(
+                'I(h_m;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
+                % (pearsonr(acc_list, mi_list)[0], pearsonr(
                     acc_list, mi_list)[1], spearmanr(acc_list, mi_list)[0],
-                 spearmanr(acc_list, mi_list)[1]) +
-                'I(h_m;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);' %
-                (pearsonr(acc_list, mi_input_list)[0], pearsonr(
-                    acc_list, mi_input_list)[1], spearmanr(acc_list, mi_input_list)[0],
-                 spearmanr(acc_list, mi_input_list)[1]),
+                   spearmanr(acc_list, mi_list)[1]) +
+                'I(h_m;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
+                % (pearsonr(acc_list, mi_input_list)[0],
+                   pearsonr(acc_list, mi_input_list)[1],
+                   spearmanr(acc_list, mi_input_list)[0],
+                   spearmanr(acc_list, mi_input_list)[1]),
                 fontsize=20)
         fig_mi_corr.savefig(save_path_fig_mi_corr)
         plt.close(fig=fig_mi_corr)
