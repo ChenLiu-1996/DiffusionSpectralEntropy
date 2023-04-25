@@ -6,7 +6,7 @@ model: 'wideresnet50'
 max_epoch: 200
 patience: 10
 batch_size: 64
-learning_rate: 1e-2
+learning_rate: 1e-3
 weight_decay: 1e-8
 num_workers: 8
 dataset: 'imagenet'
