@@ -194,7 +194,7 @@ if __name__ == '__main__':
                                       cond_x=orig_input,
                                       knn=args.knn,
                                       class_method='bin',
-                                      num_class=100,
+                                      num_class=2,
                                       orig_entropy=vne)
 
         mi_input_list.append(mi_input)

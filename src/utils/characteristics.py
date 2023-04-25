@@ -26,7 +26,7 @@ def mutual_information(orig_x: np.array,
 
     # Categorize the cond_x into discrete classes
     cond_classes = None
-
+    print('num classes ', num_class)
     if class_method == 'precompute':
         cond_classes = cond_x
     elif class_method == 'bin':
@@ -58,7 +58,7 @@ def mutual_information(orig_x: np.array,
         samples = orig_x[inds, :]
         #print('samples.s ', samples.shape)
         #TODO: what if samples.shape[0] < knn?
-        if samples.shape[0] < knn:
+        if samples.shape[0] <= knn:
             s_vne = 0.0
         else:
             # Diffusion Matrix
