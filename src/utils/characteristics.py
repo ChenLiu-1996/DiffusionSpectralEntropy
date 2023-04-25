@@ -10,14 +10,14 @@ def mutual_information(orig_x: np.array,
                        cond_x: np.array,
                        knn: int,
                        class_method: str = 'bin',
-                       num_class: int = 100, 
+                       num_bins: int = 2, 
                        orig_entropy: float = None):
     '''
         To compute the conditioned entropy H(orig_x|cond_x), we categorize the cond_x into discrete classes,
         and then compute the VNE for subgraphs of orig_x based on classes. 
 
         class_method: 'bin', 'spectral_bin', 'precompute', 'kmeans'
-        'bin' imp adapted from https://github.com/artemyk/ibsgd/blob/master/simplebinmi.py
+        'bin' partially adapted from https://github.com/artemyk/ibsgd/blob/master/simplebinmi.py
 
         orig_x: [N x d_1]
         cond_x: [N x d_2]
@@ -26,13 +26,13 @@ def mutual_information(orig_x: np.array,
 
     # Categorize the cond_x into discrete classes
     cond_classes = None
-    print('num classes ', num_class)
+
     if class_method == 'precompute':
         cond_classes = cond_x
     elif class_method == 'bin':
         # minmax normalize to [0,1]
         cond_x = (cond_x - np.min(cond_x)) / (np.max(cond_x) - np.min(cond_x)) 
-        bins = np.linspace(0, 1, num_class, dtype='float32')
+        bins = np.linspace(0, 1, num_bins, dtype='float32')
         # bin each element, [N x d_2]
         digitized_cond_x = np.digitize(cond_x, bins=bins, right=False)
 
@@ -47,17 +47,16 @@ def mutual_information(orig_x: np.array,
         return NotImplementedError
     
     classes_list = np.unique(cond_classes, return_counts=False)
-    print('classes_list len :', len(classes_list), ' cond_x.shape[1]: ', cond_x.shape[1], type(classes_list))
+    print('classes_list len :', len(classes_list), ' cond_x.shape[1]: ', cond_x.shape[1])
     assert cond_classes.shape[0] == orig_x.shape[0]
-    #assert cond_classes.shape[1] == 1
+
     # Compute VNE of subgraphs of orig_x according to cond_classes
     vne_by_classes = []
     for class_idx in tqdm(classes_list):
-        #print(class_idx, cond_classes[:20])
         inds = (cond_classes == class_idx).reshape(-1)
         samples = orig_x[inds, :]
-        #print('samples.s ', samples.shape)
-        #TODO: what if samples.shape[0] < knn?
+
+        # TODO: what if samples.shape[0] <= knn? maybe just dynamic adjust knn to samples.shape[0]
         if samples.shape[0] <= knn:
             s_vne = 0.0
         else:
@@ -74,7 +73,7 @@ def mutual_information(orig_x: np.array,
     conditioned_entropy = np.sum(
         np.array(classes_cnts) / np.sum(classes_cnts) *
         np.array(vne_by_classes))
-    print('h cond: ', conditioned_entropy) 
+    
     if orig_entropy is None:
         # Diffusion Matrix
         diffusion_matrix = DiffusionMatrix(samples, k=knn)
@@ -87,7 +86,8 @@ def mutual_information(orig_x: np.array,
     mi = orig_entropy - conditioned_entropy
 
 
-    return mi
+    return mi, conditioned_entropy, len(classes_list)
+
 
 def mutual_information_per_class(eigs: np.array,
                        vne_by_class: List[np.float64],

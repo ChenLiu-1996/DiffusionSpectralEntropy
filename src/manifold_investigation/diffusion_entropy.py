@@ -183,6 +183,7 @@ if __name__ == '__main__':
                                           classes_cnts.tolist(),
                                           unconditioned_entropy=vne)
         mi_list.append(mi)
+        log('MI between h_m and Output = %.4f' % mi, log_path)
 
         #
         '''Mutual Information between h_m and Input'''
@@ -190,18 +191,21 @@ if __name__ == '__main__':
         orig_input = np.reshape(orig_input,
                                 (N, -1))  # [N, W, H, C] -> [N, W*H*C]
         # MI with input H(h_m) - H(h_m|input)
-        mi_input = mutual_information(orig_x=embeddings,
-                                      cond_x=orig_input,
-                                      knn=args.knn,
-                                      class_method='bin',
-                                      num_class=2,
-                                      orig_entropy=vne)
+        mi_input, mi_cond, cond_classes_nums = mutual_information(orig_x=embeddings,
+                                                                  cond_x=orig_input,
+                                                                  knn=args.knn,
+                                                                  class_method='bin',
+                                                                  num_class=2,
+                                                                  orig_entropy=vne)
 
         mi_input_list.append(mi_input)
+        log('MI between h_m and Input = %.4f, Cond Entropy = %.4f, Cond Classes Num: %d ' % (
+            mi_input, mi_cond, cond_classes_nums), log_path)
 
         #
         '''Plotting'''
         plt.rcParams['font.family'] = 'serif'
+        plt.rcParams['legend.fontsize'] = 20
 
         # Plot of Diffusion Entropy vs. epoch.
         fig_vne = plt.figure(figsize=(20, 20))
@@ -250,7 +254,7 @@ if __name__ == '__main__':
         # MI wrt Input
         ax.scatter(epoch_list, mi_input_list, c='green', s=120)
         ax.plot(epoch_list, mi_input_list, c='green')
-        ax.legend(['I(h_m;Y)','I(h_m;X)'], bbox_to_anchor=(1.00, 0.48))
+        ax.legend(['I(h_m;Y)','I(h_m;Y)','I(h_m;X)','I(h_m;X)'], bbox_to_anchor=(1.00, 0.48))
         fig_mi.supylabel('Mutual Information', fontsize=40)
         fig_mi.supxlabel('Epochs Trained', fontsize=40)
         ax.tick_params(axis='both', which='major', labelsize=30)
@@ -281,7 +285,7 @@ if __name__ == '__main__':
         # Display correlation.
         if len(acc_list) > 1:
             fig_mi_corr.suptitle(
-                'I(h_m;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
+                'I(h_m;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
                 % (pearsonr(acc_list, mi_list)[0], pearsonr(
                     acc_list, mi_list)[1], spearmanr(acc_list, mi_list)[0],
                    spearmanr(acc_list, mi_list)[1]) +
