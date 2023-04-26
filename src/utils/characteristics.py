@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 from tqdm import tqdm
 
-from diffusion import DiffusionMatrix
+from diffusion import DiffusionMatrix, small_graph_DiffusionMatrix
 
 
 def mutual_information(orig_x: np.array,
@@ -17,7 +17,9 @@ def mutual_information(orig_x: np.array,
         and then compute the VNE for subgraphs of orig_x based on classes. 
 
         class_method: 'bin', 'spectral_bin', 'precompute', 'kmeans'
-        'bin' partially adapted from https://github.com/artemyk/ibsgd/blob/master/simplebinmi.py
+
+        'bin': Bin directly in vector space, adapted from https://github.com/artemyk/ibsgd/blob/master/simplebinmi.py
+        'spectral bin': Bin in spectral space: first convert cond_x to Diffusion Map coords, then bin
 
         orig_x: [N x d_1]
         cond_x: [N x d_2]
@@ -30,6 +32,9 @@ def mutual_information(orig_x: np.array,
     if class_method == 'precompute':
         cond_classes = cond_x
     elif class_method == 'bin':
+        '''
+            Bin in vector space: 
+        '''
         # minmax normalize to [0,1]
         cond_x = (cond_x - np.min(cond_x)) / (np.max(cond_x) - np.min(cond_x)) 
         bins = np.linspace(0, 1, num_bins, dtype='float32')
@@ -42,6 +47,10 @@ def mutual_information(orig_x: np.array,
         _, cond_classes, classes_cnts = np.unique(
             cond_rows, return_index=False, return_inverse=True, return_counts=True)
     elif class_method == 'spectral_bin':
+        '''
+            Bin in spectral space
+        '''
+
         return NotImplementedError
     elif class_method == 'kmeans':
         return NotImplementedError
@@ -56,12 +65,13 @@ def mutual_information(orig_x: np.array,
         inds = (cond_classes == class_idx).reshape(-1)
         samples = orig_x[inds, :]
 
-        # TODO: what if samples.shape[0] <= knn? maybe just dynamic adjust knn to samples.shape[0]
-        if samples.shape[0] <= knn:
+        # if samples.shape[0] <= knn, dynamic adjust knn to samples.shape[0]
+        min_node_num = 2
+        if samples.shape[0] < min_node_num:
             s_vne = 0.0
         else:
             # Diffusion Matrix
-            s_diffusion_matrix = DiffusionMatrix(samples, k=knn)
+            s_diffusion_matrix = small_graph_DiffusionMatrix(samples, k=knn)
             # Eigenvalues
             s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
             # Von Neumann Entropy
