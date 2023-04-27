@@ -8,6 +8,7 @@ import yaml
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr, spearmanr
 from tqdm import tqdm
+from typing import Dict, Iterable
 
 os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
 os.environ["OPENBLAS_NUM_THREADS"] = "1"  # export OPENBLAS_NUM_THREADS=1
@@ -20,7 +21,7 @@ sys.path.insert(0, import_dir + '/utils/')
 sys.path.insert(0, import_dir + '/embedding_preparation')
 from attribute_hashmap import AttributeHashmap
 from characteristics import mutual_information_per_class, von_neumann_entropy, mutual_information
-from diffusion import DiffusionMatrix
+from diffusion import compute_diffusion_matrix
 from log_utils import log
 from path_utils import update_config_dirs
 from seed import seed_everything
@@ -37,6 +38,108 @@ cifar10_int2name = {
     8: 'ship',
     9: 'truck',
 }
+
+
+def plot_figures(data_arrays: Dict[str, Iterable],
+                 save_paths_fig: Dict[str, str]) -> None:
+
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['legend.fontsize'] = 20
+
+    # Plot of Diffusion Entropy vs. epoch.
+    fig_vne = plt.figure(figsize=(20, 20))
+    ax = fig_vne.add_subplot(1, 1, 1)
+    ax.spines[['right', 'top']].set_visible(False)
+    ax.scatter(data_arrays['epoch'], data_arrays['vne'], c='mediumblue', s=120)
+    ax.plot(data_arrays['epoch'], data_arrays['vne'], c='mediumblue')
+    fig_vne.supylabel('Diffusion Entropy', fontsize=40)
+    fig_vne.supxlabel('Epochs Trained', fontsize=40)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+    fig_vne.savefig(save_paths_fig['fig_vne'])
+    plt.close(fig=fig_vne)
+
+    # Plot of Diffusion Entropy vs. Val. Acc.
+    fig_vne_corr = plt.figure(figsize=(20, 20))
+    ax = fig_vne_corr.add_subplot(1, 1, 1)
+    ax.spines[['right', 'top']].set_visible(False)
+    ax.scatter(data_arrays['acc'],
+               data_arrays['vne'],
+               facecolors='none',
+               edgecolors='mediumblue',
+               s=500,
+               linewidths=5)
+    fig_vne_corr.supylabel('Diffusion Entropy', fontsize=40)
+    fig_vne_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+    # Display correlation.
+    if len(data_arrays['acc']) > 1:
+        fig_vne_corr.suptitle(
+            'Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f)' %
+            (pearsonr(data_arrays['acc'], data_arrays['vne'])[0],
+             pearsonr(data_arrays['acc'], data_arrays['vne'])[1],
+             spearmanr(data_arrays['acc'], data_arrays['vne'])[0],
+             spearmanr(data_arrays['acc'], data_arrays['vne'])[1]),
+            fontsize=40)
+    fig_vne_corr.savefig(save_paths_fig['fig_vne_corr'])
+    plt.close(fig=fig_vne_corr)
+
+    # Plot of Mutual Information vs. epoch.
+    fig_mi = plt.figure(figsize=(20, 20))
+    ax = fig_mi.add_subplot(1, 1, 1)
+    ax.spines[['right', 'top']].set_visible(False)
+    # MI wrt Output
+    ax.plot(data_arrays['epoch'], data_arrays['mi'], c='mediumblue')
+    # MI wrt Input
+    ax.plot(data_arrays['epoch'], data_arrays['mi_input'], c='green')
+    ax.legend(['I(z;Y)', 'I(z;X)'], bbox_to_anchor=(1.00, 0.48))
+    ax.scatter(data_arrays['epoch'], data_arrays['mi'], c='mediumblue', s=120)
+    ax.scatter(data_arrays['epoch'], data_arrays['mi_input'], c='green', s=120)
+    fig_mi.supylabel('Mutual Information', fontsize=40)
+    fig_mi.supxlabel('Epochs Trained', fontsize=40)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+    fig_mi.savefig(save_paths_fig['fig_mi'])
+    plt.close(fig=fig_mi)
+
+    # Plot of Mutual Information vs. Val. Acc.
+    fig_mi_corr = plt.figure(figsize=(20, 20))
+    ax = fig_mi_corr.add_subplot(1, 1, 1)
+    ax.spines[['right', 'top']].set_visible(False)
+    ax.scatter(data_arrays['acc'],
+               data_arrays['mi'],
+               facecolors='none',
+               edgecolors='mediumblue',
+               s=500,
+               linewidths=5)
+    ax.scatter(data_arrays['acc'],
+               data_arrays['mi_input'],
+               facecolors='none',
+               edgecolors='green',
+               s=500,
+               linewidths=5)
+    ax.legend(['I(z;Y)', 'I(z;X)'], bbox_to_anchor=(1.00, 0.48))
+    fig_mi_corr.supylabel('Mutual Information', fontsize=40)
+    fig_mi_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+
+    # Display correlation.
+    if len(data_arrays['acc']) > 1:
+        fig_mi_corr.suptitle(
+            'I(z;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            % (pearsonr(data_arrays['acc'], data_arrays['mi'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['mi'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['mi'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['mi'])[1]) +
+            'I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);' %
+            (pearsonr(data_arrays['acc'], data_arrays['mi_input'])[0],
+             pearsonr(data_arrays['acc'], data_arrays['mi_input'])[1],
+             spearmanr(data_arrays['acc'], data_arrays['mi_input'])[0],
+             spearmanr(data_arrays['acc'], data_arrays['mi_input'])[1]),
+            fontsize=20)
+    fig_mi_corr.savefig(save_paths_fig['fig_mi_corr'])
+    plt.close(fig=fig_mi_corr)
+
+    return
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -73,227 +176,179 @@ if __name__ == '__main__':
 
     save_root = './results_diffusion_entropy/'
     os.makedirs(save_root, exist_ok=True)
-    save_path_fig_vne = '%s/diffusion-entropy-%s-%s-%s-seed%s-knn%s.png' % (
+
+    save_paths_fig = {
+        'fig_vne':
+        '%s/diffusion-entropy-%s-%s-%s-seed%s-knn%s.png' %
+        (save_root, config.dataset, method_str, config.model,
+         config.random_seed, args.knn),
+        'fig_vne_corr':
+        '%s/diffusion-entropy-corr-%s-%s-%s-seed%s-knn%s.png' %
+        (save_root, config.dataset, method_str, config.model,
+         config.random_seed, args.knn),
+        'fig_mi':
+        '%s/class-mutual-information-%s-%s-%s-seed%s-knn%s.png' %
+        (save_root, config.dataset, method_str, config.model,
+         config.random_seed, args.knn),
+        'fig_mi_corr':
+        '%s/class-mutual-information-corr-%s-%s-%s-seed%s-knn%s.png' %
+        (save_root, config.dataset, method_str, config.model,
+         config.random_seed, args.knn)
+    }
+
+    save_path_final_npy = '%s/numpy_files/figure-data-%s-%s-%s-seed%s-knn%s.npy' % (
         save_root, config.dataset, method_str, config.model,
         config.random_seed, args.knn)
-    save_path_fig_vne_corr = '%s/diffusion-entropy-corr-%s-%s-%s-seed%s-knn%s.png' % (
-        save_root, config.dataset, method_str, config.model,
-        config.random_seed, args.knn)
-    save_path_fig_mi = '%s/class-mutual-information-%s-%s-%s-seed%s-knn%s.png' % (
-        save_root, config.dataset, method_str, config.model,
-        config.random_seed, args.knn)
-    save_path_fig_mi_corr = '%s/class-mutual-information-corr-%s-%s-%s-seed%s-knn%s.png' % (
-        save_root, config.dataset, method_str, config.model,
-        config.random_seed, args.knn)
+
     log_path = '%s/log-%s-%s-%s-seed%s-knn%s.txt' % (
         save_root, config.dataset, method_str, config.model,
         config.random_seed, args.knn)
 
-    num_rows = len(embedding_folders)
-    epoch_list, acc_list, vne_list, mi_list, mi_input_list = [], [], [], [], []
+    os.makedirs(os.path.dirname(save_path_final_npy), exist_ok=True)
+    if os.path.exists(save_path_final_npy):
+        data_numpy = np.load(save_path_final_npy)
+        data_arrays = {
+            'epoch': data_numpy['epoch'],
+            'acc': data_numpy['acc'],
+            'vne': data_numpy['vne'],
+            'mi': data_numpy['mi'],
+            'mi_input': data_numpy['mi_input']
+        }
+        plot_figures(data_arrays=data_arrays, save_paths_fig=save_paths_fig)
 
-    for i, embedding_folder in enumerate(embedding_folders):
-        epoch_list.append(
-            int(embedding_folder.split('epoch')[-1].split('-valAcc')[0]) + 1)
-        acc_list.append(
-            float(
-                embedding_folder.split('-valAcc')[1].split('-divergence')[0]))
+    else:
+        epoch_list, acc_list, vne_list, mi_list, mi_input_list = [], [], [], [], []
 
-        files = sorted(glob(embedding_folder + '/*'))
-        checkpoint_name = os.path.basename(embedding_folder)
-        log(checkpoint_name, log_path)
+        for i, embedding_folder in enumerate(embedding_folders):
+            epoch_list.append(
+                int(embedding_folder.split('epoch')[-1].split('-valAcc')[0]) +
+                1)
+            acc_list.append(
+                float(
+                    embedding_folder.split('-valAcc')[1].split('-divergence')
+                    [0]))
 
-        labels, embeddings, orig_input = None, None, None
+            files = sorted(glob(embedding_folder + '/*'))
+            checkpoint_name = os.path.basename(embedding_folder)
+            log(checkpoint_name, log_path)
 
-        for file in tqdm(files):
-            np_file = np.load(file)
-            curr_label = np_file['label_true']
-            curr_embedding = np_file['embedding']
-            curr_input = np_file['image']
+            labels, embeddings, orig_input = None, None, None
 
-            if labels is None:
-                labels = curr_label[:, None]  # expand dim to [B, 1]
-                embeddings = curr_embedding
-                orig_input = curr_input
+            for file in tqdm(files):
+                np_file = np.load(file)
+                curr_label = np_file['label_true']
+                curr_embedding = np_file['embedding']
+                curr_input = np_file['image']
+
+                if labels is None:
+                    labels = curr_label[:, None]  # expand dim to [B, 1]
+                    embeddings = curr_embedding
+                    orig_input = curr_input
+                else:
+                    labels = np.vstack((labels, curr_label[:, None]))
+                    embeddings = np.vstack((embeddings, curr_embedding))
+                    orig_input = np.vstack((orig_input, curr_input))
+
+            # This is the matrix of N embedding vectors each at dim [1, D].
+            N, D = embeddings.shape
+
+            assert labels.shape[0] == N
+            assert labels.shape[1] == 1
+
+            if config.dataset == 'cifar10':
+                labels_updated = np.zeros(labels.shape, dtype='object')
+                for k in range(N):
+                    labels_updated[k] = cifar10_int2name[labels[k].item()]
+                labels = labels_updated
+                del labels_updated
+
+            #
+            '''Diffusion Matrix and Diffusion Eigenvalues'''
+            save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s.npz' % (
+                save_root, checkpoint_name)
+            os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
+            if os.path.exists(save_path_eigenvalues):
+                data_numpy = np.load(save_path_eigenvalues)
+                eigenvalues_P = data_numpy['eigenvalues_P']
+                print('Pre-computed eigenvalues loaded.')
             else:
-                labels = np.vstack((labels, curr_label[:, None]))
-                embeddings = np.vstack((embeddings, curr_embedding))
-                orig_input = np.vstack((orig_input, curr_input))
+                diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
+                print('Diffusion matrix computed.')
+                eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+                # Lower precision to save disk space.
+                eigenvalues_P = eigenvalues_P.astype(np.float16)
+                with open(save_path_eigenvalues, 'wb+') as f:
+                    np.savez(f, eigenvalues_P=eigenvalues_P)
+                print('Eigenvalues computed.')
 
-        # This is the matrix of N embedding vectors each at dim [1, D].
-        N, D = embeddings.shape
+            #
+            '''Diffusion Entropy'''
+            log(
+                'von Neumann Entropy (diffcur adaptive anisotropic P matrix): ',
+                log_path)
+            vne = von_neumann_entropy(eigenvalues_P)
+            vne_list.append(vne)
+            log('Diffusion Entropy = %.4f' % vne, log_path)
 
-        assert labels.shape[0] == N
-        assert labels.shape[1] == 1
+            #
+            '''Mutual Information between z and Output Class'''
+            log('Mutual Information between z and Output Class: ', log_path)
+            classes_list, classes_cnts = np.unique(labels, return_counts=True)
+            vne_by_classes = []
+            for class_idx in tqdm(classes_list):
+                inds = (labels == class_idx).reshape(-1)
+                samples = embeddings[inds, :]
 
-        if config.dataset == 'cifar10':
-            labels_updated = np.zeros(labels.shape, dtype='object')
-            for k in range(N):
-                labels_updated[k] = cifar10_int2name[labels[k].item()]
-            labels = labels_updated
-            del labels_updated
+                # Diffusion Matrix
+                s_diffusion_matrix = compute_diffusion_matrix(samples, k=args.knn)
+                # Eigenvalues
+                s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
+                # Von Neumann Entropy
+                s_vne = von_neumann_entropy(s_eigenvalues_P)
 
-        #
-        '''Diffusion Matrix and Diffusion Eigenvalues'''
-        save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s.npz' % (
-            save_root, checkpoint_name)
-        os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
-        if os.path.exists(save_path_eigenvalues):
-            data_numpy = np.load(save_path_eigenvalues)
-            eigenvalues_P = data_numpy['eigenvalues_P']
-            print('Pre-computed eigenvalues loaded.')
-        else:
-            diffusion_matrix = DiffusionMatrix(embeddings, k=args.knn)
-            print('Diffusion matrix computed.')
-            eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
-            # Lower precision to save disk space.
-            eigenvalues_P = eigenvalues_P.astype(np.float16)
-            with open(save_path_eigenvalues, 'wb+') as f:
-                np.savez(f, eigenvalues_P=eigenvalues_P)
-            print('Eigenvalues computed.')
+                vne_by_classes.append(s_vne)
 
-        #
-        '''Diffusion Entropy'''
-        log('von Neumann Entropy (diffcur adaptive anisotropic P matrix): ',
-            log_path)
-        vne = von_neumann_entropy(eigenvalues_P)
-        vne_list.append(vne)
-        log('Diffusion Entropy = %.4f' % vne, log_path)
+            mi = mutual_information_per_class(eigenvalues_P,
+                                              vne_by_classes,
+                                              classes_cnts.tolist(),
+                                              unconditioned_entropy=vne)
+            mi_list.append(mi)
+            log('MI between z and Output = %.4f' % mi, log_path)
 
-        #
-        '''Mutual Information between h_m and Output Class'''
-        log('Mutual Information between h_m and Output Class: ', log_path)
-        classes_list, classes_cnts = np.unique(labels, return_counts=True)
-        vne_by_classes = []
-        for class_idx in tqdm(classes_list):
-            inds = (labels == class_idx).reshape(-1)
-            samples = embeddings[inds, :]
+            #
+            '''Mutual Information between z and Input'''
+            log('Mutual Information between z and Input: ', log_path)
+            orig_input = np.reshape(orig_input,
+                                    (N, -1))  # [N, W, H, C] -> [N, W*H*C]
+            # MI with input H(z) - H(z|input)
+            mi_input, mi_cond, cond_classes_nums = mutual_information(
+                orig_x=embeddings,
+                cond_x=orig_input,
+                knn=args.knn,
+                class_method='bin',
+                num_bins=2,
+                orig_entropy=vne)
 
-            # Diffusion Matrix
-            s_diffusion_matrix = DiffusionMatrix(samples, k=args.knn)
-            # Eigenvalues
-            s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
-            # Von Neumann Entropy
-            s_vne = von_neumann_entropy(s_eigenvalues_P)
+            mi_input_list.append(mi_input)
+            log(
+                'MI between z and Input = %.4f, Cond Entropy = %.4f, Cond Classes Num: %d '
+                % (mi_input, mi_cond, cond_classes_nums), log_path)
 
-            vne_by_classes.append(s_vne)
+            # Plotting
+            data_arrays = {
+                'epoch': epoch_list,
+                'acc': acc_list,
+                'vne': vne_list,
+                'mi': mi_list,
+                'mi_input': mi_input_list
+            }
+            plot_figures(data_arrays=data_arrays,
+                         save_paths_fig=save_paths_fig)
 
-        mi = mutual_information_per_class(eigenvalues_P,
-                                          vne_by_classes,
-                                          classes_cnts.tolist(),
-                                          unconditioned_entropy=vne)
-        mi_list.append(mi)
-        log('MI between h_m and Output = %.4f' % mi, log_path)
-
-        #
-        '''Mutual Information between h_m and Input'''
-        log('Mutual Information between h_m and Input: ', log_path)
-        orig_input = np.reshape(orig_input,
-                                (N, -1))  # [N, W, H, C] -> [N, W*H*C]
-        # MI with input H(h_m) - H(h_m|input)
-        mi_input, mi_cond, cond_classes_nums = mutual_information(orig_x=embeddings,
-                                                                  cond_x=orig_input,
-                                                                  knn=args.knn,
-                                                                  class_method='bin',
-                                                                  num_bins=2,
-                                                                  orig_entropy=vne)
-
-        mi_input_list.append(mi_input)
-        log('MI between h_m and Input = %.4f, Cond Entropy = %.4f, Cond Classes Num: %d ' % (
-            mi_input, mi_cond, cond_classes_nums), log_path)
-
-        #
-        '''Plotting'''
-        plt.rcParams['font.family'] = 'serif'
-        plt.rcParams['legend.fontsize'] = 20
-
-        # Plot of Diffusion Entropy vs. epoch.
-        fig_vne = plt.figure(figsize=(20, 20))
-        ax = fig_vne.add_subplot(1, 1, 1)
-        ax.spines[['right', 'top']].set_visible(False)
-        ax.scatter(epoch_list, vne_list, c='mediumblue', s=120)
-        ax.plot(epoch_list, vne_list, c='mediumblue')
-        fig_vne.supylabel('Diffusion Entropy', fontsize=40)
-        fig_vne.supxlabel('Epochs Trained', fontsize=40)
-        ax.tick_params(axis='both', which='major', labelsize=30)
-        fig_vne.savefig(save_path_fig_vne)
-        plt.close(fig=fig_vne)
-
-        # Plot of Diffusion Entropy vs. Val. Acc.
-        fig_vne_corr = plt.figure(figsize=(20, 20))
-        ax = fig_vne_corr.add_subplot(1, 1, 1)
-        ax.spines[['right', 'top']].set_visible(False)
-        ax.scatter(acc_list,
-                   vne_list,
-                   facecolors='none',
-                   edgecolors='mediumblue',
-                   s=500,
-                   linewidths=5)
-        fig_vne_corr.supylabel('Diffusion Entropy', fontsize=40)
-        fig_vne_corr.supxlabel('Downstream Classification Accuracy',
-                               fontsize=40)
-        ax.tick_params(axis='both', which='major', labelsize=30)
-        # Display correlation.
-        if len(acc_list) > 1:
-            fig_vne_corr.suptitle(
-                'Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f)' %
-                (pearsonr(acc_list, vne_list)[0], pearsonr(
-                    acc_list, vne_list)[1], spearmanr(acc_list, vne_list)[0],
-                 spearmanr(acc_list, vne_list)[1]),
-                fontsize=40)
-        fig_vne_corr.savefig(save_path_fig_vne_corr)
-        plt.close(fig=fig_vne_corr)
-
-        # Plot of Mutual Information vs. epoch.
-        fig_mi = plt.figure(figsize=(20, 20))
-        ax = fig_mi.add_subplot(1, 1, 1)
-        ax.spines[['right', 'top']].set_visible(False)
-        # MI wrt Output
-        ax.scatter(epoch_list, mi_list, c='mediumblue', s=120)
-        ax.plot(epoch_list, mi_list, c='mediumblue')
-        # MI wrt Input
-        ax.scatter(epoch_list, mi_input_list, c='green', s=120)
-        ax.plot(epoch_list, mi_input_list, c='green')
-        ax.legend(['I(h_m;Y)','I(h_m;Y)','I(h_m;X)','I(h_m;X)'], bbox_to_anchor=(1.00, 0.48))
-        fig_mi.supylabel('Mutual Information', fontsize=40)
-        fig_mi.supxlabel('Epochs Trained', fontsize=40)
-        ax.tick_params(axis='both', which='major', labelsize=30)
-        fig_mi.savefig(save_path_fig_mi)
-        plt.close(fig=fig_mi)
-
-        # Plot of Mutual Information vs. Val. Acc.
-        fig_mi_corr = plt.figure(figsize=(20, 20))
-        ax = fig_mi_corr.add_subplot(1, 1, 1)
-        ax.spines[['right', 'top']].set_visible(False)
-        ax.scatter(acc_list,
-                   mi_list,
-                   facecolors='none',
-                   edgecolors='mediumblue',
-                   s=500,
-                   linewidths=5)
-        ax.scatter(acc_list,
-            mi_input_list,
-            facecolors='none',
-            edgecolors='green',
-            s=500,
-            linewidths=5)
-        ax.legend(['I(h_m;Y)','I(h_m;X)'], bbox_to_anchor=(1.00, 0.48))
-        fig_mi_corr.supylabel('Mutual Information', fontsize=40)
-        fig_mi_corr.supxlabel('Downstream Classification Accuracy',
-                              fontsize=40)
-        ax.tick_params(axis='both', which='major', labelsize=30)
-        # Display correlation.
-        if len(acc_list) > 1:
-            fig_mi_corr.suptitle(
-                'I(h_m;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-                % (pearsonr(acc_list, mi_list)[0], pearsonr(
-                    acc_list, mi_list)[1], spearmanr(acc_list, mi_list)[0],
-                   spearmanr(acc_list, mi_list)[1]) +
-                'I(h_m;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
-                % (pearsonr(acc_list, mi_input_list)[0],
-                   pearsonr(acc_list, mi_input_list)[1],
-                   spearmanr(acc_list, mi_input_list)[0],
-                   spearmanr(acc_list, mi_input_list)[1]),
-                fontsize=20)
-        fig_mi_corr.savefig(save_path_fig_mi_corr)
-        plt.close(fig=fig_mi_corr)
+        with open(save_path_final_npy, 'wb+') as f:
+            np.savez(f,
+                     epoch=np.array(epoch_list),
+                     acc=np.array(acc_list),
+                     vne=np.array(vne_list),
+                     mi=np.array(mi_list),
+                     mi_input=np.array(mi_input_list))

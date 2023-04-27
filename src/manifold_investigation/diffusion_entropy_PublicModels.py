@@ -21,7 +21,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
-from characteristics import mutual_information
+from characteristics import mutual_information_per_class
 from log_utils import log
 from seed import seed_everything
 from scheduler import LinearWarmupCosineAnnealingLR
@@ -29,7 +29,7 @@ from scheduler import LinearWarmupCosineAnnealingLR
 sys.path.insert(0, import_dir + '/nn/external_model_loader/')
 from barlowtwins_model import BarlowTwinsModel
 from characteristics import von_neumann_entropy
-from diffusion import DiffusionMatrix
+from diffusion import compute_diffusion_matrix
 from moco_model import MoCoModel
 from simsiam_model import SimSiamModel
 from swav_model import SwavModel
@@ -45,7 +45,7 @@ def compute_diffusion_entropy(embeddings: torch.Tensor, eig_npy_path: str,
         print('Pre-computed eigenvalues loaded.')
     else:
         # Diffusion Matrix
-        diffusion_matrix = DiffusionMatrix(embeddings, k=args.knn)
+        diffusion_matrix = compute_diffusion_matrix(embeddings, k=knn)
         print('Diffusion matrix computed.')
 
         # Diffusion Eigenvalues
@@ -73,7 +73,7 @@ def compute_mi_class(embeddings: torch.Tensor, labels: np.array, vne: float,
         samples = embeddings[inds, :]
 
         # Diffusion Matrix
-        s_diffusion_matrix = DiffusionMatrix(samples, k=knn)
+        s_diffusion_matrix = compute_diffusion_matrix(samples, k=knn)
         # Eigenvalues
         s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
         # Von Neumann Entropy
@@ -81,10 +81,10 @@ def compute_mi_class(embeddings: torch.Tensor, labels: np.array, vne: float,
 
         vne_by_classes.append(s_vne)
 
-    mi = mutual_information(None,
-                            vne_by_classes,
-                            classes_cnts.tolist(),
-                            unconditioned_entropy=vne)
+    mi = mutual_information_per_class(None,
+                                      vne_by_classes,
+                                      classes_cnts.tolist(),
+                                      unconditioned_entropy=vne)
 
     return mi
 
@@ -565,7 +565,7 @@ def plot_summary(summary: dict,
     spearman_r, spearman_p = spearmanr(acc_list_nominal, acc_list_actual)
     ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
                  (pearson_r, pearson_p, spearman_r, spearman_p))
-    ax.set_xlabel('Nominal Accuracy')
+    ax.set_xlabel('Nominal Accuracy on ImageNet')
     ax.set_ylabel(ylabel)
 
     # Plot the performances:

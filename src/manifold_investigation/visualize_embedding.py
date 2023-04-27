@@ -156,7 +156,7 @@ if __name__ == '__main__':
         scprep.plot.scatter2d(data_phate,
                               c=colors_extrema,
                               cmap=cmap_extrema,
-                              title=checkpoint_acc,
+                              title=None,
                               legend=False,
                               ax=ax,
                               xticks=False,
