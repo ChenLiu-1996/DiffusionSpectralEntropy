@@ -9,22 +9,26 @@ def compute_diffusion_matrix(X: np.array,
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
 
-    Given input12 X returns a diffusion matrix P, as an numpy ndarray.
-    X is a numpy array of size n x d
+    Given input X returns a diffusion matrix P, as an numpy ndarray.
     Using "adaptive anisotropic" kernel
-    k is the adaptive kernel parameter
+    Inputs:
+        X: a numpy array of size n x d
+        k: k-nearest-neighbor parameter
+        density_norm_pow: a float in [0, 1]
+            == 0: classic Gaussian kernel
+            == 1: completely removes density and provides a geometric equivalent to
+                  uniform sampling of the underlying manifold
     Returns:
-    P is a numpy array of size n x n that is the diffusion matrix
+        P: a numpy array of size n x n that is the diffusion matrix
     """
-    # construct the distance matrix
+    # Construct the distance matrix.
     D = pairwise_distances(X)
-    # make the affinity matrix
 
     # In case N <= K
     assert X.shape[0] > 1
     k = min(k, X.shape[0] - 1)
 
-    # Get the distance to the k-th neighbor
+    # Get the distance to the k-th neighbor.
     distance_to_k_neighbor = np.partition(D, k)[:, k]
 
     # Populate matrices with this distance for easy division.
@@ -32,17 +36,17 @@ def compute_diffusion_matrix(X: np.array,
     div2 = distance_to_k_neighbor[:, None] @ np.ones(len(D))[None, :]
 
     # Compute the gaussian kernel with an adaptive bandwidth
-    W = (1 / (2 * np.sqrt(2 * np.pi))) * (np.exp(-D**2 /
+    W = (1 / np.sqrt(2 * np.pi)) * (np.exp(-D**2 /
                                                  (2 * div1**2)) / div1 +
                                           np.exp(-D**2 / (2 * div2**2)) / div2)
 
     # Anisotropic density normalization.
     if density_norm_pow > 0:
-        D = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
-        W = D @ W @ D
+        Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
+        W = Deg @ W @ Deg
 
-    # Turn affinity matrix into diffusion matrix
-    D = np.diag(1 / np.sum(W, axis=1))
-    P = D @ W
+    # Turn affinity matrix into diffusion matrix.
+    Deg = np.diag(1 / np.sum(W, axis=1))
+    P = Deg @ W
 
     return P

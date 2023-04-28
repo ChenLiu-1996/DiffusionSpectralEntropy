@@ -118,7 +118,7 @@ def mutual_information_per_class(eigs: np.array,
     return mi
 
 
-def von_neumann_entropy(eigs: np.array, eps: float = 1e-4):
+def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
     eigenvalues = eigs.copy()
 
     eigenvalues = np.array(sorted(eigenvalues)[::-1])
