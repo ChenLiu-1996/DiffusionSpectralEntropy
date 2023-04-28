@@ -5,7 +5,7 @@ from sklearn.metrics import pairwise_distances
 def compute_diffusion_matrix(X: np.array,
                              k: int = 20,
                              eps: float = 1e-6,
-                             density_norm_pow: float = 0):
+                             density_norm_pow: float = 0.5):
     """
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
