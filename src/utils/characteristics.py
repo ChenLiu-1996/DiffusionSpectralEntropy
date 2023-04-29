@@ -31,12 +31,42 @@ def simple_bin(cond_x: np.array, num_digit: int):
     
     return assignments, cnts
 
+def diffusion_embedding(X: np.array, num_components: int, knn: int):
+    '''
+        Compute diffusion embedding of X, taking first num_components eigenvectors
+    Args:
+        X: [N, D]
+
+    Returns:
+        diff_embed: [N, num_components]
+    '''
+     # Diffusion matrix
+    diffusion_matrix = compute_diffusion_matrix(X, k=knn)
+    eigenvalues_P, eigenvectors_P = np.linalg.eig(diffusion_matrix)
+
+    # Sort eigenvalues & take top num_components
+    sorted_idx = np.argsort(eigenvalues_P)[::-1]
+    eigenvalues_P = eigenvalues_P[sorted_idx]
+    eigenvectors_P = eigenvectors_P[:, sorted_idx]
+
+    W = eigenvalues_P[:num_components]
+    V = eigenvectors_P[:, num_components]
+    
+    
+    # Diffusion map embedding
+    diff_embed = V @ np.diag((W**0.5))
+    assert diff_embed.shap[1] == num_components
+
+    return diff_embed
+
+
 
 def mutual_information(orig_x: np.array,
                        cond_x: np.array,
                        knn: int,
                        class_method: str = 'bin',
                        num_digit: int = 2,
+                       num_spectral: int = None,
                        orig_entropy: float = None):
     '''
         To compute the conditioned entropy H(orig_x|cond_x), we categorize the cond_x into discrete classes,
@@ -68,9 +98,17 @@ def mutual_information(orig_x: np.array,
         '''
             Bin in spectral space
         '''
-        return NotImplementedError
+        # diffusion map coords of cond_x
+        if num_spectral is None:
+            num_spectral = min(cond_x.shape[1], cond_x.shape[0])
+        diff_embed = diffusion_embedding(X=cond_x, num_components=num_spectral)
+
+        # simple bin on the diffusion map coords
+        cond_classes, classes_cnts = simple_bin(cond_x=diff_embed, num_digit=num_digit)
+        
     elif class_method == 'kmeans':
         return NotImplementedError
+
 
     classes_list = np.unique(cond_classes, return_counts=False)
     print('classes_list len :', len(classes_list), ' cond_x.shape[1]: ', cond_x.shape[1])
