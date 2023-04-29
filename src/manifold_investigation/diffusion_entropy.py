@@ -326,7 +326,7 @@ if __name__ == '__main__':
                 cond_x=orig_input,
                 knn=args.knn,
                 class_method='bin',
-                num_bins=2,
+                num_digit=2,
                 orig_entropy=vne)
 
             mi_input_list.append(mi_input)

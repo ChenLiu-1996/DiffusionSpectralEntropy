@@ -5,12 +5,38 @@ from tqdm import tqdm
 
 from diffusion import compute_diffusion_matrix
 
+def simple_bin(cond_x: np.array, num_digit: int):
+    '''
+        put N of D-dim vectors into discrete bins
+        the final number of unique D-dim vectors is M
+    Args: 
+        cond_x: [N, D] 
+
+    Returns:
+        assignment: [N, 1]
+        cnts: List of length M, each indicating the number of rows in that specific unique row
+
+    '''
+    # minmax normalize to [0,1]
+    cond_x = (cond_x - np.min(cond_x)) / (np.max(cond_x) - np.min(cond_x))
+    bins = np.linspace(0, 1, num_digit, dtype='float32')
+    # bin each element, [N x d_2]
+    digitized_cond_x = np.digitize(cond_x, bins=bins, right=False)
+
+    # turn d_2 feature vector to 1-dim [N x d_2] -> [N x 1], for the purpose of using np.unique
+    cond_rows = np.ascontiguousarray(digitized_cond_x).view(np.dtype(
+        (np.void, digitized_cond_x.dtype.itemsize * digitized_cond_x.shape[1])))
+    _, assignments, cnts = np.unique(
+        cond_rows, return_index=False, return_inverse=True, return_counts=True)
+    
+    return assignments, cnts
+
 
 def mutual_information(orig_x: np.array,
                        cond_x: np.array,
                        knn: int,
                        class_method: str = 'bin',
-                       num_bins: int = 2,
+                       num_digit: int = 2,
                        orig_entropy: float = None):
     '''
         To compute the conditioned entropy H(orig_x|cond_x), we categorize the cond_x into discrete classes,
@@ -35,22 +61,13 @@ def mutual_information(orig_x: np.array,
         '''
             Bin in vector space:
         '''
-        # minmax normalize to [0,1]
-        cond_x = (cond_x - np.min(cond_x)) / (np.max(cond_x) - np.min(cond_x))
-        bins = np.linspace(0, 1, num_bins, dtype='float32')
-        # bin each element, [N x d_2]
-        digitized_cond_x = np.digitize(cond_x, bins=bins, right=False)
 
-        # turn d_2 feature vector to 1-dim [N x d_2] -> [N x 1], for the purpose of using np.unique
-        cond_rows = np.ascontiguousarray(digitized_cond_x).view(np.dtype(
-            (np.void, digitized_cond_x.dtype.itemsize * digitized_cond_x.shape[1])))
-        _, cond_classes, classes_cnts = np.unique(
-            cond_rows, return_index=False, return_inverse=True, return_counts=True)
+        cond_classes, classes_cnts = simple_bin(cond_x, num_digit=num_digit)
+    
     elif class_method == 'spectral_bin':
         '''
             Bin in spectral space
         '''
-
         return NotImplementedError
     elif class_method == 'kmeans':
         return NotImplementedError
