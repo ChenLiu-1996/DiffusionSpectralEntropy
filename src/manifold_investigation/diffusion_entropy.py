@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from scipy.stats import pearsonr, spearmanr
 from tqdm import tqdm
 from typing import Dict, Iterable
+import random
 
 os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
 os.environ["OPENBLAS_NUM_THREADS"] = "1"  # export OPENBLAS_NUM_THREADS=1
@@ -234,24 +235,33 @@ if __name__ == '__main__':
 
             for file in tqdm(files):
                 np_file = np.load(file)
+                curr_input = np_file['image']
                 curr_label = np_file['label_true']
                 curr_embedding = np_file['embedding']
-                curr_input = np_file['image']
 
                 if labels is None:
+                    orig_input = curr_input
                     labels = curr_label[:, None]  # expand dim to [B, 1]
                     embeddings = curr_embedding
-                    orig_input = curr_input
                 else:
+                    orig_input = np.vstack((orig_input, curr_input))
                     labels = np.vstack((labels, curr_label[:, None]))
                     embeddings = np.vstack((embeddings, curr_embedding))
-                    orig_input = np.vstack((orig_input, curr_input))
 
             # This is the matrix of N embedding vectors each at dim [1, D].
             N, D = embeddings.shape
 
             assert labels.shape[0] == N
             assert labels.shape[1] == 1
+
+            # NOTE: Downsample the data matrix if it is too big (larger than 10K nodes).
+            # MNIST and CIFAR10 both have 10K nodes, while ImageNet has 50K.
+            if N > 1e4:
+                random.seed(1)
+                sampled_inds = random.sample(range(N), 1e4)
+                orig_input = orig_input[sampled_inds, :]
+                labels = labels[sampled_inds, :]
+                embeddings = embeddings[sampled_inds, :]
 
             if config.dataset == 'cifar10':
                 labels_updated = np.zeros(labels.shape, dtype='object')
@@ -270,7 +280,8 @@ if __name__ == '__main__':
                 eigenvalues_P = data_numpy['eigenvalues_P']
                 print('Pre-computed eigenvalues loaded.')
             else:
-                diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
+                diffusion_matrix = compute_diffusion_matrix(embeddings,
+                                                            k=args.knn)
                 print('Diffusion matrix computed.')
                 eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
                 # Lower precision to save disk space.
@@ -298,7 +309,8 @@ if __name__ == '__main__':
                 samples = embeddings[inds, :]
 
                 # Diffusion Matrix
-                s_diffusion_matrix = compute_diffusion_matrix(samples, k=args.knn)
+                s_diffusion_matrix = compute_diffusion_matrix(samples,
+                                                              k=args.knn)
                 # Eigenvalues
                 s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
                 # Von Neumann Entropy
