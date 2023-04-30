@@ -93,7 +93,9 @@ def compute_mi_class(embeddings: torch.Tensor, labels: np.array, vne: float,
 
 def get_dataloaders(
     args: AttributeHashmap
-) -> Tuple[Tuple[torch.utils.data.DataLoader, ], AttributeHashmap]:
+) -> Tuple[Tuple[
+        torch.utils.data.DataLoader,
+], AttributeHashmap]:
 
     dataset_dir = '%s/data/%s' % (args.root_dir, args.dataset)
 
@@ -377,7 +379,8 @@ def diffusion_entropy(args: AttributeHashmap):
     train_loader, val_loader = get_dataloaders(args=args)
 
     model_version_map = {
-        'supervised': ['supervised_ImageNet1Kv1_ep90', 'supervised_ImageNet1Kv2_ep600'],
+        'supervised':
+        ['supervised_ImageNet1Kv1_ep90', 'supervised_ImageNet1Kv2_ep600'],
         'barlowtwins': ['barlowtwins_bs2048_ep1000'],
         'moco': ['moco_v1_ep200', 'moco_v2_ep200', 'moco_v2_ep800'],
         'simsiam': ['simsiam_bs256_ep100', 'simsiam_bs512_ep100'],
@@ -390,7 +393,8 @@ def diffusion_entropy(args: AttributeHashmap):
             'swav_bs4096_ep800',
         ],
         'vicreg': ['vicreg_bs2048_ep100'],
-        'vicregl': ['vicregl_alpha0d75_bs2048_ep300', 'vicregl_alpha0d9_bs2048_ep300'],
+        'vicregl':
+        ['vicregl_alpha0d75_bs2048_ep300', 'vicregl_alpha0d9_bs2048_ep300'],
     }
     top1_acc_nominal = {
         'supervised': [76.1, 80.9],
@@ -399,7 +403,7 @@ def diffusion_entropy(args: AttributeHashmap):
         'simsiam': [68.3, 68.1],
         'swav': [72.7, 74.3, 72.1, 73.9, 74.6, 75.3],
         'vicreg': [73.2],
-        'vicregl': [70.4, 71.2], # Fine-tune acc. not reported.
+        'vicregl': [70.4, 71.2],  # Fine-tune acc. not reported.
     }
     summary = {}
 
@@ -416,8 +420,8 @@ def diffusion_entropy(args: AttributeHashmap):
 
             if model_name == 'supervised':
                 model = SupervisedModel(device=device,
-                                         version=version,
-                                         num_classes=args.num_classes)
+                                        version=version,
+                                        num_classes=args.num_classes)
             elif model_name == 'barlowtwins':
                 model = BarlowTwinsModel(device=device,
                                          version=version,

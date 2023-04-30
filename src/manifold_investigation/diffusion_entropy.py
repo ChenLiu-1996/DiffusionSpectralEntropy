@@ -64,9 +64,9 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     ax.spines[['right', 'top']].set_visible(False)
     ax.scatter(data_arrays['acc'],
                data_arrays['vne'],
-               facecolors='none',
-               edgecolors='mediumblue',
-               s=500,
+               c='mediumblue',
+               alpha=0.5,
+               s=300,
                linewidths=5)
     fig_vne_corr.supylabel('Diffusion Entropy', fontsize=40)
     fig_vne_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
@@ -106,15 +106,15 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     ax.spines[['right', 'top']].set_visible(False)
     ax.scatter(data_arrays['acc'],
                data_arrays['mi'],
-               facecolors='none',
-               edgecolors='mediumblue',
-               s=500,
+               c='mediumblue',
+               alpha=0.5,
+               s=300,
                linewidths=5)
     ax.scatter(data_arrays['acc'],
                data_arrays['mi_input'],
-               facecolors='none',
-               edgecolors='green',
-               s=500,
+               c='green',
+               alpha=0.5,
+               s=300,
                linewidths=5)
     ax.legend(['I(z;Y)', 'I(z;X)'], bbox_to_anchor=(1.00, 0.48))
     fig_mi_corr.supylabel('Mutual Information', fontsize=40)

@@ -22,12 +22,15 @@ class VICRegLModel(BaseModel):
                 Specific version of the model. Usually corresponds to the hyperparams.
                 Currently supported: ['vicregl_alpha0d75_bs2048_ep300', 'vicregl_alpha0d9_bs2048_ep300']
         '''
-        super(VICRegLModel, self).__init__(device=device,
-                                           model_class_name='VICRegLModel',
-                                           version=version,
-                                           versions=['vicregl_alpha0d75_bs2048_ep300',
-                                                     'vicregl_alpha0d9_bs2048_ep300'],
-                                           num_classes=num_classes)
+        super(VICRegLModel,
+              self).__init__(device=device,
+                             model_class_name='VICRegLModel',
+                             version=version,
+                             versions=[
+                                 'vicregl_alpha0d75_bs2048_ep300',
+                                 'vicregl_alpha0d9_bs2048_ep300'
+                             ],
+                             num_classes=num_classes)
 
     def restore_model(self, restore_path: str = None) -> None:
         '''

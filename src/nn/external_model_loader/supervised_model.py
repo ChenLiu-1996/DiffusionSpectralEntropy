@@ -22,12 +22,15 @@ class SupervisedModel(BaseModel):
                 Specific version of the model. Usually corresponds to the hyperparams.
                 Currently supported: ['supervised_ImageNet1Kv1_ep90', 'supervised_ImageNet1Kv2_ep600']
         '''
-        super(SupervisedModel, self).__init__(device=device,
-                                              model_class_name='SupervisedModel',
-                                              version=version,
-                                              versions=['supervised_ImageNet1Kv1_ep90',
-                                                        'supervised_ImageNet1Kv2_ep600'],
-                                              num_classes=num_classes)
+        super(SupervisedModel,
+              self).__init__(device=device,
+                             model_class_name='SupervisedModel',
+                             version=version,
+                             versions=[
+                                 'supervised_ImageNet1Kv1_ep90',
+                                 'supervised_ImageNet1Kv2_ep600'
+                             ],
+                             num_classes=num_classes)
 
     def restore_model(self, restore_path: str = None) -> None:
         '''

@@ -15,13 +15,12 @@ class BaseModel(object):
     A foundational class with many common methods to be inherited by individual model classes.
     '''
 
-    def __init__(
-        self,
-        device: torch.device = torch.device('cpu'),
-        model_class_name: str = None,
-        version: str = None,
-        versions: List[str] = [],
-        num_classes: int = 10) -> None:
+    def __init__(self,
+                 device: torch.device = torch.device('cpu'),
+                 model_class_name: str = None,
+                 version: str = None,
+                 versions: List[str] = [],
+                 num_classes: int = 10) -> None:
         '''
         Arg(s):
             device : torch.device
