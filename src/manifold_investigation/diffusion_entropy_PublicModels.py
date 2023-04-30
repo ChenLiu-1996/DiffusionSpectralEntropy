@@ -31,6 +31,7 @@ from barlowtwins_model import BarlowTwinsModel
 from characteristics import von_neumann_entropy
 from diffusion import compute_diffusion_matrix
 from moco_model import MoCoModel
+from supervised_model import SupervisedModel
 from simsiam_model import SimSiamModel
 from swav_model import SwavModel
 from vicreg_model import VICRegModel
@@ -413,7 +414,11 @@ def diffusion_entropy(args: AttributeHashmap):
             embedding_npy_path = '%s/%s_embeddings.npy' % (npy_folder, version)
             eig_npy_path = '%s/%s_eigP.npy' % (npy_folder, version)
 
-            if model_name == 'barlowtwins':
+            if model_name == 'supervised':
+                model = SupervisedModel(device=device,
+                                         version=version,
+                                         num_classes=args.num_classes)
+            elif model_name == 'barlowtwins':
                 model = BarlowTwinsModel(device=device,
                                          version=version,
                                          num_classes=args.num_classes)
