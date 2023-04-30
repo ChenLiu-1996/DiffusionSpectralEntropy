@@ -70,11 +70,15 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 ### Preparing pretrained weights of external models.
 NOTE: This is no longer very relevant. We prepared these but we later shifted our research focus.
 
+
+
+
 <details> <summary>Supervised</summary>
 
 ```
 cd src/nn/external_model_checkpoints/
-wget -O supervised_ep100.pth.tar https://d2j0dndfm35trm.cloudfront.net/resnet-50.t7
+wget -O supervised_ImageNet1Kv1_ep90.pth.tar https://download.pytorch.org/models/resnet50-0676ba61.pth
+wget -O supervised_ImageNet1Kv2_ep600.pth.tar https://download.pytorch.org/models/resnet50-11ad3fa6.pth
 ```
 </details>
 
@@ -131,8 +135,8 @@ wget -O vicreg_bs2048_ep100.pth.tar https://dl.fbaipublicfiles.com/vicreg/resnet
 
 ```
 cd src/nn/external_model_checkpoints/
-wget -O vicregl_alpha0d9_bs2048_ep300.pth.tar https://dl.fbaipublicfiles.com/vicregl/resnet50_alpha0.9_fullckpt.pth
-wget -O vicregl_alpha0d75_bs2048_ep300.pth.tar https://dl.fbaipublicfiles.com/vicregl/resnet50_alpha0.75_fullckpt.pth
+wget -O vicregl_alpha0d9_bs2048_ep300.pth.tar https://dl.fbaipublicfiles.com/vicregl/resnet50_alpha0.9.pth
+wget -O vicregl_alpha0d75_bs2048_ep300.pth.tar https://dl.fbaipublicfiles.com/vicregl/resnet50_alpha0.75.pth
 ```
 </details>
 

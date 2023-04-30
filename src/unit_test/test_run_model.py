@@ -9,17 +9,10 @@ sys.path.insert(0, import_dir + '/nn/external_model_loader/')
 from barlowtwins_model import BarlowTwinsModel
 from moco_model import MoCoModel
 from simsiam_model import SimSiamModel
+from supervised_model import SupervisedModel
 from swav_model import SwavModel
 from vicreg_model import VICRegModel
 from vicregl_model import VICRegLModel
-
-
-def exclude_bias_and_norm(p):
-    '''
-    This function being here is important.
-    Without it, the model VICRegL won't properly load.
-    '''
-    return p.ndim == 1
 
 
 def run_model(
@@ -30,6 +23,7 @@ def run_model(
         'barlowtwins': 'barlowtwins_bs2048_ep1000',
         'moco': 'moco_v1_ep200',
         'simsiam': 'simsiam_bs256_ep100',
+        'supervised': 'supervised_ImageNet1Kv1_ep90',
         'swav': 'swav_bs256_ep200',
         'vicreg': 'vicreg_bs2048_ep100',
         'vicregl': 'vicregl_alpha0d75_bs2048_ep300',
@@ -40,7 +34,9 @@ def run_model(
 
         print('Testing model: %s' % model_name)
 
-        if model_name == 'barlowtwins':
+        if model_name == 'supervised':
+            model = SupervisedModel(device=device, version=version)
+        elif model_name == 'barlowtwins':
             model = BarlowTwinsModel(device=device, version=version)
         elif model_name == 'moco':
             model = MoCoModel(device=device, version=version)

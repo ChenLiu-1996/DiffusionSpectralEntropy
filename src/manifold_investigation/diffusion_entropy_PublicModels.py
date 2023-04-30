@@ -37,13 +37,6 @@ from vicreg_model import VICRegModel
 from vicregl_model import VICRegLModel
 
 
-def exclude_bias_and_norm(p):
-    '''
-    This function being here is important.
-    Without it, the model VICRegL won't properly load.
-    '''
-    return p.ndim == 1
-
 def compute_diffusion_entropy(embeddings: torch.Tensor, eig_npy_path: str,
                               knn: int) -> float:
 
@@ -137,7 +130,7 @@ def get_dataloaders(
         imsize = 512
         dataset_mean = (0.4467, 0.4398, 0.4066)
         dataset_std = (0.2603, 0.2566, 0.2713)
-        torchvision_dataset = torchvision.datasets.FOOD101
+        torchvision_dataset = torchvision.datasets.Food101
 
     elif args.dataset == 'flowers102':
         args.in_channels = 3
@@ -145,7 +138,7 @@ def get_dataloaders(
         imsize = 256
         dataset_mean = (0.4467, 0.4398, 0.4066)
         dataset_std = (0.2603, 0.2566, 0.2713)
-        torchvision_dataset = torchvision.datasets.FLOWERS102
+        torchvision_dataset = torchvision.datasets.Flowers102
 
     elif args.dataset == 'stl10':
         args.in_channels = 3
@@ -382,11 +375,11 @@ def diffusion_entropy(args: AttributeHashmap):
 
     train_loader, val_loader = get_dataloaders(args=args)
 
-    # __models = ['barlowtwins', 'moco', 'simsiam', 'swav', 'vicreg']
-    __models = ['barlowtwins', 'simsiam', 'swav', 'vicreg', 'vicregl']
+    __models = ['barlowtwins', 'moco', 'simsiam', 'swav', 'vicreg', 'vicregl']
     __versions = {
+        'supervised': [''],
         'barlowtwins': ['barlowtwins_bs2048_ep1000'],
-        # 'moco': ['moco_v1_ep200', 'moco_v2_ep200', 'moco_v2_ep800'],
+        'moco': ['moco_v1_ep200', 'moco_v2_ep200', 'moco_v2_ep800'],
         'simsiam': ['simsiam_bs256_ep100', 'simsiam_bs512_ep100'],
         'swav': [
             'swav_bs256_ep200',
@@ -400,12 +393,13 @@ def diffusion_entropy(args: AttributeHashmap):
         'vicregl': ['vicregl_alpha0d75_bs2048_ep300', 'vicregl_alpha0d9_bs2048_ep300'],
     }
     top1_acc_nominal = {
+        'supervised': [76.1, 80.9],
         'barlowtwins': [73.5],
-        # 'moco': [60.6, 67.7, 71.1],
+        'moco': [60.6, 67.7, 71.1],
         'simsiam': [68.3, 68.1],
         'swav': [72.7, 74.3, 72.1, 73.9, 74.6, 75.3],
         'vicreg': [73.2],
-        'vicregl': [70.4, 71.2], # Actually not reported.
+        'vicregl': [70.4, 71.2], # Fine-tune acc. not reported.
     }
     summary = {}
 
