@@ -256,9 +256,9 @@ if __name__ == '__main__':
 
             # NOTE: Downsample the data matrix if it is too big (larger than 10K nodes).
             # MNIST and CIFAR10 both have 10K nodes, while ImageNet has 50K.
-            if N > 1e4:
+            if N > 10000:
                 random.seed(1)
-                sampled_inds = random.sample(range(N), 1e4)
+                sampled_inds = random.sample(range(N), 10000)
                 orig_input = orig_input[sampled_inds, :]
                 labels = labels[sampled_inds, :]
                 embeddings = embeddings[sampled_inds, :]
