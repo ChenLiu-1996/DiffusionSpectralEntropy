@@ -12,7 +12,8 @@ class BarlowTwinsModel(BaseModel):
 
     def __init__(self,
                  device: torch.device = None,
-                 version: str = None, num_classes: int = None) -> None:
+                 version: str = None,
+                 num_classes: int = 1000) -> None:
         '''
         Arg(s):
             device : torch.device
@@ -24,7 +25,6 @@ class BarlowTwinsModel(BaseModel):
         super(BarlowTwinsModel,
               self).__init__(device=device,
                              model_class_name='BarlowTwinsModel',
-                             model_name='barlowtwins',
                              version=version,
                              versions=['barlowtwins_bs2048_ep1000'],
                              num_classes=num_classes)

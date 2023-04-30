@@ -12,7 +12,8 @@ class SimSiamModel(BaseModel):
 
     def __init__(self,
                  device: torch.device = None,
-                 version: str = None, num_classes: int = None) -> None:
+                 version: str = None,
+                 num_classes: int = 1000) -> None:
         '''
         Arg(s):
             device : torch.device
@@ -24,7 +25,6 @@ class SimSiamModel(BaseModel):
         super(SimSiamModel, self).__init__(
             device=device,
             model_class_name='SimSiamModel',
-            model_name='simsiam',
             version=version,
             versions=['simsiam_bs256_ep100', 'simsiam_bs512_ep100'],
             num_classes=num_classes)

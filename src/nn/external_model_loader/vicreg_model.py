@@ -13,7 +13,7 @@ class VICRegModel(BaseModel):
     def __init__(self,
                  device: torch.device = None,
                  version: str = None,
-                 num_classes: int = None) -> None:
+                 num_classes: int = 1000) -> None:
         '''
         Arg(s):
             device : torch.device
@@ -24,7 +24,6 @@ class VICRegModel(BaseModel):
         '''
         super(VICRegModel, self).__init__(device=device,
                                           model_class_name='VICRegModel',
-                                          model_name='vicreg',
                                           version=version,
                                           versions=['vicreg_bs2048_ep100'],
                                           num_classes=num_classes)

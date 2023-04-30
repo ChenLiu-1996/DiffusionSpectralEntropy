@@ -69,12 +69,20 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 
 ### Preparing pretrained weights of external models.
 NOTE: This is no longer very relevant. We prepared these but we later shifted our research focus.
+
+<details> <summary>Supervised</summary>
+
+```
+cd src/nn/external_model_checkpoints/
+wget -O supervised_ep100.pth.tar https://d2j0dndfm35trm.cloudfront.net/resnet-50.t7
+```
+</details>
+
+
 <details> <summary>Barlow Twins</summary>
 
 ```
-cd external_src/barlowtwins/
-mkdir checkpoints && cd checkpoints
-mkdir ImageNet && cd ImageNet
+cd src/nn/external_model_checkpoints/
 wget -O barlowtwins_bs2048_ep1000.pth.tar https://dl.fbaipublicfiles.com/barlowtwins/ljng/resnet50.pth
 ```
 </details>
@@ -82,9 +90,7 @@ wget -O barlowtwins_bs2048_ep1000.pth.tar https://dl.fbaipublicfiles.com/barlowt
 <details> <summary>MoCo</summary>
 
 ```
-cd external_src/moco/
-mkdir checkpoints && cd checkpoints
-mkdir ImageNet && cd ImageNet
+cd src/nn/external_model_checkpoints/
 wget -O moco_v1_ep200.pth.tar https://dl.fbaipublicfiles.com/moco/moco_checkpoints/moco_v1_200ep/moco_v1_200ep_pretrain.pth.tar
 wget -O moco_v2_ep200.pth.tar https://dl.fbaipublicfiles.com/moco/moco_checkpoints/moco_v2_200ep/moco_v2_200ep_pretrain.pth.tar
 wget -O moco_v2_ep800.pth.tar https://dl.fbaipublicfiles.com/moco/moco_checkpoints/moco_v2_800ep/moco_v2_800ep_pretrain.pth.tar
@@ -94,9 +100,7 @@ wget -O moco_v2_ep800.pth.tar https://dl.fbaipublicfiles.com/moco/moco_checkpoin
 <details> <summary>SimSiam</summary>
 
 ```
-cd external_src/simsiam/
-mkdir checkpoints && cd checkpoints
-mkdir ImageNet && cd ImageNet
+cd src/nn/external_model_checkpoints/
 wget -O simsiam_bs512_ep100.pth.tar https://dl.fbaipublicfiles.com/simsiam/models/100ep/pretrain/checkpoint_0099.pth.tar
 wget -O simsiam_bs256_ep100.pth.tar https://dl.fbaipublicfiles.com/simsiam/models/100ep-256bs/pretrain/checkpoint_0099.pth.tar
 ```
@@ -105,13 +109,11 @@ wget -O simsiam_bs256_ep100.pth.tar https://dl.fbaipublicfiles.com/simsiam/model
 <details> <summary>Swav</summary>
 
 ```
-cd external_src/swav/
-mkdir checkpoints && cd checkpoints
-mkdir ImageNet && cd ImageNet
-wget -O swav_bs4096_ep800.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_800ep_pretrain.pth.tar
-wget -O swav_bs4096_ep400.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_400ep_pretrain.pth.tar
-wget -O swav_bs4096_ep200.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_200ep_pretrain.pth.tar
+cd src/nn/external_model_checkpoints/
 wget -O swav_bs4096_ep100.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_100ep_pretrain.pth.tar
+wget -O swav_bs4096_ep200.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_200ep_pretrain.pth.tar
+wget -O swav_bs4096_ep400.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_400ep_pretrain.pth.tar
+wget -O swav_bs4096_ep800.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_800ep_pretrain.pth.tar
 wget -O swav_bs256_ep200.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_200ep_bs256_pretrain.pth.tar
 wget -O swav_bs256_ep400.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav_400ep_bs256_pretrain.pth.tar
 ```
@@ -120,10 +122,17 @@ wget -O swav_bs256_ep400.pth.tar https://dl.fbaipublicfiles.com/deepcluster/swav
 <details> <summary>VICReg</summary>
 
 ```
-cd external_src/vicreg/
-mkdir checkpoints && cd checkpoints
-mkdir ImageNet && cd ImageNet
+cd src/nn/external_model_checkpoints/
 wget -O vicreg_bs2048_ep100.pth.tar https://dl.fbaipublicfiles.com/vicreg/resnet50.pth
+```
+</details>
+
+<details> <summary>VICRegL</summary>
+
+```
+cd src/nn/external_model_checkpoints/
+wget -O vicregl_alpha0d9_bs2048_ep300.pth.tar https://dl.fbaipublicfiles.com/vicregl/resnet50_alpha0.9_fullckpt.pth
+wget -O vicregl_alpha0d75_bs2048_ep300.pth.tar https://dl.fbaipublicfiles.com/vicregl/resnet50_alpha0.75_fullckpt.pth
 ```
 </details>
 

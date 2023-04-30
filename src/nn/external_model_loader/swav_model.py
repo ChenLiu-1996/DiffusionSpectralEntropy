@@ -12,7 +12,8 @@ class SwavModel(BaseModel):
 
     def __init__(self,
                  device: torch.device = None,
-                 version: str = None, num_classes: int = None) -> None:
+                 version: str = None,
+                 num_classes: int = 1000) -> None:
         '''
         Arg(s):
             device : torch.device
@@ -27,7 +28,6 @@ class SwavModel(BaseModel):
         '''
         super(SwavModel, self).__init__(device=device,
                                         model_class_name='SwavModel',
-                                        model_name='swav',
                                         version=version,
                                         versions=[
                                             'swav_bs256_ep200',

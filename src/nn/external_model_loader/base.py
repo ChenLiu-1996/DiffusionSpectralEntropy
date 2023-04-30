@@ -18,12 +18,10 @@ class BaseModel(object):
     def __init__(
         self,
         device: torch.device = torch.device('cpu'),
-        model_name: str = None,
         model_class_name: str = None,
         version: str = None,
         versions: List[str] = [],
-        num_classes: int = 10,
-    ) -> None:
+        num_classes: int = 10) -> None:
         '''
         Arg(s):
             device : torch.device
@@ -35,7 +33,6 @@ class BaseModel(object):
                 Supported versions of the model.
         '''
         self.device = device
-        self.model_name = model_name
         self.model_class_name = model_class_name
         self.num_classes = num_classes
 
@@ -51,10 +48,10 @@ class BaseModel(object):
                 (version, self.__versions))
 
         # Define pretrained model path and some hyperparams.
-        root = '/'.join(os.path.realpath(__file__).split('/')[:-4])
+        root = '/'.join(os.path.realpath(__file__).split('/')[:-2])
         self.pretrained = root + \
-            '/external_src/%s/checkpoints/ImageNet/%s.pth.tar' % (
-                self.model_name, version)
+            '/external_model_checkpoints/%s.pth.tar' % (
+                version)
         self.arch = 'resnet50'
 
         # Create model.

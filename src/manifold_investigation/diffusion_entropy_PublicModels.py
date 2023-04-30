@@ -34,7 +34,15 @@ from moco_model import MoCoModel
 from simsiam_model import SimSiamModel
 from swav_model import SwavModel
 from vicreg_model import VICRegModel
+from vicregl_model import VICRegLModel
 
+
+def exclude_bias_and_norm(p):
+    '''
+    This function being here is important.
+    Without it, the model VICRegL won't properly load.
+    '''
+    return p.ndim == 1
 
 def compute_diffusion_entropy(embeddings: torch.Tensor, eig_npy_path: str,
                               knn: int) -> float:
@@ -358,10 +366,11 @@ def diffusion_entropy(args: AttributeHashmap):
 
     train_loader, val_loader = get_dataloaders(args=args)
 
-    __models = ['barlowtwins', 'moco', 'simsiam', 'swav', 'vicreg']
+    # __models = ['barlowtwins', 'moco', 'simsiam', 'swav', 'vicreg']
+    __models = ['barlowtwins', 'simsiam', 'swav', 'vicreg', 'vicregl']
     __versions = {
         'barlowtwins': ['barlowtwins_bs2048_ep1000'],
-        'moco': ['moco_v1_ep200', 'moco_v2_ep200', 'moco_v2_ep800'],
+        # 'moco': ['moco_v1_ep200', 'moco_v2_ep200', 'moco_v2_ep800'],
         'simsiam': ['simsiam_bs256_ep100', 'simsiam_bs512_ep100'],
         'swav': [
             'swav_bs256_ep200',
@@ -371,14 +380,16 @@ def diffusion_entropy(args: AttributeHashmap):
             'swav_bs4096_ep400',
             'swav_bs4096_ep800',
         ],
-        'vicreg': ['vicreg_bs2048_ep100']
+        'vicreg': ['vicreg_bs2048_ep100'],
+        'vicregl': ['vicregl_alpha0d75_bs2048_ep300', 'vicregl_alpha0d9_bs2048_ep300'],
     }
     top1_acc_nominal = {
         'barlowtwins': [73.5],
-        'moco': [60.6, 67.7, 71.1],
+        # 'moco': [60.6, 67.7, 71.1],
         'simsiam': [68.3, 68.1],
         'swav': [72.7, 74.3, 72.1, 73.9, 74.6, 75.3],
         'vicreg': [73.2],
+        'vicregl': [70.4, 71.2], # Actually not reported.
     }
     summary = {}
 
@@ -413,6 +424,10 @@ def diffusion_entropy(args: AttributeHashmap):
                 model = VICRegModel(device=device,
                                     version=version,
                                     num_classes=args.num_classes)
+            elif model_name == 'vicregl':
+                model = VICRegLModel(device=device,
+                                     version=version,
+                                     num_classes=args.num_classes)
             else:
                 raise ValueError('model_name: %s not supported.' % model_name)
 
