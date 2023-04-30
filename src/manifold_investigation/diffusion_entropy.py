@@ -66,8 +66,7 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                data_arrays['vne'],
                c='mediumblue',
                alpha=0.5,
-               s=300,
-               linewidths=5)
+               s=300)
     fig_vne_corr.supylabel('Diffusion Entropy', fontsize=40)
     fig_vne_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
@@ -108,8 +107,7 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                data_arrays['mi'],
                c='mediumblue',
                alpha=0.5,
-               s=300,
-               linewidths=5)
+               s=300)
     ax.scatter(data_arrays['acc'],
                data_arrays['mi_input'],
                c='green',
