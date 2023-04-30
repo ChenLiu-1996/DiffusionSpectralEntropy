@@ -27,11 +27,11 @@ def run_model(
         random_seed: int = 1) -> None:
 
     base_version = {
-        # 'barlowtwins': 'barlowtwins_bs2048_ep1000',
-        # 'moco': 'moco_v1_ep200',
-        # 'simsiam': 'simsiam_bs256_ep100',
-        # 'swav': 'swav_bs256_ep200',
-        # 'vicreg': 'vicreg_bs2048_ep100',
+        'barlowtwins': 'barlowtwins_bs2048_ep1000',
+        'moco': 'moco_v1_ep200',
+        'simsiam': 'simsiam_bs256_ep100',
+        'swav': 'swav_bs256_ep200',
+        'vicreg': 'vicreg_bs2048_ep100',
         'vicregl': 'vicregl_alpha0d75_bs2048_ep300',
     }
 
