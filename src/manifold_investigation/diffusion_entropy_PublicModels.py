@@ -665,12 +665,12 @@ if __name__ == '__main__':
                         help='random seed.',
                         type=int,
                         default=0)
-    parser.add_argument('--batch-size', type=int, default=256)
+    parser.add_argument('--batch-size', type=int, default=512)
     parser.add_argument('--num-workers', type=int, default=1)
     parser.add_argument('--full-fine-tune',
                         help='If True, full fine tune. Else, linear probe.',
                         action='store_true')
-    parser.add_argument('--learning-rate-tuning', type=float, default=3e-4)
+    parser.add_argument('--learning-rate-tuning', type=float, default=1e-4)
     parser.add_argument('--num-tuning-epoch', type=int, default=50)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
