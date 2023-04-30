@@ -375,7 +375,7 @@ def diffusion_entropy(args: AttributeHashmap):
 
     train_loader, val_loader = get_dataloaders(args=args)
 
-    __models = ['barlowtwins', 'moco', 'simsiam', 'swav', 'vicreg', 'vicregl']
+    __models = ['supervised', 'barlowtwins', 'moco', 'simsiam', 'swav', 'vicreg', 'vicregl']
     __versions = {
         'supervised': ['supervised_ImageNet1Kv1_ep90', 'supervised_ImageNet1Kv2_ep600'],
         'barlowtwins': ['barlowtwins_bs2048_ep1000'],

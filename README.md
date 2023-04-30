@@ -71,8 +71,6 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 NOTE: This is no longer very relevant. We prepared these but we later shifted our research focus.
 
 
-
-
 <details> <summary>Supervised</summary>
 
 ```
