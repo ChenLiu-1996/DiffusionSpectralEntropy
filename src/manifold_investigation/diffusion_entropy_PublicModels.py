@@ -131,6 +131,22 @@ def get_dataloaders(
         dataset_std = (0.2023, 0.1994, 0.2010)
         torchvision_dataset = torchvision.datasets.CIFAR100
 
+    elif args.dataset == 'food101':
+        args.in_channels = 3
+        args.num_classes = 101
+        imsize = 512
+        dataset_mean = (0.4467, 0.4398, 0.4066)
+        dataset_std = (0.2603, 0.2566, 0.2713)
+        torchvision_dataset = torchvision.datasets.FOOD101
+
+    elif args.dataset == 'flowers102':
+        args.in_channels = 3
+        args.num_classes = 102
+        imsize = 256
+        dataset_mean = (0.4467, 0.4398, 0.4066)
+        dataset_std = (0.2603, 0.2566, 0.2713)
+        torchvision_dataset = torchvision.datasets.FLOWERS102
+
     elif args.dataset == 'stl10':
         args.in_channels = 3
         args.num_classes = 10
@@ -205,7 +221,7 @@ def get_dataloaders(
                                           download=True,
                                           transform=transform_val)
 
-    elif args.dataset in ['stanfordcars', 'stl10']:
+    elif args.dataset in ['stanfordcars', 'stl10', 'flowers102']:
         train_dataset = torchvision_dataset(dataset_dir,
                                             split='train',
                                             download=True,
