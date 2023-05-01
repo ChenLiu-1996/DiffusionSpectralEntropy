@@ -289,8 +289,8 @@ if __name__ == '__main__':
 
             #
             '''Diffusion Matrix and Diffusion Eigenvalues'''
-            save_path_eigenvalues = './%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s.npz' % (
-                save_root, checkpoint_name)
+            save_path_eigenvalues = './results_diffusion_entropy/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s.npz' % (
+                checkpoint_name)
             os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
             if os.path.exists(save_path_eigenvalues):
                 data_numpy = np.load(save_path_eigenvalues)
@@ -364,8 +364,8 @@ if __name__ == '__main__':
             '''(Spectral Bin) Mutual Information between z and Input'''
             log('(Spectral Bin) Mutual Information between z and Input: ', log_path)
             # Diffusion embeddings of orig_input
-            save_path_diff_embed = './results_diffusion_entropy/numpy_files/diffusion-embeddings/%s.npz' % (
-                config.dataset)
+            save_path_diff_embed = './%s/numpy_files/diffusion-embeddings/%s.npz' % (
+                save_root, config.dataset)
             os.makedirs(os.path.dirname(save_path_diff_embed), exist_ok=True)
             if os.path.exists(save_path_diff_embed):
                 diff_embed = np.load(save_path_diff_embed)['diff_embed']
