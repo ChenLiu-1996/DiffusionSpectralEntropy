@@ -164,6 +164,9 @@ if __name__ == '__main__':
         help='Only enter if you want to override the config!!!',
         type=int,
         default=None)
+    parser.add_argument('--exp', help='experiment mode, data/plots will be saved in different folder',
+                        action='store_true', default=False)
+
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -186,7 +189,7 @@ if __name__ == '__main__':
              (config.output_save_path, config.dataset, method_str,
               config.model, config.random_seed)))
 
-    save_root = './results_diffusion_entropy/'
+    save_root = './results_diffusion_entropy/exp_mode/' if config.exp else './results_diffusion_entropy/' 
     os.makedirs(save_root, exist_ok=True)
 
     save_paths_fig = {
@@ -217,7 +220,7 @@ if __name__ == '__main__':
         config.random_seed, args.knn)
 
     os.makedirs(os.path.dirname(save_path_final_npy), exist_ok=True)
-    if os.path.exists(save_path_final_npy):
+    if os.path.exists(save_path_final_npy) and config.exp is False:
         data_numpy = np.load(save_path_final_npy)
         data_arrays = {
             'epoch': data_numpy['epoch'],
@@ -286,8 +289,8 @@ if __name__ == '__main__':
 
             #
             '''Diffusion Matrix and Diffusion Eigenvalues'''
-            save_path_eigenvalues = '%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s.npz' % (
-                save_root, checkpoint_name)
+            save_path_eigenvalues = './results_diffusion_entropy/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s.npz' % (
+                checkpoint_name)
             os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
             if os.path.exists(save_path_eigenvalues):
                 data_numpy = np.load(save_path_eigenvalues)
@@ -361,8 +364,8 @@ if __name__ == '__main__':
             '''(Spectral Bin) Mutual Information between z and Input'''
             log('(Spectral Bin) Mutual Information between z and Input: ', log_path)
             # Diffusion embeddings of orig_input
-            save_path_diff_embed = '%s/numpy_files/diffusion-embeddings/%s.npz' % (
-                save_root, config.dataset)
+            save_path_diff_embed = './results_diffusion_entropy/numpy_files/diffusion-embeddings/%s.npz' % (
+                config.dataset)
             os.makedirs(os.path.dirname(save_path_diff_embed), exist_ok=True)
             if os.path.exists(save_path_diff_embed):
                 diff_embed = np.load(save_path_diff_embed)['diff_embed']
