@@ -289,8 +289,8 @@ if __name__ == '__main__':
 
             #
             '''Diffusion Matrix and Diffusion Eigenvalues'''
-            save_path_eigenvalues = './results_diffusion_entropy/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s.npz' % (
-                checkpoint_name)
+            save_path_eigenvalues = './%s/numpy_files/diffusion-eigenvalues/diffusion-eigenvalues-%s.npz' % (
+                save_root, checkpoint_name)
             os.makedirs(os.path.dirname(save_path_eigenvalues), exist_ok=True)
             if os.path.exists(save_path_eigenvalues):
                 data_numpy = np.load(save_path_eigenvalues)
