@@ -97,10 +97,10 @@ def mutual_information(orig_x: np.array,
         if num_spectral is None:
             num_spectral = min(cond_x.shape[1], cond_x.shape[0])
         if diff_embed is None:
-            diff_embed = diffusion_embedding(X=cond_x)
+            diff_embed = comp_diffusion_embedding(X=cond_x)
         
         # Top components
-        diff_embed = diff_embed[:, num_spectral]
+        diff_embed = diff_embed[:, :num_spectral]
 
         # simple bin on the diffusion map coords
         cond_classes, classes_cnts = simple_bin(cond_x=diff_embed, num_digit=num_digit)
