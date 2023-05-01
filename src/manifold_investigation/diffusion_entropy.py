@@ -189,7 +189,7 @@ if __name__ == '__main__':
              (config.output_save_path, config.dataset, method_str,
               config.model, config.random_seed)))
 
-    save_root = './results_diffusion_entropy/exp_mode/' if args.exp else './results_diffusion_entropy/' 
+    save_root = './exp_diffusion_entropy/' if args.exp else './results_diffusion_entropy/' 
     os.makedirs(save_root, exist_ok=True)
 
     save_paths_fig = {
