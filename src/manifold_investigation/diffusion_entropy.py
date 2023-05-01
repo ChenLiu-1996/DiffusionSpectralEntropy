@@ -189,7 +189,7 @@ if __name__ == '__main__':
              (config.output_save_path, config.dataset, method_str,
               config.model, config.random_seed)))
 
-    save_root = './results_diffusion_entropy/exp_mode/' if config.exp else './results_diffusion_entropy/' 
+    save_root = './results_diffusion_entropy/exp_mode/' if args.exp else './results_diffusion_entropy/' 
     os.makedirs(save_root, exist_ok=True)
 
     save_paths_fig = {
@@ -220,7 +220,7 @@ if __name__ == '__main__':
         config.random_seed, args.knn)
 
     os.makedirs(os.path.dirname(save_path_final_npy), exist_ok=True)
-    if os.path.exists(save_path_final_npy) and config.exp is False:
+    if os.path.exists(save_path_final_npy) and args.exp is False:
         data_numpy = np.load(save_path_final_npy)
         data_arrays = {
             'epoch': data_numpy['epoch'],
@@ -371,7 +371,7 @@ if __name__ == '__main__':
                 diff_embed = np.load(save_path_diff_embed)['diff_embed']
                 print('Pre-computed original data diffusion embeddings loaded.')
             else:
-                diff_embed = comp_diffusion_embedding(orig_input,knn=config.knn)
+                diff_embed = comp_diffusion_embedding(orig_input,knn=args.knn)
                 print('Original data diffusion embeddings computed.')
                 diff_embed = diff_embed.astype(np.float16)
                 with open(save_path_diff_embed, 'wb+') as f:
