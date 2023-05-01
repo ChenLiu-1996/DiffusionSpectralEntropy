@@ -31,31 +31,27 @@ def simple_bin(cond_x: np.array, num_digit: int):
     
     return assignments, cnts
 
-def diffusion_embedding(X: np.array, num_components: int, knn: int):
+
+def comp_diffusion_embedding(X: np.array, knn: int):
     '''
-        Compute diffusion embedding of X, taking first num_components eigenvectors
+        Compute diffusion embedding of X
     Args:
         X: [N, D]
 
     Returns:
-        diff_embed: [N, num_components]
+        diff_embed: [N, N]
     '''
      # Diffusion matrix
     diffusion_matrix = compute_diffusion_matrix(X, k=knn)
     eigenvalues_P, eigenvectors_P = np.linalg.eig(diffusion_matrix)
 
-    # Sort eigenvalues & take top num_components
+    # Sort eigenvalues
     sorted_idx = np.argsort(eigenvalues_P)[::-1]
     eigenvalues_P = eigenvalues_P[sorted_idx]
     eigenvectors_P = eigenvectors_P[:, sorted_idx]
-
-    W = eigenvalues_P[:num_components]
-    V = eigenvectors_P[:, num_components]
-    
     
     # Diffusion map embedding
-    diff_embed = V @ np.diag((W**0.5))
-    assert diff_embed.shap[1] == num_components
+    diff_embed = eigenvectors_P @ np.diag((eigenvalues_P**0.5))
 
     return diff_embed
 
@@ -67,12 +63,13 @@ def mutual_information(orig_x: np.array,
                        class_method: str = 'bin',
                        num_digit: int = 2,
                        num_spectral: int = None,
+                       diff_embed: np.array = None,
                        orig_entropy: float = None):
     '''
         To compute the conditioned entropy H(orig_x|cond_x), we categorize the cond_x into discrete classes,
         and then compute the VNE for subgraphs of orig_x based on classes.
 
-        class_method: 'bin', 'spectral_bin', 'precompute', 'kmeans'
+        class_method: 'bin', 'spectral_bin', 'kmeans'
 
         'bin': Bin directly in vector space, adapted from https://github.com/artemyk/ibsgd/blob/master/simplebinmi.py
         'spectral bin': Bin in spectral space: first convert cond_x to Diffusion Map coords, then bin
@@ -85,9 +82,7 @@ def mutual_information(orig_x: np.array,
     # Categorize the cond_x into discrete classes
     cond_classes = None
 
-    if class_method == 'precompute':
-        cond_classes = cond_x
-    elif class_method == 'bin':
+    if class_method == 'bin':
         '''
             Bin in vector space:
         '''
@@ -101,7 +96,11 @@ def mutual_information(orig_x: np.array,
         # diffusion map coords of cond_x
         if num_spectral is None:
             num_spectral = min(cond_x.shape[1], cond_x.shape[0])
-        diff_embed = diffusion_embedding(X=cond_x, num_components=num_spectral)
+        if diff_embed is None:
+            diff_embed = diffusion_embedding(X=cond_x)
+        
+        # Top components
+        diff_embed = diff_embed[:, num_spectral]
 
         # simple bin on the diffusion map coords
         cond_classes, classes_cnts = simple_bin(cond_x=diff_embed, num_digit=num_digit)
@@ -111,7 +110,6 @@ def mutual_information(orig_x: np.array,
 
 
     classes_list = np.unique(cond_classes, return_counts=False)
-    print('classes_list len :', len(classes_list), ' cond_x.shape[1]: ', cond_x.shape[1])
     assert cond_classes.shape[0] == orig_x.shape[0]
 
     # Compute VNE of subgraphs of orig_x according to cond_classes
