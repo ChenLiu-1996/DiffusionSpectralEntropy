@@ -382,7 +382,7 @@ if __name__ == '__main__':
                 cond_x=orig_input,
                 knn=args.knn,
                 class_method='spectral_bin',
-                num_digit=2,
+                num_digit=10,
                 num_spectral=None,
                 diff_embed=diff_embed,
                 orig_entropy=vne)
