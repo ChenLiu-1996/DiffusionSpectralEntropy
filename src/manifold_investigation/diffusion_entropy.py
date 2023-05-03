@@ -91,11 +91,15 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     ax.plot(data_arrays['epoch'], data_arrays['mi'], c='mediumblue')
     # MI wrt Input
     ax.plot(data_arrays['epoch'], data_arrays['mi_input'], c='green')
-    ax.plot(data_arrays['epoch'], data_arrays['mii_spectral'], c='red')
-    ax.legend(['I(z;Y)', 'I(z;X)', 'I(z;X) spectral'], bbox_to_anchor=(1.00, 0.48))
+    # ax.plot(data_arrays['epoch'], data_arrays['mii_spectral'], c='red')
+    ax.legend(['I(z;Y)', 'I(z;X)', 'I(z;X) spectral'],
+              bbox_to_anchor=(1.00, 0.48))
     ax.scatter(data_arrays['epoch'], data_arrays['mi'], c='mediumblue', s=120)
     ax.scatter(data_arrays['epoch'], data_arrays['mi_input'], c='green', s=120)
-    ax.scatter(data_arrays['epoch'], data_arrays['mii_spectral'], c='red', s=120)
+    # ax.scatter(data_arrays['epoch'],
+    #            data_arrays['mii_spectral'],
+    #            c='red',
+    #            s=120)
     fig_mi.supylabel('Mutual Information', fontsize=40)
     fig_mi.supxlabel('Epochs Trained', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
@@ -117,13 +121,15 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                alpha=0.5,
                s=300,
                linewidths=5)
-    ax.scatter(data_arrays['acc'],
-               data_arrays['mii_spectral'],
-               c='red',
-               alpha=0.5,
-               s=300,
-               linewidths=5)
-    ax.legend(['I(z;Y)', 'I(z;X)', 'I(z;X) spectral'], bbox_to_anchor=(1.00, 0.48))
+    # ax.scatter(data_arrays['acc'],
+    #            data_arrays['mii_spectral'],
+    #            c='red',
+    #            alpha=0.5,
+    #            s=300,
+    #            linewidths=5)
+    # ax.legend(['I(z;Y)', 'I(z;X)', 'I(z;X) spectral'],
+    ax.legend(['I(z;Y)', 'I(z;X)'],
+              bbox_to_anchor=(1.00, 0.48))
     fig_mi_corr.supylabel('Mutual Information', fontsize=40)
     fig_mi_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
@@ -136,16 +142,16 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                pearsonr(data_arrays['acc'], data_arrays['mi'])[1],
                spearmanr(data_arrays['acc'], data_arrays['mi'])[0],
                spearmanr(data_arrays['acc'], data_arrays['mi'])[1]) +
-            'I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n' %
-            (pearsonr(data_arrays['acc'], data_arrays['mi_input'])[0],
-             pearsonr(data_arrays['acc'], data_arrays['mi_input'])[1],
-             spearmanr(data_arrays['acc'], data_arrays['mi_input'])[0],
-             spearmanr(data_arrays['acc'], data_arrays['mi_input'])[1]) +
-            'Spectral I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);' %
-            (pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
-             pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[1],
-             spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
-             spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[1]),
+            'I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            % (pearsonr(data_arrays['acc'], data_arrays['mi_input'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['mi_input'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['mi_input'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['mi_input'])[1]), #+
+            # 'Spectral I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
+            # % (pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
+            #    pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[1],
+            #    spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
+            #    spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[1]),
             fontsize=20)
     fig_mi_corr.savefig(save_paths_fig['fig_mi_corr'])
     plt.close(fig=fig_mi_corr)
@@ -225,7 +231,7 @@ if __name__ == '__main__':
             'vne': data_numpy['vne'],
             'mi': data_numpy['mi'],
             'mi_input': data_numpy['mi_input'],
-            'mii_spectral': data_numpy['mii_spectral'],
+            # 'mii_spectral': data_numpy['mii_spectral'],
         }
         plot_figures(data_arrays=data_arrays, save_paths_fig=save_paths_fig)
 
@@ -360,36 +366,38 @@ if __name__ == '__main__':
                 % (mi_input, mi_cond, cond_classes_nums), log_path)
             #
             '''(Spectral Bin) Mutual Information between z and Input'''
-            log('(Spectral Bin) Mutual Information between z and Input: ', log_path)
-            # Diffusion embeddings of orig_input
-            save_path_diff_embed = '%s/numpy_files/diffusion-embeddings/%s.npz' % (
-                save_root, config.dataset)
-            os.makedirs(os.path.dirname(save_path_diff_embed), exist_ok=True)
-            if os.path.exists(save_path_diff_embed):
-                diff_embed = np.load(save_path_diff_embed)['diff_embed']
-                print('Pre-computed original data diffusion embeddings loaded.')
-            else:
-                diff_embed = comp_diffusion_embedding(orig_input,knn=config.knn)
-                print('Original data diffusion embeddings computed.')
-                diff_embed = diff_embed.astype(np.float16)
-                with open(save_path_diff_embed, 'wb+') as f:
-                    np.savez(f, diff_embed=diff_embed)
+            # log('(Spectral Bin) Mutual Information between z and Input: ',
+            #     log_path)
+            # # Diffusion embeddings of orig_input
+            # save_path_diff_embed = '%s/numpy_files/diffusion-embeddings/%s.npz' % (
+            #     save_root, config.dataset)
+            # os.makedirs(os.path.dirname(save_path_diff_embed), exist_ok=True)
+            # if os.path.exists(save_path_diff_embed):
+            #     diff_embed = np.load(save_path_diff_embed)['diff_embed']
+            #     print(
+            #         'Pre-computed original data diffusion embeddings loaded.')
+            # else:
+            #     diff_embed = comp_diffusion_embedding(orig_input, knn=args.knn)
+            #     print('Original data diffusion embeddings computed.')
+            #     diff_embed = diff_embed.astype(np.float16)
+            #     with open(save_path_diff_embed, 'wb+') as f:
+            #         np.savez(f, diff_embed=diff_embed)
 
-            mii_spectral, mi_cond_spectral, cond_classes_nums_spectral = mutual_information(
-                orig_x=embeddings,
-                cond_x=orig_input,
-                knn=args.knn,
-                class_method='spectral_bin',
-                num_digit=2,
-                num_spectral=None,
-                diff_embed=diff_embed,
-                orig_entropy=vne)
+            # mii_spectral, mi_cond_spectral, cond_classes_nums_spectral = mutual_information(
+            #     orig_x=embeddings,
+            #     cond_x=orig_input,
+            #     knn=args.knn,
+            #     class_method='spectral_bin',
+            #     num_digit=2,
+            #     num_spectral=None,
+            #     diff_embed=diff_embed,
+            #     orig_entropy=vne)
 
-            mii_spectral_list.append(mii_spectral)
-            log(
-                '(Spectral Bin) MI between z and Input = %.4f, Cond Entropy = %.4f, Cond Classes Num: %d '
-                % (mii_spectral, mi_cond_spectral, cond_classes_nums_spectral), log_path)
-
+            # mii_spectral_list.append(mii_spectral)
+            # log(
+            #     '(Spectral Bin) MI between z and Input = %.4f, Cond Entropy = %.4f, Cond Classes Num: %d '
+            #     % (mii_spectral, mi_cond_spectral, cond_classes_nums_spectral),
+            #     log_path)
 
             # Plotting
             data_arrays = {
@@ -398,7 +406,7 @@ if __name__ == '__main__':
                 'vne': vne_list,
                 'mi': mi_list,
                 'mi_input': mi_input_list,
-                'mii_spectral': mii_spectral_list,
+                # 'mii_spectral': mii_spectral_list,
             }
             plot_figures(data_arrays=data_arrays,
                          save_paths_fig=save_paths_fig)
@@ -409,5 +417,5 @@ if __name__ == '__main__':
                      acc=np.array(acc_list),
                      vne=np.array(vne_list),
                      mi=np.array(mi_list),
-                     mi_input=np.array(mi_input_list),
-                     mii_spectral=np.array(mii_spectral_list))
+                     mi_input=np.array(mi_input_list))
+                    #  mii_spectral=np.array(mii_spectral_list))
