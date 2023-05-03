@@ -217,7 +217,7 @@ def get_dataloaders(
                                           download=True,
                                           transform=transform_val)
 
-    elif args.dataset in ['stanfordcars', 'stl10', 'flowers102']:
+    elif args.dataset in ['stanfordcars', 'stl10', 'food101', 'flowers102']:
         train_dataset = torchvision_dataset(dataset_dir,
                                             split='train',
                                             download=True,

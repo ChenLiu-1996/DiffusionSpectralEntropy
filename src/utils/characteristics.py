@@ -9,8 +9,8 @@ def simple_bin(cond_x: np.array, num_digit: int):
     '''
         put N of D-dim vectors into discrete bins
         the final number of unique D-dim vectors is M
-    Args: 
-        cond_x: [N, D] 
+    Args:
+        cond_x: [N, D]
 
     Returns:
         assignment: [N, 1]
@@ -28,7 +28,7 @@ def simple_bin(cond_x: np.array, num_digit: int):
         (np.void, digitized_cond_x.dtype.itemsize * digitized_cond_x.shape[1])))
     _, assignments, cnts = np.unique(
         cond_rows, return_index=False, return_inverse=True, return_counts=True)
-    
+
     return assignments, cnts
 
 
@@ -41,7 +41,7 @@ def comp_diffusion_embedding(X: np.array, knn: int):
     Returns:
         diff_embed: [N, N]
     '''
-     # Diffusion matrix
+    # Diffusion matrix
     diffusion_matrix = compute_diffusion_matrix(X, k=knn)
     eigenvalues_P, eigenvectors_P = np.linalg.eig(diffusion_matrix)
 
@@ -49,7 +49,6 @@ def comp_diffusion_embedding(X: np.array, knn: int):
     sorted_idx = np.argsort(eigenvalues_P)[::-1]
     eigenvalues_P = eigenvalues_P[sorted_idx]
     eigenvectors_P = eigenvectors_P[:, sorted_idx]
-    
     # Diffusion map embedding
     diff_embed = eigenvectors_P @ np.diag((eigenvalues_P**0.5))
 
@@ -88,7 +87,7 @@ def mutual_information(orig_x: np.array,
         '''
 
         cond_classes, classes_cnts = simple_bin(cond_x, num_digit=num_digit)
-    
+
     elif class_method == 'spectral_bin':
         '''
             Bin in spectral space
@@ -98,13 +97,13 @@ def mutual_information(orig_x: np.array,
             num_spectral = min(cond_x.shape[1], cond_x.shape[0])
         if diff_embed is None:
             diff_embed = comp_diffusion_embedding(X=cond_x)
-        
+
         # Top components
         diff_embed = diff_embed[:, :num_spectral]
 
         # simple bin on the diffusion map coords
         cond_classes, classes_cnts = simple_bin(cond_x=diff_embed, num_digit=num_digit)
-        
+
     elif class_method == 'kmeans':
         return NotImplementedError
 
@@ -181,7 +180,7 @@ def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
         eigenvalues -= eigenvalues.min()
 
     # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
-    eigenvalues = eigenvalues[eigenvalues <= 1 - eps]
+    eigenvalues = eigenvalues[1:]
 
     # Drop the close-to-zero eigenvalue(s).
     eigenvalues = eigenvalues[eigenvalues >= eps]
