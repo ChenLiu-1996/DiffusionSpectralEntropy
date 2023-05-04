@@ -228,8 +228,8 @@ if __name__ == '__main__':
             'epoch': data_numpy['epoch'],
             'acc': data_numpy['acc'],
             'vne': data_numpy['vne'],
-            'mi': data_numpy['mi'],
-            'mi_input': data_numpy['mi_input'],
+            # 'mi': data_numpy['mi'],
+            # 'mi_input': data_numpy['mi_input'],
             # 'mii_spectral': data_numpy['mii_spectral'],
         }
         plot_figures(data_arrays=data_arrays, save_paths_fig=save_paths_fig)
