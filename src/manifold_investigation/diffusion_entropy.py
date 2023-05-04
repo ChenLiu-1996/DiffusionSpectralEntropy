@@ -173,7 +173,6 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
-    args = AttributeHashmap(args)
     config = AttributeHashmap(yaml.safe_load(open(args.config)))
     config = update_config_dirs(AttributeHashmap(config))
     if args.random_seed is not None:

@@ -5,8 +5,8 @@ dataset_dir: '$ROOT_DIR/data/stl10/'
 model: 'resnet50'
 max_epoch: 300
 patience: 20
-batch_size: 256
-learning_rate: 5e-3
+batch_size: 64
+learning_rate: 2e-3
 weight_decay: 1e-8
 num_workers: 4
 dataset: 'stl10'

@@ -170,19 +170,17 @@ def mutual_information_per_class(eigs: np.array,
     return mi
 
 
-def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
+def von_neumann_entropy(eigs: np.array, eps: float = 1e-4):
     eigenvalues = eigs.copy()
 
     eigenvalues = np.array(sorted(eigenvalues)[::-1])
-
-    # Shift the negative eigenvalue(s) that occurred due to rounding errors.
-    if eigenvalues.min() < 0:
-        eigenvalues -= eigenvalues.min()
 
     # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
     eigenvalues = eigenvalues[1:]
 
     # Drop the close-to-zero eigenvalue(s).
+    # This also takes care of the numerical rounding issues where
+    # some eigenvalues gets slightly negative.
     eigenvalues = eigenvalues[eigenvalues >= eps]
 
     prob = eigenvalues / eigenvalues.sum()

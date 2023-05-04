@@ -37,7 +37,9 @@ def print_state_dict(state_dict: dict) -> str:
 
 def get_dataloaders(
     config: AttributeHashmap
-) -> Tuple[Tuple[torch.utils.data.DataLoader, ], AttributeHashmap]:
+) -> Tuple[Tuple[
+        torch.utils.data.DataLoader,
+], AttributeHashmap]:
     if config.dataset == 'mnist':
         config.in_channels = 1
         config.num_classes = 10
@@ -64,6 +66,33 @@ def get_dataloaders(
         dataset_std = (0.2023, 0.1994, 0.2010)
         torchvision_dataset = torchvision.datasets.CIFAR100
         config.small_image = True
+
+    elif config.dataset == 'food101':
+        config.in_channels = 3
+        config.num_classes = 101
+        imsize = 512
+        dataset_mean = (0.4467, 0.4398, 0.4066)
+        dataset_std = (0.2603, 0.2566, 0.2713)
+        torchvision_dataset = torchvision.datasets.Food101
+        config.small_image = False
+
+    elif config.dataset == 'flowers102':
+        config.in_channels = 3
+        config.num_classes = 102
+        imsize = 256
+        dataset_mean = (0.4467, 0.4398, 0.4066)
+        dataset_std = (0.2603, 0.2566, 0.2713)
+        torchvision_dataset = torchvision.datasets.Flowers102
+        config.small_image = False
+
+    elif config.dataset == 'stanfordcars':
+        config.in_channels = 3
+        config.num_classes = 196
+        imsize = 352  # (360 x 240)
+        dataset_mean = (0.485, 0.456, 0.406)
+        dataset_std = (0.229, 0.224, 0.225)
+        torchvision_dataset = torchvision.datasets.StanfordCars
+        config.small_image = False
 
     elif config.dataset == 'stl10':
         config.in_channels = 3
@@ -151,7 +180,7 @@ def get_dataloaders(
                                           download=True,
                                           transform=transform_val)
 
-    elif config.dataset in ['stl10']:
+    elif config.dataset in ['stanfordcars', 'stl10', 'food101', 'flowers102']:
         train_dataset = torchvision_dataset(config.dataset_dir,
                                             split='train',
                                             download=True,
