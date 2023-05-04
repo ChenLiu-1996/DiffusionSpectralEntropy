@@ -404,7 +404,7 @@ if __name__ == '__main__':
             np.savez(f,
                      epoch=np.array(epoch_list),
                      acc=np.array(acc_list),
-                     vne=np.array(vne_list),
-                     mi=np.array(mi_list),
-                     mi_input=np.array(mi_input_list))
+                     vne=np.array(vne_list))
+            #  mi=np.array(mi_list),
+            #  mi_input=np.array(mi_input_list)
             #  mii_spectral=np.array(mii_spectral_list))
