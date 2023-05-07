@@ -631,6 +631,11 @@ def plot_summary(summary: dict,
                    color=model_color_map[version_list[i].split('_ep')[0]],
                    s=int(version_list[i].split('_ep')[1]) / 5,
                    cmap='tab10')
+    linear_fit_coeff = np.polyfit(acc_list_nominal, acc_list_actual, 1)
+    linear_fit_fn = np.poly1d(linear_fit_coeff)
+    x_arr = np.linspace(np.min(acc_list_nominal), np.max(acc_list_nominal),
+                        100)
+    ax.plot(x_arr, linear_fit_fn(x_arr), 'k:')
     ax.legend(version_list)
     ax.spines[['right', 'top']].set_visible(False)
 
