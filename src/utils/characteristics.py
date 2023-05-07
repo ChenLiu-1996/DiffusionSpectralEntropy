@@ -169,6 +169,53 @@ def mutual_information(orig_x: np.array,
     return mi, conditioned_entropy, len(classes_list)
 
 
+def mutual_information_per_class_random_sample(embeddings: np.array, labels: np.array, rand_trials: int, knn: int):
+    '''
+        Randomly assign class labels to entire embeds graph
+        for computing unconditioned entropy
+    Args:    
+        embeddings: [N,D]
+        labels: [N,1]
+    Returns:
+        mi: scaler
+    '''
+    classes_list, classes_cnts = np.unique(labels, return_counts=True)
+    mi_by_classes = []
+
+    for class_idx in tqdm(classes_list):
+        inds = (labels == class_idx).reshape(-1)
+        samples = embeddings[inds, :]
+
+        ''' Class conditioned entropy'''
+        # Diffusion Matrix
+        s_diffusion_matrix = compute_diffusion_matrix(samples,k=knn)
+        # Eigenvalues
+        s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
+        # Von Neumann Entropy
+        s_vne = von_neumann_entropy(s_eigenvalues_P)
+
+        ''' Randomly sampled unconditioned entropy'''
+        rand_vne = 0
+        for j in tqdm(np.arange(rand_trials)):
+            rand_inds = np.random.choice(labels.shape[0], size=samples.shape[0], replace=False)
+            rand_samples = embeddings[rand_inds, :]
+            # Diffusion Matrix
+            r_diffusion_matrix = compute_diffusion_matrix(rand_samples,k=knn)
+            # Eigenvalues
+            r_eigenvalues_P = np.linalg.eigvals(r_diffusion_matrix)
+            # Von Neumann Entropy
+            r_vne = von_neumann_entropy(r_eigenvalues_P)
+
+            rand_vne += r_vne
+        rand_vne = rand_vne / rand_trials
+
+        mi_by_classes.append((rand_vne-s_vne))
+    
+    mi = np.sum(
+        classes_cnts / np.sum(classes_cnts) * np.array(mi_by_classes))
+
+    return mi
+
 def mutual_information_per_class(eigs: np.array,
                                  vne_by_class: List[np.float64],
                                  n_by_class: List[int],
