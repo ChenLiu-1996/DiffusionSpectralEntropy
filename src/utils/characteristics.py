@@ -210,21 +210,21 @@ def mutual_information_per_class(eigs: np.array,
 #     return -np.sum(prob * np.log(prob))
 
 
-def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
-# def von_neumann_entropy(eigs: np.array):
+# def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
+def von_neumann_entropy(eigs: np.array):
     eigenvalues = eigs.copy()
     eigenvalues = eigenvalues.astype(np.float64)  # mitigates rounding error.
 
     eigenvalues = np.array(sorted(eigenvalues)[::-1])
 
     # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
-    # eigenvalues = eigenvalues[1:]
+    eigenvalues = eigenvalues[1:]
 
     # Eigenvalues may be negative. Only care about the magnitude, not the sign.
     eigenvalues = np.abs(eigenvalues)
 
     # Drop the insignificant eigenvalue(s).
-    eigenvalues = eigenvalues[eigenvalues >= eps]
+    # eigenvalues = eigenvalues[eigenvalues >= eps]
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps
