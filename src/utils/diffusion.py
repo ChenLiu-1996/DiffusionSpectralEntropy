@@ -51,7 +51,6 @@ def compute_diffusion_matrix(X: np.array,
         W[W < threshold_for_small_values] = 0
 
     # Turn affinity matrix into diffusion matrix.
-    W = W + np.eye(len(X)) * 1e-5
     Deg = np.diag(1 / np.sum(W, axis=1))
     P = Deg @ W
 
