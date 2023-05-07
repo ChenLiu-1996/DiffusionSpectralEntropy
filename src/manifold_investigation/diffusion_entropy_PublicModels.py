@@ -384,6 +384,7 @@ def diffusion_entropy(args: AttributeHashmap):
         'barlowtwins': ['barlowtwins_bs2048_ep1000'],
         'moco': ['moco_v1_ep200', 'moco_v2_ep200', 'moco_v2_ep800'],
         'simsiam': ['simsiam_bs256_ep100', 'simsiam_bs512_ep100'],
+        # 'simsiam': ['simsiam_bs256_ep100'],
         'swav': [
             'swav_bs256_ep200',
             'swav_bs256_ep400',
@@ -508,30 +509,49 @@ def diffusion_entropy(args: AttributeHashmap):
                 tuned_model_path = '%s/%s_LinearProbeModel.pt' % (pt_folder,
                                                                   version)
 
-            if os.path.exists(tuned_model_path):
-                log('Loading tuned model: %s' % version, log_path)
-                val_acc_actual = infer_model(val_loader=val_loader,
-                                             model=model,
-                                             device=device,
-                                             model_path=tuned_model_path)
+            if args.full_fine_tune is True:
+                val_acc_npy_path = '%s/%s_val_acc_FineTune.npy' % (npy_folder,
+                                                                   version)
             else:
-                log('Tuning model: %s ...' % version, log_path)
-                if args.full_fine_tune is True:
-                    log('NOTE: We are performing a full fine tune!', log_path)
-                else:
-                    log('NOTE: We are performing a linear probing!', log_path)
+                val_acc_npy_path = '%s/%s_val_acc_LinearProbe.npy' % (
+                    npy_folder, version)
 
-                tune_model(args=args,
-                           train_loader=train_loader,
-                           val_loader=val_loader,
-                           model=model,
-                           device=device,
-                           model_path=tuned_model_path,
-                           log_path=log_path)
-                val_acc_actual = infer_model(val_loader=val_loader,
-                                             model=model,
-                                             device=device,
-                                             model_path=tuned_model_path)
+            if args.reuse_acc:
+                assert os.path.exists(val_acc_npy_path)
+                data_numpy = np.load(val_acc_npy_path)
+                val_acc_actual = data_numpy['val_acc']
+                print('Reusing previously computed accuracies.')
+            else:
+                if os.path.exists(tuned_model_path):
+                    log('Loading tuned model: %s' % version, log_path)
+                    val_acc_actual = infer_model(val_loader=val_loader,
+                                                 model=model,
+                                                 device=device,
+                                                 model_path=tuned_model_path)
+                else:
+                    log('Tuning model: %s ...' % version, log_path)
+                    if args.full_fine_tune is True:
+                        log('NOTE: We are performing a full fine tune!',
+                            log_path)
+                    else:
+                        log('NOTE: We are performing a linear probing!',
+                            log_path)
+
+                    tune_model(args=args,
+                               train_loader=train_loader,
+                               val_loader=val_loader,
+                               model=model,
+                               device=device,
+                               model_path=tuned_model_path,
+                               log_path=log_path)
+                    val_acc_actual = infer_model(val_loader=val_loader,
+                                                 model=model,
+                                                 device=device,
+                                                 model_path=tuned_model_path)
+
+                with open(val_acc_npy_path, 'wb+') as f:
+                    np.savez(f, val_acc=val_acc_actual)
+
             summary[version]['top1_acc_actual'] = val_acc_actual
             log('val acc actual %.2f\n\n' % val_acc_actual, log_path)
 
@@ -592,8 +612,9 @@ def plot_summary(summary: dict,
     acc_list_nominal = np.array(acc_list_nominal)
     acc_list_actual = np.array(acc_list_actual)
 
-    fig_corr = plt.figure(figsize=(32, 8))
-    ax = fig_corr.add_subplot(1, 4, 1)
+    plt.rcParams['font.family'] = 'serif'
+    fig_corr = plt.figure(figsize=(24, 8))
+    ax = fig_corr.add_subplot(1, 3, 1)
     pearson_r, pearson_p = pearsonr(acc_list_nominal, acc_list_actual)
     spearman_r, spearman_p = spearmanr(acc_list_nominal, acc_list_actual)
     ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
@@ -609,11 +630,11 @@ def plot_summary(summary: dict,
                    acc_list_actual[i],
                    color=model_color_map[version_list[i].split('_ep')[0]],
                    s=int(version_list[i].split('_ep')[1]) / 5,
-                   cmap='tab20')
+                   cmap='tab10')
     ax.legend(version_list)
     ax.spines[['right', 'top']].set_visible(False)
 
-    ax = fig_corr.add_subplot(1, 4, 2)
+    ax = fig_corr.add_subplot(1, 3, 2)
     pearson_r, pearson_p = pearsonr(vne_list, acc_list_actual)
     spearman_r, spearman_p = spearmanr(vne_list, acc_list_actual)
     ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
@@ -626,16 +647,20 @@ def plot_summary(summary: dict,
                    acc_list_actual[i],
                    color=model_color_map[version_list[i].split('_ep')[0]],
                    s=int(version_list[i].split('_ep')[1]) / 5,
-                   cmap='tab20')
+                   cmap='tab10')
+    linear_fit_coeff = np.polyfit(vne_list, acc_list_actual, 1)
+    linear_fit_fn = np.poly1d(linear_fit_coeff)
+    x_arr = np.linspace(np.min(vne_list), np.max(vne_list), 100)
+    ax.plot(x_arr, linear_fit_fn(x_arr), 'k:')
     ax.legend(version_list)
     ax.spines[['right', 'top']].set_visible(False)
 
-    ax = fig_corr.add_subplot(1, 4, 3)
+    ax = fig_corr.add_subplot(1, 3, 3)
     pearson_r, pearson_p = pearsonr(mi_class_list, acc_list_actual)
     spearman_r, spearman_p = spearmanr(mi_class_list, acc_list_actual)
     ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
                  (pearson_r, pearson_p, spearman_r, spearman_p))
-    ax.set_xlabel('Mutual Information (class-conditional)')
+    ax.set_xlabel(r'Mutual Information $I(Z, Y)$')
     ax.set_ylabel(ylabel)
 
     for i in range(len(version_list)):
@@ -643,7 +668,11 @@ def plot_summary(summary: dict,
                    acc_list_actual[i],
                    color=model_color_map[version_list[i].split('_ep')[0]],
                    s=int(version_list[i].split('_ep')[1]) / 5,
-                   cmap='tab20')
+                   cmap='tab10')
+    linear_fit_coeff = np.polyfit(mi_class_list, acc_list_actual, 1)
+    linear_fit_fn = np.poly1d(linear_fit_coeff)
+    x_arr = np.linspace(np.min(mi_class_list), np.max(mi_class_list), 100)
+    ax.plot(x_arr, linear_fit_fn(x_arr), 'k:')
     ax.legend(version_list)
     ax.spines[['right', 'top']].set_visible(False)
 
@@ -674,6 +703,7 @@ if __name__ == '__main__':
                         action='store_true')
     parser.add_argument('--learning-rate-tuning', type=float, default=1e-4)
     parser.add_argument('--num-tuning-epoch', type=int, default=50)
+    parser.add_argument('--reuse-acc', action='store_true')
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 

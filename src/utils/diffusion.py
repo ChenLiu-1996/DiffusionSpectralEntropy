@@ -3,7 +3,7 @@ from sklearn.metrics import pairwise_distances
 
 
 def compute_diffusion_matrix(X: np.array,
-                             k: int = 20,
+                             k: int = 10,
                              density_norm_pow: float = 1.0):
     """
     Adapted from

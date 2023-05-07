@@ -37,7 +37,7 @@ if __name__ == '__main__':
     plt.rcParams['legend.fontsize'] = 20
     N = 500
     D = 512
-    num_dim = 10
+    num_dim = 20
     num_repetition = 5
     matrix_mix_dims = [400, 420, 440, 460, 480, 500]
 
@@ -54,7 +54,8 @@ if __name__ == '__main__':
             matrix_PD = datasets.make_spd_matrix(n_dim=dim)
             for alpha in alpha_list:
                 matrix = matrix_I * alpha + matrix_PD * (1 - alpha)
-                eigenvalues_P = np.linalg.eigvals(matrix)
+                # eigenvalues_P = np.linalg.eigvals(matrix)
+                eigenvalues_P = np.linalg.svd(matrix, compute_uv=False)
                 vne = von_neumann_entropy(eigenvalues_P)
                 vne_list_matrix[j][i].append(vne)
 
@@ -64,7 +65,8 @@ if __name__ == '__main__':
             if dim < D:
                 embeddings[:, dim:] = np.random.randn(1)
             diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
-            eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+            # eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+            eigenvalues_P = np.linalg.svd(diffusion_matrix, compute_uv=False)
             vne = von_neumann_entropy(eigenvalues_P)
             vne_list_uniform[i].append(vne)
 
@@ -73,7 +75,8 @@ if __name__ == '__main__':
             if dim < D:
                 embeddings[:, dim:] = np.random.randn(1)
             diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
-            eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+            # eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+            eigenvalues_P = np.linalg.svd(diffusion_matrix, compute_uv=False)
             vne = von_neumann_entropy(eigenvalues_P)
             vne_list_gaussian[i].append(vne)
 

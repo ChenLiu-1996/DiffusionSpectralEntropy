@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 from diffusion import compute_diffusion_matrix
 
+
 def simple_bin(cond_x: np.array, num_digit: int):
     '''
         put N of D-dim vectors into discrete bins
@@ -24,10 +25,14 @@ def simple_bin(cond_x: np.array, num_digit: int):
     digitized_cond_x = np.digitize(cond_x, bins=bins, right=False)
 
     # turn d_2 feature vector to 1-dim [N x d_2] -> [N x 1], for the purpose of using np.unique
-    cond_rows = np.ascontiguousarray(digitized_cond_x).view(np.dtype(
-        (np.void, digitized_cond_x.dtype.itemsize * digitized_cond_x.shape[1])))
-    _, assignments, cnts = np.unique(
-        cond_rows, return_index=False, return_inverse=True, return_counts=True)
+    cond_rows = np.ascontiguousarray(digitized_cond_x).view(
+        np.dtype(
+            (np.void,
+             digitized_cond_x.dtype.itemsize * digitized_cond_x.shape[1])))
+    _, assignments, cnts = np.unique(cond_rows,
+                                     return_index=False,
+                                     return_inverse=True,
+                                     return_counts=True)
 
     return assignments, cnts
 
@@ -53,7 +58,6 @@ def comp_diffusion_embedding(X: np.array, knn: int):
     diff_embed = eigenvectors_P @ np.diag((eigenvalues_P**0.5))
 
     return diff_embed
-
 
 
 def mutual_information(orig_x: np.array,
@@ -102,11 +106,11 @@ def mutual_information(orig_x: np.array,
         diff_embed = diff_embed[:, :num_spectral]
 
         # simple bin on the diffusion map coords
-        cond_classes, classes_cnts = simple_bin(cond_x=diff_embed, num_digit=num_digit)
+        cond_classes, classes_cnts = simple_bin(cond_x=diff_embed,
+                                                num_digit=num_digit)
 
     elif class_method == 'kmeans':
         return NotImplementedError
-
 
     classes_list = np.unique(cond_classes, return_counts=False)
     assert cond_classes.shape[0] == orig_x.shape[0]
@@ -144,25 +148,22 @@ def mutual_information(orig_x: np.array,
         # Von Neumann Entropy
         orig_entropy = von_neumann_entropy(eigenvalues_P)
 
-
     mi = orig_entropy - conditioned_entropy
-
 
     return mi, conditioned_entropy, len(classes_list)
 
 
 def mutual_information_per_class(eigs: np.array,
-                       vne_by_class: List[np.float64],
-                       n_by_class: List[int],
-                       unconditioned_entropy: float = None):
+                                 vne_by_class: List[np.float64],
+                                 n_by_class: List[int],
+                                 unconditioned_entropy: float = None):
     # H(h_m)
     if unconditioned_entropy is None:
         unconditioned_entropy = von_neumann_entropy(eigs)
 
     # H(h_m|Y), Y is the class
     conditioned_entropy = np.sum(
-        np.array(n_by_class) / np.sum(n_by_class) *
-        np.array(vne_by_class))
+        np.array(n_by_class) / np.sum(n_by_class) * np.array(vne_by_class))
 
     # I(h_m; Y)
     mi = unconditioned_entropy - conditioned_entropy
@@ -188,23 +189,44 @@ def mutual_information_per_class(eigs: np.array,
 
 #     return -np.sum(prob * np.log(prob))
 
+# def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
+#     eigenvalues = eigs.copy()
+
+#     eigenvalues = np.array(sorted(eigenvalues)[::-1])
+
+#     # Shift the negative eigenvalue(s) that occurred due to rounding errors.
+#     if eigenvalues.min() < 0:
+#         eigenvalues -= eigenvalues.min()
+
+#     # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
+#     eigenvalues = eigenvalues[1:]
+
+#     # Drop the close-to-zero eigenvalue(s).
+#     eigenvalues = eigenvalues[eigenvalues >= eps]
+
+#     prob = eigenvalues / eigenvalues.sum()
+#     prob = prob + np.finfo(float).eps
+
+#     return -np.sum(prob * np.log(prob))
+
 
 def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
+# def von_neumann_entropy(eigs: np.array):
     eigenvalues = eigs.copy()
+    eigenvalues = eigenvalues.astype(np.float64)  # mitigates rounding error.
 
     eigenvalues = np.array(sorted(eigenvalues)[::-1])
 
-    # Shift the negative eigenvalue(s) that occurred due to rounding errors.
-    if eigenvalues.min() < 0:
-        eigenvalues -= eigenvalues.min()
-
     # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
-    eigenvalues = eigenvalues[1:]
+    # eigenvalues = eigenvalues[1:]
 
-    # Drop the close-to-zero eigenvalue(s).
+    # Eigenvalues may be negative. Only care about the magnitude, not the sign.
+    eigenvalues = np.abs(eigenvalues)
+
+    # Drop the insignificant eigenvalue(s).
     eigenvalues = eigenvalues[eigenvalues >= eps]
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps
 
-    return -np.sum(prob * np.log(prob))
+    return -np.sum(prob * np.log2(prob))
