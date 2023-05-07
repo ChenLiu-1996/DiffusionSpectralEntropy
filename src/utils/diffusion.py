@@ -4,7 +4,8 @@ from sklearn.metrics import pairwise_distances
 
 def compute_diffusion_matrix(X: np.array,
                              k: int = 10,
-                             density_norm_pow: float = 1.0):
+                             density_norm_pow: float = 1.0,
+                             threshold_for_small_values: float = 1e-5):
     """
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
@@ -18,6 +19,8 @@ def compute_diffusion_matrix(X: np.array,
             == 0: classic Gaussian kernel
             == 1: completely removes density and provides a geometric equivalent to
                   uniform sampling of the underlying manifold
+        threshold_for_small_values:
+            Sets all affinities below this value to zero. Set to zero to disable
     Returns:
         P: a numpy array of size n x n that is the diffusion matrix
     """
@@ -36,15 +39,19 @@ def compute_diffusion_matrix(X: np.array,
     div2 = distance_to_k_neighbor[:, None] @ np.ones(len(D))[None, :]
 
     # Compute the gaussian kernel with an adaptive bandwidth
-    W = (1 / np.sqrt(2 * np.pi)) * (np.exp(-D**2 / (2 * div1**2)) / div1 +
-                                    np.exp(-D**2 / (2 * div2**2)) / div2)
+    W = 1 / (2 * np.sqrt(2 * np.pi)) * (np.exp(-D**2 / (2 * div1**2)) / div1 +
+                                        np.exp(-D**2 / (2 * div2**2)) / div2)
 
     # Anisotropic density normalization.
     if density_norm_pow > 0:
         Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
         W = Deg @ W @ Deg
 
+    if threshold_for_small_values:
+        W[W < threshold_for_small_values] = 0
+
     # Turn affinity matrix into diffusion matrix.
+    W = W + np.eye(len(X)) * 1e-5
     Deg = np.diag(1 / np.sum(W, axis=1))
     P = Deg @ W
 
