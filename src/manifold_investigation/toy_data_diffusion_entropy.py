@@ -36,22 +36,22 @@ if __name__ == '__main__':
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['legend.fontsize'] = 20
     N = 500
-    D = 512
+    D = 1024
     num_dim = 20
     num_repetition = 5
-    matrix_mix_dims = [400, 420, 440, 460, 480, 500]
+    matrix_mix_sizes = [400, 420, 440, 460, 480, 500]
 
     alpha_list = np.linspace(0, 1, num_dim)
     dim_list = np.linspace(D // num_dim, D, num_dim, dtype=np.int16)
     vne_list_matrix = [[[] for _ in range(num_repetition)]
-                       for _ in matrix_mix_dims]
+                       for _ in matrix_mix_sizes]
     vne_list_uniform = [[] for _ in range(num_repetition)]
     vne_list_gaussian = [[] for _ in range(num_repetition)]
 
     for i in range(num_repetition):
-        for j, dim in enumerate(matrix_mix_dims):
-            matrix_I = np.eye(dim)
-            matrix_PD = datasets.make_spd_matrix(n_dim=dim)
+        for j, size in enumerate(matrix_mix_sizes):
+            matrix_I = np.eye(size)
+            matrix_PD = datasets.make_spd_matrix(n_dim=size)
             for alpha in alpha_list:
                 matrix = matrix_I * alpha + matrix_PD * (1 - alpha)
                 # eigenvalues_P = np.linalg.eigvals(matrix)
@@ -60,7 +60,7 @@ if __name__ == '__main__':
                 vne_list_matrix[j][i].append(vne)
 
         for dim in tqdm(dim_list):
-            # Uniform distribution over [-1, 1] with manifold dimension == dim.
+            # Uniform distribution over [-1, 1] with distribution dimension == dim.
             embeddings = np.random.uniform(-1, 1, size=(N, D))
             if dim < D:
                 embeddings[:, dim:] = np.random.randn(1)
@@ -70,7 +70,7 @@ if __name__ == '__main__':
             vne = von_neumann_entropy(eigenvalues_P)
             vne_list_uniform[i].append(vne)
 
-            # Normal distribution with manifold dimension == dim.
+            # Normal distribution with distribution dimension == dim.
             embeddings = np.random.randn(N, D)
             if dim < D:
                 embeddings[:, dim:] = np.random.randn(1)
@@ -95,13 +95,13 @@ if __name__ == '__main__':
             matrix_PD = datasets.make_spd_matrix(n_dim=matrix_dim,
                                                  random_state=9)
             mappable = ax.matshow(matrix_PD, cmap='Blues')
-            ax.set_xlabel(r'$d \times d$ Positive Definite Matrix',
+            ax.set_xlabel(r'$n \times n$ Positive Definite Matrix',
                           fontsize=20)
             plt.colorbar(mappable, ax=ax, location='left', shrink=0.8)
         else:
             matrix_I = np.eye(matrix_dim)
             mappable = ax.matshow(matrix_I, cmap='Blues')
-            ax.set_xlabel(r'$d \times d$ Identity Matrix', fontsize=20)
+            ax.set_xlabel(r'$n \times n$ Identity Matrix', fontsize=20)
             plt.colorbar(mappable, ax=ax, shrink=0.8)
         ax.set_xticks([])
         ax.set_yticks([])
@@ -113,7 +113,7 @@ if __name__ == '__main__':
             ax = fig_vne.add_subplot(gs[gs_x, gs_y])
         ax.spines[['right', 'top']].set_visible(False)
 
-        # Uniform distribution over [-1, 1] with manifold dimension == dim.
+        # Uniform distribution over [-1, 1] with distribution dimension == {1, 2, 3}.
         embeddings = np.random.uniform(-1, 1, size=(N, D))
         if dim < D:
             embeddings[:, dim:] = np.random.randn(1)
@@ -142,7 +142,7 @@ if __name__ == '__main__':
             ax = fig_vne.add_subplot(gs[gs_x, gs_y])
         ax.spines[['right', 'top']].set_visible(False)
 
-        # Normal distribution with manifold dimension == dim.
+        # Normal distribution with distribution dimension == dim.
         embeddings = np.random.randn(N, D)
         if dim < D:
             embeddings[:, dim:] = np.random.randn(1)
@@ -166,14 +166,14 @@ if __name__ == '__main__':
 
     ax = fig_vne.add_subplot(gs[1:, 0:3])
     ax.spines[['right', 'top']].set_visible(False)
-    for j, _ in enumerate(matrix_mix_dims):
+    for j, _ in enumerate(matrix_mix_sizes):
         ax.plot(alpha_list,
                 np.mean(vne_list_matrix[j, ...], axis=0),
                 color=cm.get_cmap('tab10').colors[j])
-    ax.legend(['$d$ = %s' % item for item in matrix_mix_dims],
+    ax.legend(['$n$ = %s' % item for item in matrix_mix_sizes],
               loc='lower right',
               ncol=3)
-    for j, _ in enumerate(matrix_mix_dims):
+    for j, _ in enumerate(matrix_mix_sizes):
         ax.fill_between(alpha_list,
                         np.mean(vne_list_matrix[j, ...], axis=0) -
                         np.std(vne_list_matrix[j, ...], axis=0),
@@ -195,7 +195,7 @@ if __name__ == '__main__':
         color='mediumblue',
         alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
-    ax.set_xlabel('Data Manifold Dimension $d$', fontsize=25)
+    ax.set_xlabel('Data Distribution Dimension $d$', fontsize=25)
 
     ax = fig_vne.add_subplot(gs[1:, 6:])
     ax.spines[['right', 'top']].set_visible(False)
@@ -207,7 +207,7 @@ if __name__ == '__main__':
         color='mediumblue',
         alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
-    ax.set_xlabel('Data Manifold Dimension $d$', fontsize=25)
+    ax.set_xlabel('Data Distribution Dimension $d$', fontsize=25)
 
     fig_vne.tight_layout()
     fig_vne.savefig(save_path_fig)

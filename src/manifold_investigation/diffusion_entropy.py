@@ -83,78 +83,77 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     fig_vne_corr.savefig(save_paths_fig['fig_vne_corr'])
     plt.close(fig=fig_vne_corr)
 
-    # # Plot of Mutual Information vs. epoch.
-    # fig_mi = plt.figure(figsize=(20, 20))
-    # ax = fig_mi.add_subplot(1, 1, 1)
-    # ax.spines[['right', 'top']].set_visible(False)
-    # # MI wrt Output
-    # ax.plot(data_arrays['epoch'], data_arrays['mi'], c='mediumblue')
-    # # MI wrt Input
+    # Plot of Mutual Information vs. epoch.
+    fig_mi = plt.figure(figsize=(20, 20))
+    ax = fig_mi.add_subplot(1, 1, 1)
+    ax.spines[['right', 'top']].set_visible(False)
+    # MI wrt Output
+    ax.plot(data_arrays['epoch'], data_arrays['mi'], c='mediumblue')
+    # MI wrt Input
     # ax.plot(data_arrays['epoch'], data_arrays['mi_input'], c='green')
-    # # ax.plot(data_arrays['epoch'], data_arrays['mii_spectral'], c='red')
-    # ax.legend(['I(z;Y)', 'I(z;X)', 'I(z;X) spectral'],
-    #           bbox_to_anchor=(1.00, 0.48))
-    # ax.scatter(data_arrays['epoch'], data_arrays['mi'], c='mediumblue', s=120)
+    # ax.plot(data_arrays['epoch'], data_arrays['mii_spectral'], c='red')
+    ax.legend(['I(z;Y)', 'I(z;X)', 'I(z;X) spectral'],
+              bbox_to_anchor=(1.00, 0.48))
+    ax.scatter(data_arrays['epoch'], data_arrays['mi'], c='mediumblue', s=120)
     # ax.scatter(data_arrays['epoch'], data_arrays['mi_input'], c='green', s=120)
-    # # ax.scatter(data_arrays['epoch'],
-    # #            data_arrays['mii_spectral'],
-    # #            c='red',
-    # #            s=120)
-    # fig_mi.supylabel('Mutual Information', fontsize=40)
-    # fig_mi.supxlabel('Epochs Trained', fontsize=40)
-    # ax.tick_params(axis='both', which='major', labelsize=30)
-    # fig_mi.savefig(save_paths_fig['fig_mi'])
-    # plt.close(fig=fig_mi)
+    # ax.scatter(data_arrays['epoch'],
+    #            data_arrays['mii_spectral'],
+    #            c='red',
+    #            s=120)
+    fig_mi.supylabel('Mutual Information', fontsize=40)
+    fig_mi.supxlabel('Epochs Trained', fontsize=40)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+    fig_mi.savefig(save_paths_fig['fig_mi'])
+    plt.close(fig=fig_mi)
 
-    # # Plot of Mutual Information vs. Val. Acc.
-    # fig_mi_corr = plt.figure(figsize=(20, 20))
-    # ax = fig_mi_corr.add_subplot(1, 1, 1)
-    # ax.spines[['right', 'top']].set_visible(False)
-    # ax.scatter(data_arrays['acc'],
-    #            data_arrays['mi'],
-    #            c='mediumblue',
-    #            alpha=0.5,
-    #            s=300)
+    # Plot of Mutual Information vs. Val. Acc.
+    fig_mi_corr = plt.figure(figsize=(20, 20))
+    ax = fig_mi_corr.add_subplot(1, 1, 1)
+    ax.spines[['right', 'top']].set_visible(False)
+    ax.scatter(data_arrays['acc'],
+               data_arrays['mi'],
+               c='mediumblue',
+               alpha=0.5,
+               s=300)
     # ax.scatter(data_arrays['acc'],
     #            data_arrays['mi_input'],
     #            c='green',
     #            alpha=0.5,
     #            s=300,
     #            linewidths=5)
-    # # ax.scatter(data_arrays['acc'],
-    # #            data_arrays['mii_spectral'],
-    # #            c='red',
-    # #            alpha=0.5,
-    # #            s=300,
-    # #            linewidths=5)
-    # # ax.legend(['I(z;Y)', 'I(z;X)', 'I(z;X) spectral'],
-    # ax.legend(['I(z;Y)', 'I(z;X)'],
-    #           bbox_to_anchor=(1.00, 0.48))
-    # fig_mi_corr.supylabel('Mutual Information', fontsize=40)
-    # fig_mi_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
-    # ax.tick_params(axis='both', which='major', labelsize=30)
+    # ax.scatter(data_arrays['acc'],
+    #            data_arrays['mii_spectral'],
+    #            c='red',
+    #            alpha=0.5,
+    #            s=300,
+    #            linewidths=5)
+    ax.legend(['I(z;Y)', 'I(z;X)', 'I(z;X) spectral'],
+              bbox_to_anchor=(1.00, 0.48))
+    fig_mi_corr.supylabel('Mutual Information', fontsize=40)
+    fig_mi_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
+    ax.tick_params(axis='both', which='major', labelsize=30)
 
-    # # Display correlation.
-    # if len(data_arrays['acc']) > 1:
-    #     fig_mi_corr.suptitle(
-    #         'I(z;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-    #         % (pearsonr(data_arrays['acc'], data_arrays['mi'])[0],
-    #            pearsonr(data_arrays['acc'], data_arrays['mi'])[1],
-    #            spearmanr(data_arrays['acc'], data_arrays['mi'])[0],
-    #            spearmanr(data_arrays['acc'], data_arrays['mi'])[1]) +
-    #         'I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-    #         % (pearsonr(data_arrays['acc'], data_arrays['mi_input'])[0],
-    #            pearsonr(data_arrays['acc'], data_arrays['mi_input'])[1],
-    #            spearmanr(data_arrays['acc'], data_arrays['mi_input'])[0],
-    #            spearmanr(data_arrays['acc'], data_arrays['mi_input'])[1]), #+
-    #         # 'Spectral I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
-    #         # % (pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
-    #         #    pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[1],
-    #         #    spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
-    #         #    spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[1]),
-    #         fontsize=20)
-    # fig_mi_corr.savefig(save_paths_fig['fig_mi_corr'])
-    # plt.close(fig=fig_mi_corr)
+    # Display correlation.
+    if len(data_arrays['acc']) > 1:
+        fig_mi_corr.suptitle(
+            'I(z;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            % (pearsonr(data_arrays['acc'], data_arrays['mi'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['mi'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['mi'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['mi'])[1]),  #+
+            # '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            # % (pearsonr(data_arrays['acc'], data_arrays['mi_input'])[0],
+            #    pearsonr(data_arrays['acc'], data_arrays['mi_input'])[1],
+            #    spearmanr(data_arrays['acc'], data_arrays['mi_input'])[0],
+            #    spearmanr(data_arrays['acc'], data_arrays['mi_input'])[1]),  #+
+            # '\nSpectral I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
+            # % (pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
+            #    pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[1],
+            #    spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
+            #    spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[1]),
+            fontsize=40)
+    fig_mi_corr.savefig(save_paths_fig['fig_mi_corr'])
+    plt.close(fig=fig_mi_corr)
 
     return
 
@@ -228,8 +227,8 @@ if __name__ == '__main__':
             'epoch': data_numpy['epoch'],
             'acc': data_numpy['acc'],
             'vne': data_numpy['vne'],
-            # 'mi': data_numpy['mi'],
-            # 'mi_input': data_numpy['mi_input'],
+            'mi': data_numpy['mi'],
+            'mi_input': data_numpy['mi_input'],
             # 'mii_spectral': data_numpy['mii_spectral'],
         }
         plot_figures(data_arrays=data_arrays, save_paths_fig=save_paths_fig)
@@ -311,29 +310,29 @@ if __name__ == '__main__':
 
             #
             '''Mutual Information between z and Output Class'''
-            # log('Mutual Information between z and Output Class: ', log_path)
-            # classes_list, classes_cnts = np.unique(labels, return_counts=True)
-            # vne_by_classes = []
-            # for class_idx in tqdm(classes_list):
-            #     inds = (labels == class_idx).reshape(-1)
-            #     samples = embeddings[inds, :]
+            log('Mutual Information between z and Output Class: ', log_path)
+            classes_list, classes_cnts = np.unique(labels, return_counts=True)
+            vne_by_classes = []
+            for class_idx in tqdm(classes_list):
+                inds = (labels == class_idx).reshape(-1)
+                samples = embeddings[inds, :]
 
-            #     # Diffusion Matrix
-            #     s_diffusion_matrix = compute_diffusion_matrix(samples,
-            #                                                   k=args.knn)
-            #     # Eigenvalues
-            #     s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
-            #     # Von Neumann Entropy
-            #     s_vne = von_neumann_entropy(s_eigenvalues_P)
+                # Diffusion Matrix
+                s_diffusion_matrix = compute_diffusion_matrix(samples,
+                                                              k=args.knn)
+                # Eigenvalues
+                s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
+                # Von Neumann Entropy
+                s_vne = von_neumann_entropy(s_eigenvalues_P)
 
-            #     vne_by_classes.append(s_vne)
+                vne_by_classes.append(s_vne)
 
-            # mi = mutual_information_per_class(eigenvalues_P,
-            #                                   vne_by_classes,
-            #                                   classes_cnts.tolist(),
-            #                                   unconditioned_entropy=vne)
-            # mi_list.append(mi)
-            # log('MI between z and Output = %.4f' % mi, log_path)
+            mi = mutual_information_per_class(eigenvalues_P,
+                                              vne_by_classes,
+                                              classes_cnts.tolist(),
+                                              unconditioned_entropy=vne)
+            mi_list.append(mi)
+            log('MI between z and Output = %.4f' % mi, log_path)
 
             #
             '''Mutual Information between z and Input'''
@@ -353,7 +352,7 @@ if __name__ == '__main__':
             # log(
             #     'MI between z and Input = %.4f, Cond Entropy = %.4f, Cond Classes Num: %d '
             #     % (mi_input, mi_cond, cond_classes_nums), log_path)
-            # #
+            #
             '''(Spectral Bin) Mutual Information between z and Input'''
             # log('(Spectral Bin) Mutual Information between z and Input: ',
             #     log_path)
@@ -393,7 +392,7 @@ if __name__ == '__main__':
                 'epoch': epoch_list,
                 'acc': acc_list,
                 'vne': vne_list,
-                # 'mi': mi_list,
+                'mi': mi_list,
                 # 'mi_input': mi_input_list,
                 # 'mii_spectral': mii_spectral_list,
             }
@@ -404,7 +403,7 @@ if __name__ == '__main__':
             np.savez(f,
                      epoch=np.array(epoch_list),
                      acc=np.array(acc_list),
-                     vne=np.array(vne_list))
-            #  mi=np.array(mi_list),
+                     vne=np.array(vne_list),
+                     mi=np.array(mi_list))
             #  mi_input=np.array(mi_input_list)
             #  mii_spectral=np.array(mii_spectral_list))
