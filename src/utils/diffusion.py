@@ -5,7 +5,7 @@ from sklearn.metrics import pairwise_distances
 def compute_diffusion_matrix(X: np.array,
                              k: int = 10,
                              density_norm_pow: float = 1.0,
-                             threshold_for_small_values: float = 1e-5):
+                             threshold_for_small_values: float = 1e-6):
     """
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
@@ -49,6 +49,7 @@ def compute_diffusion_matrix(X: np.array,
 
     if threshold_for_small_values:
         W[W < threshold_for_small_values] = 0
+        W = W + np.eye(len(X)) * threshold_for_small_values
 
     # Turn affinity matrix into diffusion matrix.
     Deg = np.diag(1 / np.sum(W, axis=1))
