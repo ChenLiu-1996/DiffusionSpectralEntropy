@@ -67,6 +67,7 @@ def mutual_information(orig_x: np.array,
                        num_digit: int = 2,
                        num_spectral: int = None,
                        diff_embed: np.array = None,
+                       num_clusters: int = 100,
                        orig_entropy: float = None):
     '''
         To compute the conditioned entropy H(orig_x|cond_x), we categorize the cond_x into discrete classes,
@@ -110,7 +111,22 @@ def mutual_information(orig_x: np.array,
                                                 num_digit=num_digit)
 
     elif class_method == 'kmeans':
+        '''
+            Kmeans
+        '''
+        from sklearn.cluster import KMeans
+
+        kmeans = KMeans(n_clusters=num_clusters, random_state=0, n_init="auto").fit(cond_x)
+        cond_classes = kmeans.labels_
+        _, classes_cnts = np.unique(cond_classes, return_counts=True)
+    elif class_method == 'kspectral':
+        '''
+            SpectralClustering, 
+            clustering to a projection of the normalized Laplacian.
+        '''
+        from sklearn.cluster import SpectralClustering
         return NotImplementedError
+
 
     classes_list = np.unique(cond_classes, return_counts=False)
     assert cond_classes.shape[0] == orig_x.shape[0]
