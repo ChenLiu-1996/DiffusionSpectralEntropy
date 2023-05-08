@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 
 from diffusion import compute_diffusion_matrix
+from DiffusionEMD.diffusion_emd import estimate_dos
 
 
 def simple_bin(cond_x: np.array, num_digit: int):
@@ -116,17 +117,17 @@ def mutual_information(orig_x: np.array,
         '''
         from sklearn.cluster import KMeans
 
-        kmeans = KMeans(n_clusters=num_clusters, random_state=0, n_init="auto").fit(cond_x)
+        kmeans = KMeans(n_clusters=num_clusters, random_state=0,
+                        n_init="auto").fit(cond_x)
         cond_classes = kmeans.labels_
         _, classes_cnts = np.unique(cond_classes, return_counts=True)
     elif class_method == 'kspectral':
         '''
-            SpectralClustering, 
+            SpectralClustering,
             clustering to a projection of the normalized Laplacian.
         '''
         from sklearn.cluster import SpectralClustering
         return NotImplementedError
-
 
     classes_list = np.unique(cond_classes, return_counts=False)
     assert cond_classes.shape[0] == orig_x.shape[0]
@@ -169,57 +170,82 @@ def mutual_information(orig_x: np.array,
     return mi, conditioned_entropy, len(classes_list)
 
 
-def mutual_information_per_class_random_sample(embeddings: np.array, labels: np.array, rand_trials: int, knn: int):
+def mutual_information_per_class_random_sample(embeddings: np.array,
+                                               labels: np.array,
+                                               num_repetitions: int = 5,
+                                               knn: int = 10):
     '''
-        Randomly assign class labels to entire embeds graph
-        for computing unconditioned entropy
-    Args:    
+    Randomly assign class labels to entire embeds graph
+    for computing unconditioned entropy
+
+    Using the formula:
+        I(Z; Y) = H(Z) - H(Z | Y)
+            H(Z | Y) is directly computed
+            H(Z) is estimated by sampling #pts = count(Y=y) from Z
+        Note: the key is that we don't use the entire graph
+              (i.e., all Z) to compute H(Z).
+
+    Args:
         embeddings: [N,D]
         labels: [N,1]
     Returns:
         mi: scaler
     '''
-    classes_list, classes_cnts = np.unique(labels, return_counts=True)
-    mi_by_classes = []
+    classes_list, class_cnts = np.unique(labels, return_counts=True)
+    mi_by_class = []
 
     for class_idx in tqdm(classes_list):
         inds = (labels == class_idx).reshape(-1)
-        samples = embeddings[inds, :]
+        Z_curr_class = embeddings[inds, :]
 
-        ''' Class conditioned entropy'''
+        #
+        ''' Class conditioned entropy H(Z | Y)'''
         # Diffusion Matrix
-        s_diffusion_matrix = compute_diffusion_matrix(samples,k=knn)
+        diffusion_matrix_curr_class = compute_diffusion_matrix(Z_curr_class,
+                                                               k=knn)
         # Eigenvalues
-        s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
+        eigenvalues_curr_class = np.linalg.eigvals(diffusion_matrix_curr_class)
         # Von Neumann Entropy
-        s_vne = von_neumann_entropy(s_eigenvalues_P)
+        H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
 
-        ''' Randomly sampled unconditioned entropy'''
-        rand_vne = 0
-        for j in tqdm(np.arange(rand_trials)):
-            rand_inds = np.random.choice(labels.shape[0], size=samples.shape[0], replace=False)
-            rand_samples = embeddings[rand_inds, :]
+        #
+        ''' Unconditioned entropy H(Z), estimated by randomly sampling the same number of points'''
+        H_Z_list = []
+        for _ in np.arange(num_repetitions):
+            rand_inds = np.random.choice(labels.shape[0],
+                                         size=Z_curr_class.shape[0],
+                                         replace=False)
+            Z_random = embeddings[rand_inds, :]
             # Diffusion Matrix
-            r_diffusion_matrix = compute_diffusion_matrix(rand_samples,k=knn)
+            diffusion_matrix_random_set = compute_diffusion_matrix(Z_random,
+                                                                   k=knn)
             # Eigenvalues
-            r_eigenvalues_P = np.linalg.eigvals(r_diffusion_matrix)
+            eigenvalues_random_set = np.linalg.eigvals(
+                diffusion_matrix_random_set)
             # Von Neumann Entropy
-            r_vne = von_neumann_entropy(r_eigenvalues_P)
+            H_Z_rep = von_neumann_entropy(eigenvalues_random_set)
+            H_Z_list.append(H_Z_rep)
 
-            rand_vne += r_vne
-        rand_vne = rand_vne / rand_trials
+        H_Z = np.mean(H_Z_list)
 
-        mi_by_classes.append((rand_vne-s_vne))
-    
-    mi = np.sum(
-        classes_cnts / np.sum(classes_cnts) * np.array(mi_by_classes))
+        mi_by_class.append((H_Z - H_ZgivenY))
+
+    mi = np.sum(class_cnts / np.sum(class_cnts) * np.array(mi_by_class))
 
     return mi
+
 
 def mutual_information_per_class(eigs: np.array,
                                  vne_by_class: List[np.float64],
                                  n_by_class: List[int],
                                  unconditioned_entropy: float = None):
+    '''
+    Using the formula:
+    I(Z; Y) = H(Z) - H(Z | Y)
+        H(Z | Y) is directly computed
+        H(Z) is directly computed over the entire graph (i.e., all Z).
+    '''
+
     # H(h_m)
     if unconditioned_entropy is None:
         unconditioned_entropy = von_neumann_entropy(eigs)
@@ -272,9 +298,55 @@ def mutual_information_per_class(eigs: np.array,
 
 #     return -np.sum(prob * np.log(prob))
 
-
 # def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
-def von_neumann_entropy(eigs: np.array):
+# def von_neumann_entropy(eigs: np.array, num_bins: int = 1000):
+# THIS IS BAD!
+#     eigenvalues = eigs.copy()
+#     eigenvalues = eigenvalues.astype(np.float64)  # mitigates rounding error.
+
+#     eigenvalues = np.array(sorted(eigenvalues)[::-1])
+
+#     # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
+#     eigenvalues = eigenvalues[1:]
+
+#     # Eigenvalues may be negative. Only care about the magnitude, not the sign.
+#     eigenvalues = np.abs(eigenvalues)
+
+#     bins = np.linspace(-1, 1, num_bins)
+#     frequency, _ = np.histogram(eigenvalues, bins=bins)
+#     density = frequency / np.sum(frequency)
+
+#     prob = density + np.finfo(float).eps
+
+#     return -np.sum(prob * np.log2(prob))
+
+
+def approx_eigvals(A: np.array, filter_thr: float = 1e-3):
+    matrix = A.copy()
+    N = matrix.shape[0]
+
+    if filter_thr is not None:
+        matrix[np.abs(matrix) < filter_thr] = 0
+
+    eigs, cdf = estimate_dos(matrix)
+    pdf = np.zeros_like(cdf)
+    for i in range(len(cdf) - 1):
+        pdf[i] = cdf[i + 1] - cdf[i]
+
+    counts = N * pdf / np.sum(pdf)
+
+    eigenvalues = []
+    for i, count in enumerate(counts):
+        if np.round(count) > 0:
+            for _ in range(int(np.round(count))):
+                eigenvalues.append(eigs[i])
+
+    eigenvalues = np.array(eigenvalues)
+
+    return eigenvalues
+
+
+def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 1e-3):
     eigenvalues = eigs.copy()
     eigenvalues = eigenvalues.astype(np.float64)  # mitigates rounding error.
 
@@ -286,8 +358,8 @@ def von_neumann_entropy(eigs: np.array):
     # Eigenvalues may be negative. Only care about the magnitude, not the sign.
     eigenvalues = np.abs(eigenvalues)
 
-    # Drop the insignificant eigenvalue(s).
-    # eigenvalues = eigenvalues[eigenvalues >= eps]
+    # Drop the trivial eigenvalues that are corresponding to noise eigenvectors.
+    eigenvalues[eigenvalues < noise_eigval_thr] = 0
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps

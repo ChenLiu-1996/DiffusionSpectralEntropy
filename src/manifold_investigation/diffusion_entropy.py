@@ -21,7 +21,7 @@ import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 sys.path.insert(0, import_dir + '/embedding_preparation')
 from attribute_hashmap import AttributeHashmap
-from characteristics import mutual_information_per_class, von_neumann_entropy, mutual_information, comp_diffusion_embedding
+from characteristics import approx_eigvals, mutual_information_per_class_random_sample, von_neumann_entropy, mutual_information, comp_diffusion_embedding
 from diffusion import compute_diffusion_matrix
 from log_utils import log
 from path_utils import update_config_dirs
@@ -133,27 +133,27 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     fig_mi_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
 
-    # Display correlation.
-    if len(data_arrays['acc']) > 1:
-        fig_mi_corr.suptitle(
-            'I(z;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-            % (pearsonr(data_arrays['acc'], data_arrays['mi'])[0],
-               pearsonr(data_arrays['acc'], data_arrays['mi'])[1],
-               spearmanr(data_arrays['acc'], data_arrays['mi'])[0],
-               spearmanr(data_arrays['acc'], data_arrays['mi'])[1]),  #+
-            # '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-            # % (pearsonr(data_arrays['acc'], data_arrays['mi_input'])[0],
-            #    pearsonr(data_arrays['acc'], data_arrays['mi_input'])[1],
-            #    spearmanr(data_arrays['acc'], data_arrays['mi_input'])[0],
-            #    spearmanr(data_arrays['acc'], data_arrays['mi_input'])[1]),  #+
-            # '\nSpectral I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
-            # % (pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
-            #    pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[1],
-            #    spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
-            #    spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[1]),
-            fontsize=40)
-    fig_mi_corr.savefig(save_paths_fig['fig_mi_corr'])
-    plt.close(fig=fig_mi_corr)
+    # # Display correlation.
+    # if len(data_arrays['acc']) > 1:
+    #     fig_mi_corr.suptitle(
+    #         'I(z;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+    #         % (pearsonr(data_arrays['acc'], data_arrays['mi'])[0],
+    #            pearsonr(data_arrays['acc'], data_arrays['mi'])[1],
+    #            spearmanr(data_arrays['acc'], data_arrays['mi'])[0],
+    #            spearmanr(data_arrays['acc'], data_arrays['mi'])[1]),  #+
+    #         # '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+    #         # % (pearsonr(data_arrays['acc'], data_arrays['mi_input'])[0],
+    #         #    pearsonr(data_arrays['acc'], data_arrays['mi_input'])[1],
+    #         #    spearmanr(data_arrays['acc'], data_arrays['mi_input'])[0],
+    #         #    spearmanr(data_arrays['acc'], data_arrays['mi_input'])[1]),  #+
+    #         # '\nSpectral I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
+    #         # % (pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
+    #         #    pearsonr(data_arrays['acc'], data_arrays['mii_spectral'])[1],
+    #         #    spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[0],
+    #         #    spearmanr(data_arrays['acc'], data_arrays['mii_spectral'])[1]),
+    #         fontsize=40)
+    # fig_mi_corr.savefig(save_paths_fig['fig_mi_corr'])
+    # plt.close(fig=fig_mi_corr)
 
     return
 
@@ -228,7 +228,7 @@ if __name__ == '__main__':
             'acc': data_numpy['acc'],
             'vne': data_numpy['vne'],
             'mi': data_numpy['mi'],
-            'mi_input': data_numpy['mi_input'],
+            # 'mi_input': data_numpy['mi_input'],
             # 'mii_spectral': data_numpy['mii_spectral'],
         }
         plot_figures(data_arrays=data_arrays, save_paths_fig=save_paths_fig)
@@ -293,6 +293,8 @@ if __name__ == '__main__':
                                                             k=args.knn)
                 print('Diffusion matrix computed.')
                 eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+                # eigenvalues_P = approx_eigvals(diffusion_matrix)
+
                 # Lower precision to save disk space.
                 eigenvalues_P = eigenvalues_P.astype(np.float16)
                 with open(save_path_eigenvalues, 'wb+') as f:
@@ -327,10 +329,12 @@ if __name__ == '__main__':
 
                 vne_by_classes.append(s_vne)
 
-            mi = mutual_information_per_class(eigenvalues_P,
-                                              vne_by_classes,
-                                              classes_cnts.tolist(),
-                                              unconditioned_entropy=vne)
+            # mi = mutual_information_per_class(eigenvalues_P,
+            #                                   vne_by_classes,
+            #                                   classes_cnts.tolist(),
+            #                                   unconditioned_entropy=vne)
+            mi = mutual_information_per_class_random_sample(
+                embeddings=embeddings, labels=labels, knn=args.knn)
             mi_list.append(mi)
             log('MI between z and Output = %.4f' % mi, log_path)
 

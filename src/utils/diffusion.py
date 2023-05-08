@@ -1,11 +1,24 @@
 import numpy as np
 from sklearn.metrics import pairwise_distances
+import graphtools
+import warnings
+
+warnings.filterwarnings("ignore")
+
+# def compute_diffusion_matrix(X: np.array, k: int = 10):
+#     G = graphtools.Graph(X, anisotropy=1.0, knn=k)
+#     return G.diff_op.toarray()
+
+# import phate
+# def compute_diffusion_matrix(X: np.array, k: int = 10):
+#     phate_op = phate.PHATE(random_state=0, n_jobs=1, knn_max=k, verbose=False)
+#     _ = phate_op.fit_transform(X)
+#     return phate_op.diff_op
 
 
 def compute_diffusion_matrix(X: np.array,
                              k: int = 10,
-                             density_norm_pow: float = 1.0,
-                             threshold_for_small_values: float = 1e-5):
+                             density_norm_pow: float = 1.0):
     """
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
@@ -14,45 +27,38 @@ def compute_diffusion_matrix(X: np.array,
     Using "adaptive anisotropic" kernel
     Inputs:
         X: a numpy array of size n x d
-        k: k-nearest-neighbor parameter
         density_norm_pow: a float in [0, 1]
             == 0: classic Gaussian kernel
             == 1: completely removes density and provides a geometric equivalent to
                   uniform sampling of the underlying manifold
-        threshold_for_small_values:
-            Sets all affinities below this value to zero. Set to zero to disable
     Returns:
         P: a numpy array of size n x n that is the diffusion matrix
     """
     # Construct the distance matrix.
     D = pairwise_distances(X)
 
-    # In case N <= K
-    assert X.shape[0] > 1
-    k = min(k, X.shape[0] - 1)
-
-    # Get the distance to the k-th neighbor.
-    distance_to_k_neighbor = np.partition(D, k)[:, k]
-
-    # Populate matrices with this distance for easy division.
-    div1 = np.ones(len(D))[:, None] @ distance_to_k_neighbor[None, :]
-    div2 = distance_to_k_neighbor[:, None] @ np.ones(len(D))[None, :]
-
-    # Compute the gaussian kernel with an adaptive bandwidth
-    W = 1 / (2 * np.sqrt(2 * np.pi)) * (np.exp(-D**2 / (2 * div1**2)) / div1 +
-                                        np.exp(-D**2 / (2 * div2**2)) / div2)
+    sigma = median_heuristic(D)
+    W = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp((-D**2) / (2 * sigma**2))
 
     # Anisotropic density normalization.
     if density_norm_pow > 0:
         Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
         W = Deg @ W @ Deg
 
-    if threshold_for_small_values:
-        W[W < threshold_for_small_values] = 0
-        W = W + np.eye(len(X)) * threshold_for_small_values
-
     # Turn affinity matrix into diffusion matrix.
-    Deg = np.diag(1 / np.sum(W, axis=1))
-    P = Deg @ W
+    Deg = np.diag(1 / np.sum(W, axis=1)**0.5)
+    P = Deg @ W @ Deg
 
     return P
+
+
+def median_heuristic(
+        D: np.ndarray,  # the distance matrix
+):
+    # estimate kernel bandwidth from distance matrix using the median heuristic
+    # Get upper triangle from distance matrix (ignoring duplicates)
+    h = D[np.triu_indices_from(D)]
+    h = h**2
+    h = np.median(h)
+    nu = np.sqrt(h / 2)
+    return nu
