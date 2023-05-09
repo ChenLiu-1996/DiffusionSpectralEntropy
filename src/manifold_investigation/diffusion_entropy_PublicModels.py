@@ -21,7 +21,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
-from information import mutual_information_per_class, von_neumann_entropy, approx_eigvals, mutual_information_per_class_random_sample
+from information import mutual_information_per_class, von_neumann_entropy, approx_eigvals, exact_eigvals, mutual_information_per_class_random_sample
 from log_utils import log
 from seed import seed_everything
 from scheduler import LinearWarmupCosineAnnealingLR
@@ -55,7 +55,7 @@ def compute_diffusion_entropy(embeddings: torch.Tensor,
         if chebyshev_approx:
             eigenvalues_P = approx_eigvals(diffusion_matrix)
         else:
-            eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+            eigenvalues_P = exact_eigvals(diffusion_matrix)
         eigenvalues_P = eigenvalues_P.astype(np.float16)
         print('Eigenvalues computed.')
 

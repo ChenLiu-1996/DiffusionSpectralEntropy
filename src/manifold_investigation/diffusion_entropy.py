@@ -21,7 +21,7 @@ import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 sys.path.insert(0, import_dir + '/embedding_preparation')
 from attribute_hashmap import AttributeHashmap
-from information import approx_eigvals, mutual_information_per_class_random_sample, von_neumann_entropy, shannon_entropy, mutual_information, comp_diffusion_embedding
+from information import approx_eigvals, exact_eigvals, mutual_information_per_class_random_sample, von_neumann_entropy, shannon_entropy, mutual_information, comp_diffusion_embedding
 from diffusion import compute_diffusion_matrix
 from log_utils import log
 from path_utils import update_config_dirs
@@ -358,7 +358,7 @@ if __name__ == '__main__':
                 if args.chebyshev:
                     eigenvalues_P = approx_eigvals(diffusion_matrix)
                 else:
-                    eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+                    eigenvalues_P = exact_eigvals(diffusion_matrix)
 
                 # Lower precision to save disk space.
                 eigenvalues_P = eigenvalues_P.astype(np.float16)

@@ -356,6 +356,19 @@ def approx_eigvals(A: np.array, filter_thr: float = 1e-3):
     return eigenvalues
 
 
+def exact_eigvals(A: np.array):
+    '''
+    Compute the exact eigenvalues.
+    '''
+    if np.allclose(A, A.T, rtol=1e-5, atol=1e-8):
+        # Symmetric matrix.
+        eigenvalues = np.linalg.eigvalsh(A)
+    else:
+        eigenvalues = np.linalg.eigvals(A)
+
+    return eigenvalues
+
+
 def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 1e-3):
     '''
     von Neumann Entropy over a data graph.
