@@ -1,25 +1,14 @@
 import numpy as np
 from sklearn.metrics import pairwise_distances
-import graphtools
 import warnings
 
 warnings.filterwarnings("ignore")
-
-# def compute_diffusion_matrix(X: np.array, k: int = 10):
-#     G = graphtools.Graph(X, anisotropy=1.0, knn=k)
-#     return G.diff_op.toarray()
-
-# import phate
-# def compute_diffusion_matrix(X: np.array, k: int = 10):
-#     phate_op = phate.PHATE(random_state=0, n_jobs=1, knn_max=k, verbose=False)
-#     _ = phate_op.fit_transform(X)
-#     return phate_op.diff_op
 
 
 def compute_diffusion_matrix(X: np.array,
                              k: int = 10,
                              density_norm_pow: float = 1.0):
-    """
+    '''
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
 
@@ -33,7 +22,12 @@ def compute_diffusion_matrix(X: np.array,
                   uniform sampling of the underlying manifold
     Returns:
         P: a numpy array of size n x n that is the diffusion matrix
-    """
+
+    NOTE: With a recent update (using anisotropic kernel instead of adaptive kernel),
+          the input argument `k` becomes a dummy argument.
+          It's not removed yet for backward compatibility.
+    '''
+
     # Construct the distance matrix.
     D = pairwise_distances(X)
 

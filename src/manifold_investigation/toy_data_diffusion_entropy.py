@@ -18,7 +18,7 @@ import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 sys.path.insert(0, import_dir + '/embedding_preparation')
 from attribute_hashmap import AttributeHashmap
-from characteristics import von_neumann_entropy, approx_eigvals
+from information import von_neumann_entropy, approx_eigvals
 from diffusion import compute_diffusion_matrix
 
 if __name__ == '__main__':
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     save_path_fig = '%s/toy-data-knn%s.png' % (save_root, args.knn)
 
     plt.rcParams['font.family'] = 'serif'
-    plt.rcParams['legend.fontsize'] = 20
+    plt.rcParams['legend.fontsize'] = 15
     N = 500
     D = 512
     num_dim = 10
@@ -197,10 +197,10 @@ if __name__ == '__main__':
 
     ax = fig_vne.add_subplot(gs[1:2, 3:6])
     ax.spines[['right', 'top']].set_visible(False)
+    ax.set_title('Full Eigendecomposition', fontsize=20)
     ax.plot(dim_list,
             np.mean(vne_list_uniform[0, ...], axis=0),
             color='mediumblue')
-    ax.legend(['full eigendecomposition'])
     ax.fill_between(dim_list,
                     np.mean(vne_list_uniform[0, ...], axis=0) -
                     np.std(vne_list_uniform[0, ...], axis=0),
@@ -212,6 +212,7 @@ if __name__ == '__main__':
 
     ax = fig_vne.add_subplot(gs[2:, 3:6])
     ax.spines[['right', 'top']].set_visible(False)
+    ax.set_title('Chebyshev Approximation of Eigenvalues', fontsize=20)
     for j, _ in enumerate(vne_list_uniform[1:]):
         ax.plot(dim_list,
                 np.mean(vne_list_uniform[j + 1, ...], axis=0),
@@ -234,10 +235,10 @@ if __name__ == '__main__':
 
     ax = fig_vne.add_subplot(gs[1:2, 6:])
     ax.spines[['right', 'top']].set_visible(False)
+    ax.set_title('Full Eigendecomposition', fontsize=20)
     ax.plot(dim_list,
             np.mean(vne_list_gaussian[0, ...], axis=0),
             color='mediumblue')
-    ax.legend(['full eigendecomposition'])
     ax.fill_between(dim_list,
                     np.mean(vne_list_gaussian[0, ...], axis=0) -
                     np.std(vne_list_gaussian[0, ...], axis=0),
@@ -246,10 +247,10 @@ if __name__ == '__main__':
                     color='mediumblue',
                     alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
-    ax.set_xlabel('Data Distribution Dimension $d$', fontsize=25)
 
     ax = fig_vne.add_subplot(gs[2:, 6:])
     ax.spines[['right', 'top']].set_visible(False)
+    ax.set_title('Chebyshev Approximation of Eigenvalues', fontsize=20)
     for j, _ in enumerate(vne_list_gaussian[1:]):
         ax.plot(dim_list,
                 np.mean(vne_list_gaussian[j + 1, ...], axis=0),

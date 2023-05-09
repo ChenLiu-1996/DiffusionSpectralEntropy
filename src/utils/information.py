@@ -2,7 +2,7 @@ from typing import List
 
 import numpy as np
 from tqdm import tqdm
-
+import random
 from diffusion import compute_diffusion_matrix
 from DiffusionEMD.diffusion_emd import estimate_dos
 
@@ -173,7 +173,8 @@ def mutual_information(orig_x: np.array,
 def mutual_information_per_class_random_sample(embeddings: np.array,
                                                labels: np.array,
                                                num_repetitions: int = 5,
-                                               knn: int = 10):
+                                               knn: int = 10,
+                                               chebyshev_approx: bool = True):
     '''
     Randomly assign class labels to entire embeds graph
     for computing unconditioned entropy
@@ -204,24 +205,33 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
         diffusion_matrix_curr_class = compute_diffusion_matrix(Z_curr_class,
                                                                k=knn)
         # Eigenvalues
-        eigenvalues_curr_class = np.linalg.eigvals(diffusion_matrix_curr_class)
+        if chebyshev_approx:
+            eigenvalues_curr_class = approx_eigvals(
+                diffusion_matrix_curr_class)
+        else:
+            eigenvalues_curr_class = np.linalg.eigvals(
+                diffusion_matrix_curr_class)
         # Von Neumann Entropy
         H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
 
         #
         ''' Unconditioned entropy H(Z), estimated by randomly sampling the same number of points'''
+        random.seed(0)
         H_Z_list = []
         for _ in np.arange(num_repetitions):
-            rand_inds = np.random.choice(labels.shape[0],
-                                         size=Z_curr_class.shape[0],
-                                         replace=False)
+            rand_inds = np.array(
+                random.sample(range(labels.shape[0]), k=Z_curr_class.shape[0]))
             Z_random = embeddings[rand_inds, :]
             # Diffusion Matrix
             diffusion_matrix_random_set = compute_diffusion_matrix(Z_random,
                                                                    k=knn)
             # Eigenvalues
-            eigenvalues_random_set = np.linalg.eigvals(
-                diffusion_matrix_random_set)
+            if chebyshev_approx:
+                eigenvalues_random_set = approx_eigvals(
+                    diffusion_matrix_random_set)
+            else:
+                eigenvalues_random_set = np.linalg.eigvals(
+                    diffusion_matrix_random_set)
             # Von Neumann Entropy
             H_Z_rep = von_neumann_entropy(eigenvalues_random_set)
             H_Z_list.append(H_Z_rep)
@@ -307,86 +317,36 @@ def mutual_information_per_class(eigs: np.array,
     return mi
 
 
-# def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
-#     eigenvalues = eigs.copy()
-
-#     eigenvalues = np.array(sorted(eigenvalues)[::-1])
-
-#     # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
-#     eigenvalues = eigenvalues[1:]
-
-#     # Drop the close-to-zero eigenvalue(s).
-#     # This also takes care of the numerical rounding issues where
-#     # some eigenvalues gets slightly negative.
-#     eigenvalues = eigenvalues[eigenvalues >= eps]
-
-#     prob = eigenvalues / eigenvalues.sum()
-#     prob = prob + np.finfo(float).eps
-
-#     return -np.sum(prob * np.log(prob))
-
-# def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
-#     eigenvalues = eigs.copy()
-
-#     eigenvalues = np.array(sorted(eigenvalues)[::-1])
-
-#     # Shift the negative eigenvalue(s) that occurred due to rounding errors.
-#     if eigenvalues.min() < 0:
-#         eigenvalues -= eigenvalues.min()
-
-#     # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
-#     eigenvalues = eigenvalues[1:]
-
-#     # Drop the close-to-zero eigenvalue(s).
-#     eigenvalues = eigenvalues[eigenvalues >= eps]
-
-#     prob = eigenvalues / eigenvalues.sum()
-#     prob = prob + np.finfo(float).eps
-
-#     return -np.sum(prob * np.log(prob))
-
-# def von_neumann_entropy(eigs: np.array, eps: float = 1e-3):
-# def von_neumann_entropy(eigs: np.array, num_bins: int = 1000):
-# THIS IS BAD!
-#     eigenvalues = eigs.copy()
-#     eigenvalues = eigenvalues.astype(np.float64)  # mitigates rounding error.
-
-#     eigenvalues = np.array(sorted(eigenvalues)[::-1])
-
-#     # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
-#     eigenvalues = eigenvalues[1:]
-
-#     # Eigenvalues may be negative. Only care about the magnitude, not the sign.
-#     eigenvalues = np.abs(eigenvalues)
-
-#     bins = np.linspace(-1, 1, num_bins)
-#     frequency, _ = np.histogram(eigenvalues, bins=bins)
-#     density = frequency / np.sum(frequency)
-
-#     prob = density + np.finfo(float).eps
-
-#     return -np.sum(prob * np.log2(prob))
-
-
 def approx_eigvals(A: np.array, filter_thr: float = 1e-3):
+    '''
+    Estimate the eigenvalues of a matrix `A` using
+    Chebyshev approximation of the eigenspectrum.
+
+    Assuming the eigenvalues of `A` are within [-1, 1].
+
+    There is no guarantee the set of eigenvalues are accurate.
+    '''
+
     matrix = A.copy()
     N = matrix.shape[0]
 
     if filter_thr is not None:
         matrix[np.abs(matrix) < filter_thr] = 0
 
+    # Chebyshev approximation of eigenspectrum.
     eigs, cdf = estimate_dos(matrix)
+
+    # CDF to PDF conversion.
     pdf = np.zeros_like(cdf)
     for i in range(len(cdf) - 1):
         pdf[i] = cdf[i + 1] - cdf[i]
 
+    # Estimate the set of eigenvalues.
     counts = N * pdf / np.sum(pdf)
-
     eigenvalues = []
     for i, count in enumerate(counts):
         if np.round(count) > 0:
-            for _ in range(int(np.round(count))):
-                eigenvalues.append(eigs[i])
+            eigenvalues += [eigs[i]] * int(np.round(count))
 
     eigenvalues = np.array(eigenvalues)
 
@@ -394,6 +354,14 @@ def approx_eigvals(A: np.array, filter_thr: float = 1e-3):
 
 
 def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 1e-3):
+    '''
+    von Neumann Entropy over a data graph.
+
+    H(G) = - sum_i [eig_i log eig_i]
+
+    where each `eig_i` is a non-trivial eigenvalue of G.
+    '''
+
     eigenvalues = eigs.copy()
     eigenvalues = eigenvalues.astype(np.float64)  # mitigates rounding error.
 
@@ -409,6 +377,32 @@ def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 1e-3):
     eigenvalues[eigenvalues < noise_eigval_thr] = 0
 
     prob = eigenvalues / eigenvalues.sum()
+    prob = prob + np.finfo(float).eps
+
+    return -np.sum(prob * np.log2(prob))
+
+
+def shannon_entropy(X: np.array, num_bins_per_dim: int = 2):
+    '''
+    Shannon Entropy over a set of N vectors, each of D dimensions.
+
+    H(X) = - sum_i [p(x) log p(x)]
+
+    where each p(x) is the probability density of a histogram bin, after some sort of binning.
+    '''
+    vecs = X.copy()
+
+    # Min-Max scale each dimension.
+    vecs = (vecs - np.min(vecs, axis=0)) / (np.max(vecs, axis=0) -
+                                            np.min(vecs, axis=0))
+
+    # Bin along each dimension.
+    bins = np.linspace(0, 1, num_bins_per_dim + 1)[:-1]
+    vecs = np.digitize(vecs, bins=bins)
+
+    # Count probability.
+    counts = np.unique(vecs, axis=0, return_counts=True)[1]
+    prob = counts / np.sum(counts)
     prob = prob + np.finfo(float).eps
 
     return -np.sum(prob * np.log2(prob))

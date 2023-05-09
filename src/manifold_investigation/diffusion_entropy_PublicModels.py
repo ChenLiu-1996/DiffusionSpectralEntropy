@@ -21,14 +21,13 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
-from characteristics import mutual_information_per_class
+from information import mutual_information_per_class, von_neumann_entropy, approx_eigvals, mutual_information_per_class_random_sample
 from log_utils import log
 from seed import seed_everything
 from scheduler import LinearWarmupCosineAnnealingLR
 
 sys.path.insert(0, import_dir + '/nn/external_model_loader/')
 from barlowtwins_model import BarlowTwinsModel
-from characteristics import von_neumann_entropy
 from diffusion import compute_diffusion_matrix
 from moco_model import MoCoModel
 from supervised_model import SupervisedModel
@@ -38,8 +37,10 @@ from vicreg_model import VICRegModel
 from vicregl_model import VICRegLModel
 
 
-def compute_diffusion_entropy(embeddings: torch.Tensor, eig_npy_path: str,
-                              knn: int) -> float:
+def compute_diffusion_entropy(embeddings: torch.Tensor,
+                              eig_npy_path: str,
+                              knn: int,
+                              chebyshev_approx: bool = True) -> float:
 
     if os.path.exists(eig_npy_path):
         data_numpy = np.load(eig_npy_path)
@@ -51,7 +52,10 @@ def compute_diffusion_entropy(embeddings: torch.Tensor, eig_npy_path: str,
         print('Diffusion matrix computed.')
 
         # Diffusion Eigenvalues
-        eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+        if chebyshev_approx:
+            eigenvalues_P = approx_eigvals(diffusion_matrix)
+        else:
+            eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
         eigenvalues_P = eigenvalues_P.astype(np.float16)
         print('Eigenvalues computed.')
 
@@ -62,33 +66,6 @@ def compute_diffusion_entropy(embeddings: torch.Tensor, eig_npy_path: str,
     vne = von_neumann_entropy(eigenvalues_P)
 
     return vne
-
-
-def compute_mi_class(embeddings: torch.Tensor, labels: np.array, vne: float,
-                     knn: int) -> float:
-
-    classes_list, classes_cnts = np.unique(labels, return_counts=True)
-
-    vne_by_classes = []
-    for class_idx in classes_list:
-        inds = (labels == class_idx).reshape(-1)
-        samples = embeddings[inds, :]
-
-        # Diffusion Matrix
-        s_diffusion_matrix = compute_diffusion_matrix(samples, k=knn)
-        # Eigenvalues
-        s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
-        # Von Neumann Entropy
-        s_vne = von_neumann_entropy(s_eigenvalues_P)
-
-        vne_by_classes.append(s_vne)
-
-    mi = mutual_information_per_class(None,
-                                      vne_by_classes,
-                                      classes_cnts.tolist(),
-                                      unconditioned_entropy=vne)
-
-    return mi
 
 
 def get_dataloaders(
@@ -492,13 +469,17 @@ def diffusion_entropy(args: AttributeHashmap):
                     np.savez(f, embeddings=embeddings, labels=labels)
 
             summary[version]['vne'] = compute_diffusion_entropy(
-                embeddings=embeddings, eig_npy_path=eig_npy_path, knn=args.knn)
-
-            summary[version]['mi_class'] = compute_mi_class(
                 embeddings=embeddings,
-                labels=labels,
-                vne=summary[version]['vne'],
-                knn=args.knn)
+                eig_npy_path=eig_npy_path,
+                knn=args.knn,
+                chebyshev_approx=not args.no_chebyshev)
+
+            summary[version][
+                'mi_class'] = mutual_information_per_class_random_sample(
+                    embeddings,
+                    labels,
+                    knn=args.knn,
+                    chebyshev_approx=not args.no_chebyshev)
 
             #
             ''' 2. Tune the model. We can either linear probe or full fine tune. '''
@@ -697,6 +678,12 @@ if __name__ == '__main__':
                         type=str,
                         default='mnist')
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
+    parser.add_argument(
+        '--no-chebyshev',
+        action='store_true',
+        help=
+        'Turn on to disable Chebyshev approximation and use full eigendecomposition.'
+    )
     parser.add_argument('--random-seed',
                         help='random seed.',
                         type=int,
