@@ -303,12 +303,12 @@ if __name__ == '__main__':
             assert labels.shape[0] == N
             assert labels.shape[1] == 1
 
-            if config.dataset == 'cifar10':
-                labels_updated = np.zeros(labels.shape, dtype='object')
-                for k in range(N):
-                    labels_updated[k] = cifar10_int2name[labels[k].item()]
-                labels = labels_updated
-                del labels_updated
+            # if config.dataset == 'cifar10':
+            #     labels_updated = np.zeros(labels.shape, dtype='object')
+            #     for k in range(N):
+            #         labels_updated[k] = cifar10_int2name[labels[k].item()]
+            #     labels = labels_updated
+            #     del labels_updated
 
             # diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
             # print('ready set go')
