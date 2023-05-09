@@ -270,7 +270,7 @@ def mutual_information_per_class_append(embeddings: np.array,
     # Diffusion Matrix
     diffusion_matrix = compute_diffusion_matrix(joint_embeds, k=knn)
     # Eigenvalues
-    eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+    eigenvalues_P = exact_eigvals(diffusion_matrix)
     # Von Neumann Entropy
     joint_entropy = von_neumann_entropy(eigenvalues_P)
 
@@ -278,7 +278,7 @@ def mutual_information_per_class_append(embeddings: np.array,
         # Diffusion Matrix
         diffusion_matrix = compute_diffusion_matrix(labels_embeds, k=knn)
         # Eigenvalues
-        eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+        eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
         y_entropy = von_neumann_entropy(eigenvalues_P)
 
@@ -286,7 +286,7 @@ def mutual_information_per_class_append(embeddings: np.array,
         # Diffusion Matrix
         diffusion_matrix = compute_diffusion_matrix(embeddings, k=knn)
         # Eigenvalues
-        eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+        eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
         z_entropy = von_neumann_entropy(eigenvalues_P)
 
