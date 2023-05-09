@@ -3,7 +3,6 @@ from sklearn.metrics import pairwise_distances
 import phate
 import warnings
 
-
 warnings.filterwarnings("ignore")
 
 # import graphtools
@@ -19,15 +18,19 @@ warnings.filterwarnings("ignore")
 #     )
 #     return graph.diff_op.toarray()
 
-def diffusion_matrix_from_phate_distance(X: np.array,k: int = 10):
+
+def diffusion_matrix_from_phate_distance(X: np.array, k: int = 10):
     # Phate Distance Matrix
-    phate_op = phate.PHATE(random_state=42, verbose=False, n_components=2, knn=k).fit(X)
-    diff_pot = phate_op.diff_potential # -log(P^t)
-    
+    phate_op = phate.PHATE(random_state=42,
+                           verbose=False,
+                           n_components=2,
+                           knn=k).fit(X)
+    diff_pot = phate_op.diff_potential  # -log(P^t)
+
     assert diff_pot.shape[0] == X.shape[0]
     assert diff_pot.shape[1] == X.shape[0]
 
-    phate_distance = pairwise_distances(diff_pot, diff_pot)
+    phate_distance = pairwise_distances(diff_pot)
 
     # Normalize
     Deg = np.diag((1 / np.sum(phate_distance, axis=1))**0.5)
