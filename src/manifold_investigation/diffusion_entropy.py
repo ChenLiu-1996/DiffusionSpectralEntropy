@@ -189,9 +189,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--chebyshev',
         action='store_true',
-        help=
-        'Chebyshev approximation instead of full eigendecomposition.'
-    )
+        help='Chebyshev approximation instead of full eigendecomposition.')
     parser.add_argument(
         '--random-seed',
         help='Only enter if you want to override the config!!!',
@@ -357,10 +355,10 @@ if __name__ == '__main__':
                                                             k=args.knn)
                 print('Diffusion matrix computed.')
 
-                if args.no_chebyshev:
-                    eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
-                else:
+                if args.chebyshev:
                     eigenvalues_P = approx_eigvals(diffusion_matrix)
+                else:
+                    eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
 
                 # Lower precision to save disk space.
                 eigenvalues_P = eigenvalues_P.astype(np.float16)
@@ -400,7 +398,7 @@ if __name__ == '__main__':
                 embeddings=embeddings,
                 labels=labels,
                 knn=args.knn,
-                chebyshev_approx=not args.no_chebyshev)
+                chebyshev_approx=args.chebyshev)
             mi_Y_list.append(mi_Y)
             log('MI between z and Output = %.4f' % mi_Y, log_path)
 

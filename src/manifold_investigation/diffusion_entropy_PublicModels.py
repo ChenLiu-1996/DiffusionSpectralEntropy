@@ -472,14 +472,14 @@ def diffusion_entropy(args: AttributeHashmap):
                 embeddings=embeddings,
                 eig_npy_path=eig_npy_path,
                 knn=args.knn,
-                chebyshev_approx=not args.no_chebyshev)
+                chebyshev_approx=args.chebyshev)
 
             summary[version][
                 'mi_class'] = mutual_information_per_class_random_sample(
                     embeddings,
                     labels,
                     knn=args.knn,
-                    chebyshev_approx=not args.no_chebyshev)
+                    chebyshev_approx=args.chebyshev)
 
             #
             ''' 2. Tune the model. We can either linear probe or full fine tune. '''
@@ -681,9 +681,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--chebyshev',
         action='store_true',
-        help=
-        'Chebyshev approximation instead of full eigendecomposition.'
-    )
+        help='Chebyshev approximation instead of full eigendecomposition.')
     parser.add_argument('--random-seed',
                         help='random seed.',
                         type=int,
