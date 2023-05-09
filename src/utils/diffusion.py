@@ -76,9 +76,9 @@ def compute_diffusion_matrix(X: np.array,
         Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
         W = Deg @ W @ Deg
 
-    if threshold_for_small_values:
-        W[W < threshold_for_small_values] = 0
-        W = W + np.eye(len(X)) * threshold_for_small_values
+    if kernel_eps:
+        W[W < kernel_eps] = 0
+        W = W + np.eye(len(X)) * kernel_eps
 
     # Gaussian kernel to diffusion matrix
     Deg = np.diag(1 / np.sum(W, axis=1)**0.5)
