@@ -56,7 +56,7 @@ def compute_diffusion_matrix(X: np.array,
             == 1: completely removes density and provides a geometric equivalent to
                   uniform sampling of the underlying manifold
         kernel_eps: a float
-            zero values below this value in the Gaussian kernel
+            zero out entries below this value in the Gaussian kernel
     Returns:
         P: a numpy array of size n x n that is the diffusion matrix
 
