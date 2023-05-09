@@ -37,8 +37,8 @@ if __name__ == '__main__':
     plt.rcParams['legend.fontsize'] = 15
     N = 500
     D = 512
-    num_dim = 10
-    num_repetition = 5
+    num_dim = 4
+    num_repetition = 2
     matrix_mix_sizes = [400, 420, 440, 460, 480, 500]
     approx_thr_list = [None, 1e-5, 1e-4, 1e-3, 3e-3, 1e-2]
 

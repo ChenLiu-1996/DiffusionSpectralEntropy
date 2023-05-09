@@ -4,10 +4,23 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+# import graphtools
+# def compute_diffusion_matrix(X, k):
+#     graph = graphtools.Graph(
+#         X,
+#         n_pca=X.shape[0],
+#         knn=k,
+#         decay=1,
+#         thresh=1e-4,
+#         verbose=False,
+#         random_state=1,
+#     )
+#     return graph.diff_op.toarray()
+
 
 def compute_diffusion_matrix(X: np.array,
                              k: int = 10,
-                             density_norm_pow: float = 1.0):
+                             density_norm_pow: float = 0.5):
     '''
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
@@ -37,11 +50,7 @@ def compute_diffusion_matrix(X: np.array,
     # Anisotropic density normalization.
     if density_norm_pow > 0:
         Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
-        W = Deg @ W @ Deg
-
-    # Turn affinity matrix into diffusion matrix.
-    Deg = np.diag(1 / np.sum(W, axis=1)**0.5)
-    P = Deg @ W @ Deg
+        P = Deg @ W @ Deg
 
     return P
 

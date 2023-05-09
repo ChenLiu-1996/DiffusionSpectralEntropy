@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 from tqdm import tqdm
@@ -170,11 +170,72 @@ def mutual_information(orig_x: np.array,
     return mi, conditioned_entropy, len(classes_list)
 
 
+def mutual_information_per_class_simple(embeddings: np.array,
+                                        labels: np.array,
+                                        H_Z: float = None,
+                                        H_ZgivenY_map: Dict = None,
+                                        knn: int = 10,
+                                        chebyshev_approx: bool = False):
+    '''
+    Using the formula:
+    I(Z; Y) = H(Z) - H(Z | Y)
+        H(Z | Y) is directly computed
+        H(Z) is directly computed over the entire graph (i.e., all Z).
+    '''
+
+    if H_ZgivenY_map is None:
+        H_ZgivenY_map = {}
+
+    # H(Z)
+    if H_Z is None:
+        diffusion_matrix = compute_diffusion_matrix(embeddings, k=knn)
+        if chebyshev_approx:
+            eigs = approx_eigvals(diffusion_matrix)
+        else:
+            eigs = exact_eigvals(diffusion_matrix)
+        H_Z = von_neumann_entropy(eigs)
+
+    # H(Z | Y)
+    classes_list, class_cnts = np.unique(labels, return_counts=True)
+    H_givenY_by_class = []
+
+    for class_idx in tqdm(classes_list):
+        if H_ZgivenY_map is not None:
+            H_ZgivenY = H_ZgivenY_map[class_idx]
+        else:
+            inds = (labels == class_idx).reshape(-1)
+            Z_curr_class = embeddings[inds, :]
+            # Diffusion Matrix
+            diffusion_matrix_curr_class = compute_diffusion_matrix(
+                Z_curr_class, k=knn)
+            # Eigenvalues
+            if chebyshev_approx:
+                eigenvalues_curr_class = approx_eigvals(
+                    diffusion_matrix_curr_class)
+            else:
+                eigenvalues_curr_class = exact_eigvals(
+                    diffusion_matrix_curr_class)
+            # Von Neumann Entropy
+            H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
+            H_ZgivenY_map[class_idx] = H_ZgivenY
+
+        H_givenY_by_class.append(H_ZgivenY)
+
+    # I(Z; Y)
+    H_ZgivenY = np.sum(class_cnts / np.sum(class_cnts) *
+                       np.array(H_givenY_by_class))
+
+    mi = H_Z - H_ZgivenY
+
+    return mi, H_ZgivenY_map
+
+
 def mutual_information_per_class_random_sample(embeddings: np.array,
                                                labels: np.array,
+                                               H_ZgivenY_map: Dict = None,
                                                num_repetitions: int = 5,
                                                knn: int = 10,
-                                               chebyshev_approx: bool = True):
+                                               chebyshev_approx: bool = False):
     '''
     Randomly assign class labels to entire embeds graph
     for computing unconditioned entropy
@@ -195,32 +256,37 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
     classes_list, class_cnts = np.unique(labels, return_counts=True)
     mi_by_class = []
 
+    if H_ZgivenY_map is None:
+        H_ZgivenY_map = {}
+
     for class_idx in tqdm(classes_list):
-        inds = (labels == class_idx).reshape(-1)
-        Z_curr_class = embeddings[inds, :]
-
-        #
-        ''' Class conditioned entropy H(Z | Y)'''
-        # Diffusion Matrix
-        diffusion_matrix_curr_class = compute_diffusion_matrix(Z_curr_class,
-                                                               k=knn)
-        # Eigenvalues
-        if chebyshev_approx:
-            eigenvalues_curr_class = approx_eigvals(
-                diffusion_matrix_curr_class)
+        # H(Z | Y)
+        if H_ZgivenY_map is not None:
+            H_ZgivenY = H_ZgivenY_map[class_idx]
         else:
-            eigenvalues_curr_class = exact_eigvals(
-                diffusion_matrix_curr_class)
-        # Von Neumann Entropy
-        H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
+            inds = (labels == class_idx).reshape(-1)
+            Z_curr_class = embeddings[inds, :]
+            # Diffusion Matrix
+            diffusion_matrix_curr_class = compute_diffusion_matrix(
+                Z_curr_class, k=knn)
+            # Eigenvalues
+            if chebyshev_approx:
+                eigenvalues_curr_class = approx_eigvals(
+                    diffusion_matrix_curr_class)
+            else:
+                eigenvalues_curr_class = exact_eigvals(
+                    diffusion_matrix_curr_class)
+            # Von Neumann Entropy
+            H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
+            H_ZgivenY_map[class_idx] = H_ZgivenY
 
-        #
-        ''' Unconditioned entropy H(Z), estimated by randomly sampling the same number of points'''
+        # H(Z), estimated by randomly sampling the same number of points.
         random.seed(0)
         H_Z_list = []
         for _ in np.arange(num_repetitions):
             rand_inds = np.array(
-                random.sample(range(labels.shape[0]), k=Z_curr_class.shape[0]))
+                random.sample(range(labels.shape[0]),
+                              k=np.sum(labels == class_idx)))
             Z_random = embeddings[rand_inds, :]
             # Diffusion Matrix
             diffusion_matrix_random_set = compute_diffusion_matrix(Z_random,
@@ -242,12 +308,12 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
 
     mi = np.sum(class_cnts / np.sum(class_cnts) * np.array(mi_by_class))
 
-    return mi
+    return mi, H_ZgivenY_map
 
 
 def mutual_information_per_class_append(embeddings: np.array,
                                         labels: np.array,
-                                        knn: int,
+                                        knn: int = 10,
                                         z_entropy: float = None,
                                         y_entropy: float = None):
     '''
@@ -291,31 +357,6 @@ def mutual_information_per_class_append(embeddings: np.array,
         z_entropy = von_neumann_entropy(eigenvalues_P)
 
     mi = z_entropy + y_entropy - joint_entropy
-
-    return mi
-
-
-def mutual_information_per_class(eigs: np.array,
-                                 vne_by_class: List[np.float64],
-                                 n_by_class: List[int],
-                                 unconditioned_entropy: float = None):
-    '''
-    Using the formula:
-    I(Z; Y) = H(Z) - H(Z | Y)
-        H(Z | Y) is directly computed
-        H(Z) is directly computed over the entire graph (i.e., all Z).
-    '''
-
-    # H(h_m)
-    if unconditioned_entropy is None:
-        unconditioned_entropy = von_neumann_entropy(eigs)
-
-    # H(h_m|Y), Y is the class
-    conditioned_entropy = np.sum(
-        np.array(n_by_class) / np.sum(n_by_class) * np.array(vne_by_class))
-
-    # I(h_m; Y)
-    mi = unconditioned_entropy - conditioned_entropy
 
     return mi
 
@@ -369,7 +410,7 @@ def exact_eigvals(A: np.array):
     return eigenvalues
 
 
-def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 1e-3):
+def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 1e-2):
     '''
     von Neumann Entropy over a data graph.
 
