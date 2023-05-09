@@ -78,7 +78,7 @@ def compute_diffusion_matrix(X: np.array,
 
     if kernel_eps:
         W[W < kernel_eps] = 0
-        W = W + np.eye(len(X)) * kernel_eps
+        W = W + np.eye(len(W)) * kernel_eps
 
     # Gaussian kernel to diffusion matrix
     Deg = np.diag(1 / np.sum(W, axis=1)**0.5)
