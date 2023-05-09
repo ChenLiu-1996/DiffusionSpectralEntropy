@@ -160,26 +160,26 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     ax.tick_params(axis='both', which='major', labelsize=30)
 
     # # Display correlation.
-    # if len(data_arrays['acc']) > 1:
-    #     fig_mi_corr.suptitle(
-    #         'I(z;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-    #         % (pearsonr(data_arrays['acc'], data_arrays['mi_Y'])[0],
-    #            pearsonr(data_arrays['acc'], data_arrays['mi_Y'])[1],
-    #            spearmanr(data_arrays['acc'], data_arrays['mi_Y'])[0],
-    #            spearmanr(data_arrays['acc'], data_arrays['mi_Y'])[1]),  #+
-    #         # '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-    #         # % (pearsonr(data_arrays['acc'], data_arrays['mi_X'])[0],
-    #         #    pearsonr(data_arrays['acc'], data_arrays['mi_X'])[1],
-    #         #    spearmanr(data_arrays['acc'], data_arrays['mi_X'])[0],
-    #         #    spearmanr(data_arrays['acc'], data_arrays['mi_X'])[1]),  #+
-    #         # '\nSpectral I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
-    #         # % (pearsonr(data_arrays['acc'], data_arrays['mi_X_spectral'])[0],
-    #         #    pearsonr(data_arrays['acc'], data_arrays['mi_X_spectral'])[1],
-    #         #    spearmanr(data_arrays['acc'], data_arrays['mi_X_spectral'])[0],
-    #         #    spearmanr(data_arrays['acc'], data_arrays['mi_X_spectral'])[1]),
-    #         fontsize=40)
-    # fig_mi_corr.savefig(save_paths_fig['fig_mi_corr'])
-    # plt.close(fig=fig_mi_corr)
+    if len(data_arrays['acc']) > 1:
+        fig_mi_corr.suptitle(
+            'I(z;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            % (pearsonr(data_arrays['acc'], data_arrays['mi_Y'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['mi_Y'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['mi_Y'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['mi_Y'])[1]),  #+
+            # '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            # % (pearsonr(data_arrays['acc'], data_arrays['mi_X'])[0],
+            #    pearsonr(data_arrays['acc'], data_arrays['mi_X'])[1],
+            #    spearmanr(data_arrays['acc'], data_arrays['mi_X'])[0],
+            #    spearmanr(data_arrays['acc'], data_arrays['mi_X'])[1]),  #+
+            # '\nSpectral I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
+            # % (pearsonr(data_arrays['acc'], data_arrays['mi_X_spectral'])[0],
+            #    pearsonr(data_arrays['acc'], data_arrays['mi_X_spectral'])[1],
+            #    spearmanr(data_arrays['acc'], data_arrays['mi_X_spectral'])[0],
+            #    spearmanr(data_arrays['acc'], data_arrays['mi_X_spectral'])[1]),
+            fontsize=40)
+    fig_mi_corr.savefig(save_paths_fig['fig_mi_corr'])
+    plt.close(fig=fig_mi_corr)
 
     return
 
