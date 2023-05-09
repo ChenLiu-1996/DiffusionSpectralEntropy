@@ -204,7 +204,7 @@ def mutual_information_per_class_simple(embeddings: np.array,
 
     for class_idx in tqdm(classes_list):
         if map_predefined:
-            H_ZgivenY = H_ZgivenY_map[str(int(class_idx))]
+            H_ZgivenY = H_ZgivenY_map[str(class_idx)]
         else:
             inds = (labels == class_idx).reshape(-1)
             Z_curr_class = embeddings[inds, :]
@@ -220,7 +220,7 @@ def mutual_information_per_class_simple(embeddings: np.array,
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
             H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
-            H_ZgivenY_map[str(int(class_idx))] = H_ZgivenY
+            H_ZgivenY_map[str(class_idx)] = H_ZgivenY
 
         H_givenY_by_class.append(H_ZgivenY)
 
@@ -268,7 +268,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
     for class_idx in tqdm(classes_list):
         # H(Z | Y)
         if map_predefined:
-            H_ZgivenY = H_ZgivenY_map[str(int(class_idx))]
+            H_ZgivenY = H_ZgivenY_map[str(class_idx)]
         else:
             inds = (labels == class_idx).reshape(-1)
             Z_curr_class = embeddings[inds, :]
@@ -284,7 +284,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
             H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
-            H_ZgivenY_map[str(int(class_idx))] = H_ZgivenY
+            H_ZgivenY_map[str(class_idx)] = H_ZgivenY
 
         # H(Z), estimated by randomly sampling the same number of points.
         random.seed(0)
