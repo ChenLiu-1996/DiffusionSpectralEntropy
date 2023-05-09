@@ -406,7 +406,7 @@ if __name__ == '__main__':
                 y_entropy = np.load(save_path_y_entropy)['y_entropy']
                 print('Pre-computed Y entropy loaded.')
             else:
-                num_classes = np.max(labels) + 1
+                num_classes = int(np.max(labels) + 1)
                 # One hot embedding for labels
                 labels_embeds = np.zeros((N, num_classes))
                 labels_embeds[np.arange(N), labels[:, 0]] = 1

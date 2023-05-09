@@ -260,7 +260,7 @@ def mutual_information_per_class_append(embeddings: np.array,
         mi: scaler
     '''
     N, D = embeddings.shape
-    num_classes = np.max(labels) + 1
+    num_classes = int(np.max(labels) + 1)
     # One hot embedding for labels
     labels_embeds = np.zeros((N, num_classes))
     labels_embeds[np.arange(N), labels[:, 0]] = 1
