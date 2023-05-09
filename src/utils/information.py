@@ -185,6 +185,9 @@ def mutual_information_per_class_simple(embeddings: np.array,
 
     if H_ZgivenY_map is None:
         H_ZgivenY_map = {}
+        map_predefined = False
+    else:
+        map_predefined = True
 
     # H(Z)
     if H_Z is None:
@@ -200,8 +203,8 @@ def mutual_information_per_class_simple(embeddings: np.array,
     H_givenY_by_class = []
 
     for class_idx in tqdm(classes_list):
-        if H_ZgivenY_map is not None:
-            H_ZgivenY = H_ZgivenY_map[class_idx]
+        if map_predefined:
+            H_ZgivenY = H_ZgivenY_map[str(int(class_idx))]
         else:
             inds = (labels == class_idx).reshape(-1)
             Z_curr_class = embeddings[inds, :]
@@ -217,7 +220,7 @@ def mutual_information_per_class_simple(embeddings: np.array,
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
             H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
-            H_ZgivenY_map[class_idx] = H_ZgivenY
+            H_ZgivenY_map[str(int(class_idx))] = H_ZgivenY
 
         H_givenY_by_class.append(H_ZgivenY)
 
@@ -258,11 +261,14 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
 
     if H_ZgivenY_map is None:
         H_ZgivenY_map = {}
+        map_predefined = False
+    else:
+        map_predefined = True
 
     for class_idx in tqdm(classes_list):
         # H(Z | Y)
-        if H_ZgivenY_map is not None:
-            H_ZgivenY = H_ZgivenY_map[class_idx]
+        if map_predefined:
+            H_ZgivenY = H_ZgivenY_map[str(int(class_idx))]
         else:
             inds = (labels == class_idx).reshape(-1)
             Z_curr_class = embeddings[inds, :]
@@ -278,7 +284,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
             H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
-            H_ZgivenY_map[class_idx] = H_ZgivenY
+            H_ZgivenY_map[str(int(class_idx))] = H_ZgivenY
 
         # H(Z), estimated by randomly sampling the same number of points.
         random.seed(0)
