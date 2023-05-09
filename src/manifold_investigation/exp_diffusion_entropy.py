@@ -303,6 +303,8 @@ if __name__ == '__main__':
             assert labels.shape[0] == N
             assert labels.shape[1] == 1
 
+            labels = labels.astype(np.int64)
+
             # if config.dataset == 'cifar10':
             #     labels_updated = np.zeros(labels.shape, dtype='object')
             #     for k in range(N):
