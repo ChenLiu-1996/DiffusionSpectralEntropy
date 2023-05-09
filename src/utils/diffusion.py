@@ -41,19 +41,22 @@ def diffusion_matrix_from_phate_distance(X: np.array, k: int = 10):
 
 def compute_diffusion_matrix(X: np.array,
                              k: int = 10,
-                             density_norm_pow: float = 1.0):
+                             density_norm_pow: float = 1.0,
+                             kernel_eps: float = 1e-5):
     '''
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
 
     Given input X returns a diffusion matrix P, as an numpy ndarray.
-    Using "adaptive anisotropic" kernel
+    Using the "anisotropic" kernel
     Inputs:
         X: a numpy array of size n x d
         density_norm_pow: a float in [0, 1]
             == 0: classic Gaussian kernel
             == 1: completely removes density and provides a geometric equivalent to
                   uniform sampling of the underlying manifold
+        kernel_eps: a float
+            zero values below this value in the Gaussian kernel
     Returns:
         P: a numpy array of size n x n that is the diffusion matrix
 
@@ -71,7 +74,15 @@ def compute_diffusion_matrix(X: np.array,
     # Anisotropic density normalization.
     if density_norm_pow > 0:
         Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
-        P = Deg @ W @ Deg
+        W = Deg @ W @ Deg
+
+    if threshold_for_small_values:
+        W[W < threshold_for_small_values] = 0
+        W = W + np.eye(len(X)) * threshold_for_small_values
+
+    # Gaussian kernel to diffusion matrix
+    Deg = np.diag(1 / np.sum(W, axis=1)**0.5)
+    P = Deg @ W @ Deg
 
     return P
 

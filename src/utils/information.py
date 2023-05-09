@@ -417,6 +417,7 @@ def exact_eigvals(A: np.array):
 
 
 def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 1e-3):
+    # def von_neumann_entropy(eigs: np.array, topk: int = 100):
     '''
     von Neumann Entropy over a data graph.
 
@@ -438,6 +439,9 @@ def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 1e-3):
 
     # Drop the trivial eigenvalues that are corresponding to noise eigenvectors.
     eigenvalues[eigenvalues < noise_eigval_thr] = 0
+    # # Retain the most significant (non-trivial) eigenvalues
+    # if len(eigenvalues) > topk:
+    #     eigenvalues = eigenvalues[:topk]
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps
