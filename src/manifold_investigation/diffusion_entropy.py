@@ -52,15 +52,18 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     ax = fig_entropy.add_subplot(1, 1, 1)
     ax_secondary = ax.twinx()
     ax.spines[['right', 'top']].set_visible(False)
-    ax.plot(data_arrays['epoch'], data_arrays['se'], c='grey')
+    ax_secondary.spines[['left', 'top']].set_visible(False)
+    ln1 = ax.plot(data_arrays['epoch'], data_arrays['se'], c='grey')
     ax.scatter(data_arrays['epoch'], data_arrays['se'], c='grey', s=120)
-    ax_secondary.plot(data_arrays['epoch'], data_arrays['vne'], c='mediumblue')
+    ln2 = ax_secondary.plot(data_arrays['epoch'],
+                            data_arrays['vne'],
+                            c='mediumblue')
     ax_secondary.scatter(data_arrays['epoch'],
                          data_arrays['vne'],
                          c='mediumblue',
                          s=120)
-    ax.legend(['Shannon entropy'])
-    ax_secondary.legend(['spectral von Neumann entropy'])
+    lns = ln1 + ln2
+    ax.legend(lns, ['Shannon entropy', 'spectral von Neumann entropy'])
     fig_entropy.supylabel('Diffusion Entropy', fontsize=40)
     fig_entropy.supxlabel('Epochs Trained', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
@@ -73,18 +76,19 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     ax = fig_entropy_corr.add_subplot(1, 1, 1)
     ax_secondary = ax.twinx()
     ax.spines[['right', 'top']].set_visible(False)
-    ax.scatter(data_arrays['acc'],
-               data_arrays['se'],
-               c='grey',
-               alpha=0.5,
-               s=300)
-    ax_secondary.scatter(data_arrays['acc'],
-                         data_arrays['vne'],
-                         c='mediumblue',
-                         alpha=0.5,
-                         s=300)
-    ax.legend(['Shannon entropy'])
-    ax_secondary.legend(['spectral von Neumann entropy'])
+    ax_secondary.spines[['left', 'top']].set_visible(False)
+    ln1 = ax.scatter(data_arrays['acc'],
+                     data_arrays['se'],
+                     c='grey',
+                     alpha=0.5,
+                     s=300)
+    ln2 = ax_secondary.scatter(data_arrays['acc'],
+                               data_arrays['vne'],
+                               c='mediumblue',
+                               alpha=0.5,
+                               s=300)
+    lns = [ln1] + [ln2]
+    ax.legend(lns, ['Shannon entropy', 'spectral von Neumann entropy'])
     fig_entropy_corr.supylabel('Diffusion Entropy', fontsize=40)
     fig_entropy_corr.supxlabel('Downstream Classification Accuracy',
                                fontsize=40)
