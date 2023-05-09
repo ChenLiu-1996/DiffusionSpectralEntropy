@@ -28,7 +28,7 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
-    save_root = './results_toy_data/'
+    save_root = './phate_toy_data/'
     os.makedirs(save_root, exist_ok=True)
 
     save_path_fig = '%s/toy-data-knn%s.png' % (save_root, args.knn)
