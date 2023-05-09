@@ -146,7 +146,7 @@ def mutual_information(orig_x: np.array,
             # Diffusion Matrix
             s_diffusion_matrix = compute_diffusion_matrix(samples, k=knn)
             # Eigenvalues
-            s_eigenvalues_P = np.linalg.eigvals(s_diffusion_matrix)
+            s_eigenvalues_P = exact_eigvals(s_diffusion_matrix)
             # Von Neumann Entropy
             s_vne = von_neumann_entropy(s_eigenvalues_P)
 
@@ -161,7 +161,7 @@ def mutual_information(orig_x: np.array,
         # Diffusion Matrix
         diffusion_matrix = compute_diffusion_matrix(samples, k=knn)
         # Eigenvalues
-        eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+        eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
         orig_entropy = von_neumann_entropy(eigenvalues_P)
 
@@ -209,7 +209,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
             eigenvalues_curr_class = approx_eigvals(
                 diffusion_matrix_curr_class)
         else:
-            eigenvalues_curr_class = np.linalg.eigvals(
+            eigenvalues_curr_class = exact_eigvals(
                 diffusion_matrix_curr_class)
         # Von Neumann Entropy
         H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
@@ -230,7 +230,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                 eigenvalues_random_set = approx_eigvals(
                     diffusion_matrix_random_set)
             else:
-                eigenvalues_random_set = np.linalg.eigvals(
+                eigenvalues_random_set = exact_eigvals(
                     diffusion_matrix_random_set)
             # Von Neumann Entropy
             H_Z_rep = von_neumann_entropy(eigenvalues_random_set)

@@ -18,7 +18,7 @@ import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 sys.path.insert(0, import_dir + '/embedding_preparation')
 from attribute_hashmap import AttributeHashmap
-from information import von_neumann_entropy, approx_eigvals
+from information import von_neumann_entropy, approx_eigvals, exact_eigvals
 from diffusion import compute_diffusion_matrix
 
 if __name__ == '__main__':
@@ -57,7 +57,7 @@ if __name__ == '__main__':
             matrix_PD = datasets.make_spd_matrix(n_dim=size)
             for alpha in alpha_list:
                 matrix = matrix_I * alpha + matrix_PD * (1 - alpha)
-                eigenvalues_P = np.linalg.eigvals(matrix)
+                eigenvalues_P = exact_eigvals(matrix)
                 vne = von_neumann_entropy(eigenvalues_P)
                 vne_list_matrix[j][i].append(vne)
 
@@ -67,7 +67,7 @@ if __name__ == '__main__':
             if dim < D:
                 embeddings[:, dim:] = np.random.randn(1)
             diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
-            eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+            eigenvalues_P = exact_eigvals(diffusion_matrix)
             vne = von_neumann_entropy(eigenvalues_P)
             vne_list_uniform[0][i].append(vne)
             for j, thr in enumerate(approx_thr_list):
@@ -81,7 +81,7 @@ if __name__ == '__main__':
             if dim < D:
                 embeddings[:, dim:] = np.random.randn(1)
             diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
-            eigenvalues_P = np.linalg.eigvals(diffusion_matrix)
+            eigenvalues_P = exact_eigvals(diffusion_matrix)
             vne = von_neumann_entropy(eigenvalues_P)
             vne_list_gaussian[0][i].append(vne)
             for j, thr in enumerate(approx_thr_list):
