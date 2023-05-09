@@ -41,7 +41,7 @@ def diffusion_matrix_from_phate_distance(X: np.array, k: int = 10):
 
 def compute_diffusion_matrix(X: np.array,
                              k: int = 10,
-                             density_norm_pow: float = 0.5):
+                             density_norm_pow: float = 1.0):
     '''
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
