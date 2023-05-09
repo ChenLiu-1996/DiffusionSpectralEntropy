@@ -187,10 +187,10 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
     parser.add_argument(
-        '--no-chebyshev',
+        '--chebyshev',
         action='store_true',
         help=
-        'Turn on to disable Chebyshev approximation and use full eigendecomposition.'
+        'Chebyshev approximation instead of full eigendecomposition.'
     )
     parser.add_argument(
         '--random-seed',
