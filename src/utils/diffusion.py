@@ -50,7 +50,7 @@ def diffusion_matrix_from_phate_distance(X: np.array, k: int = 10):
 def compute_diffusion_matrix(X: np.array,
                              k: int = 10,
                              density_norm_pow: float = 1.0,
-                             filter_eps: float = 1e-6):
+                             filter_eps: float = 0):
     '''
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
@@ -87,7 +87,7 @@ def compute_diffusion_matrix(X: np.array,
     # Noise value filtering.
     if filter_eps:
         W[W < filter_eps] = 0
-        W = W + np.eye(W.shape[0]) * min(filter_eps, 1e-4)
+        W = W + np.eye(W.shape[0]) * filter_eps
 
     # Gaussian kernel to diffusion matrix
     Deg = np.diag(1 / np.sum(W, axis=1)**0.5)
