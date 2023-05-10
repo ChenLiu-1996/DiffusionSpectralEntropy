@@ -426,12 +426,37 @@ if __name__ == '__main__':
                 with open(save_path_y_entropy, 'wb+') as f:
                     np.savez(f, y_entropy=y_entropy)
                     print('Y entropy computed.')
+            
+            save_path_joint_entropy = '%s/numpy_files/joint_entropy-%s-noise_eigval_thr-%.4f.npz' % (
+                save_root, config.dataset, args.noise_eigval_thr)
+            os.makedirs(os.path.dirname(save_path_joint_entropy), exist_ok=True)
+            if os.path.exists(save_path_joint_entropy):
+                joint_entropy = np.load(save_path_joint_entropy)['joint_entropy']
+                print('Pre-computed Joint entropy loaded.')
+            else:
+                num_classes = int(np.max(labels) + 1)
+                # One hot embedding for labels
+                labels_embeds = np.zeros((N, num_classes))
+                labels_embeds[np.arange(N), labels[:, 0]] = 1
+                
+                # H(Z, Y) by appending one-hot label embeds to the Z
+                joint_embeds = np.hstack((embeddings, labels_embeds))
+                # Diffusion Matrix
+                joint_diffusion_matrix = compute_diffusion_matrix(joint_embeds, k=args.knn)
+                # Eigenvalues
+                joint_eigenvalues_P = exact_eigvals(joint_diffusion_matrix)
+                # Von Neumann Entropy
+                joint_entropy = von_neumann_entropy(joint_eigenvalues_P, args.noise_eigval_thr)
+                with open(save_path_joint_entropy, 'wb+') as f:
+                    np.savez(f, joint_entropy=joint_entropy)
+                    print('Joint entropy computed.')
 
             mi_Y = mutual_information_per_class_append(
                 embeddings=embeddings,
                 labels=labels,
                 knn=args.knn,
                 noise_eigval_thr=args.noise_eigval_thr,
+                joint_entropy=joint_entropy,
                 z_entropy=vne,
                 y_entropy=y_entropy)
             mi_Y_list.append(mi_Y)

@@ -321,6 +321,7 @@ def mutual_information_per_class_append(embeddings: np.array,
                                         labels: np.array,
                                         knn: int = 10,
                                         noise_eigval_thr = 1e-3,
+                                        joint_entropy: float = None,
                                         z_entropy: float = None,
                                         y_entropy: float = None):
     '''
@@ -332,20 +333,21 @@ def mutual_information_per_class_append(embeddings: np.array,
     Returns:
         mi: scaler
     '''
-    N, D = embeddings.shape
-    num_classes = int(np.max(labels) + 1)
-    # One hot embedding for labels
-    labels_embeds = np.zeros((N, num_classes))
-    labels_embeds[np.arange(N), labels[:, 0]] = 1
+    if joint_entropy is None:
+        N, D = embeddings.shape
+        num_classes = int(np.max(labels) + 1)
+        # One hot embedding for labels
+        labels_embeds = np.zeros((N, num_classes))
+        labels_embeds[np.arange(N), labels[:, 0]] = 1
 
-    # H(Z, Y) by appending one-hot label embeds to the Z
-    joint_embeds = np.hstack((embeddings, labels_embeds))
-    # Diffusion Matrix
-    diffusion_matrix = compute_diffusion_matrix(joint_embeds, k=knn)
-    # Eigenvalues
-    eigenvalues_P = exact_eigvals(diffusion_matrix)
-    # Von Neumann Entropy
-    joint_entropy = von_neumann_entropy(eigenvalues_P, noise_eigval_thr)
+        # H(Z, Y) by appending one-hot label embeds to the Z
+        joint_embeds = np.hstack((embeddings, labels_embeds))
+        # Diffusion Matrix
+        diffusion_matrix = compute_diffusion_matrix(joint_embeds, k=knn)
+        # Eigenvalues
+        eigenvalues_P = exact_eigvals(diffusion_matrix)
+        # Von Neumann Entropy
+        joint_entropy = von_neumann_entropy(eigenvalues_P, noise_eigval_thr)
 
     if y_entropy is None:
         # Diffusion Matrix
