@@ -10,21 +10,25 @@ warnings.filterwarnings("ignore")
 # def compute_diffusion_matrix(X, k):
 #     graph = graphtools.Graph(
 #         X,
-#         n_pca=X.shape[0],
 #         knn=k,
 #         decay=1,
 #         thresh=1e-4,
 #         verbose=False,
 #         random_state=1,
 #     )
+#     import pdb
+#     pdb.set_trace()
 #     return graph.diff_op.toarray()
 
 
 def diffusion_matrix_from_phate_distance(X: np.array, k: int = 10):
     # Phate Distance Matrix
-    phate_op = phate.PHATE(random_state=1, verbose=False, n_components=2, knn=k).fit(X)
-    diff_pot = phate_op.diff_potential # -log(P^t)
-    
+    phate_op = phate.PHATE(random_state=1,
+                           verbose=False,
+                           n_components=2,
+                           knn=k).fit(X)
+    diff_pot = phate_op.diff_potential  # -log(P^t)
+
     assert diff_pot.shape[0] == X.shape[0]
 
     phate_distance = pairwise_distances(diff_pot)
@@ -48,8 +52,7 @@ def diffusion_matrix_from_phate_distance(X: np.array, k: int = 10):
 
 def compute_diffusion_matrix(X: np.array,
                              k: int = 10,
-                             density_norm_pow: float = 1.0,
-                             filter_eps: float = 0):
+                             density_norm_pow: float = 1.0):
     '''
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
@@ -62,8 +65,6 @@ def compute_diffusion_matrix(X: np.array,
             == 0: classic Gaussian kernel
             == 1: completely removes density and provides a geometric equivalent to
                   uniform sampling of the underlying manifold
-        filter_eps: a float
-            zero out entries in the Gaussian kernel smaller than this value
     Returns:
         P: a numpy array of size n x n that is the diffusion matrix
 
@@ -82,11 +83,6 @@ def compute_diffusion_matrix(X: np.array,
     if density_norm_pow > 0:
         Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
         W = Deg @ W @ Deg
-
-    # Noise value filtering.
-    if filter_eps:
-        W[W < filter_eps] = 0
-        W = W + np.eye(W.shape[0]) * filter_eps
 
     # Gaussian kernel to diffusion matrix
     Deg = np.diag(1 / np.sum(W, axis=1)**0.5)

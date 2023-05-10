@@ -416,7 +416,7 @@ def exact_eigvals(A: np.array):
     return eigenvalues
 
 
-def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 1e-3):
+def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 0):
     # def von_neumann_entropy(eigs: np.array, topk: int = 100):
     '''
     von Neumann Entropy over a data graph.
