@@ -199,6 +199,11 @@ if __name__ == '__main__':
         help='Only enter if you want to override the config!!!',
         type=int,
         default=None)
+    parser.add_argument(
+        '--noise_eigval_thr',
+        help='noise_eigval_thr',
+        type=float,
+        default=1e-3)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -220,7 +225,7 @@ if __name__ == '__main__':
              (config.output_save_path, config.dataset, method_str,
               config.model, config.random_seed)))
 
-    save_root = './exp_diffusion_entropy/'
+    save_root = './append_diffusion_entropy/'
     os.makedirs(save_root, exist_ok=True)
 
     save_paths_fig = {
@@ -375,7 +380,7 @@ if __name__ == '__main__':
             #
             '''Diffusion Entropy'''
             log('von Neumann Entropy: ', log_path)
-            vne = von_neumann_entropy(eigenvalues_P)
+            vne = von_neumann_entropy(eigenvalues_P, args.noise_eigval_thr)
             vne_list.append(vne)
             log('Diffusion Entropy = %.4f' % vne, log_path)
 
@@ -401,8 +406,8 @@ if __name__ == '__main__':
             #                                   classes_cnts.tolist(),
             #                                   unconditioned_entropy=vne)
             
-            save_path_y_entropy = '%s/numpy_files/y_entropy-%s.npz' % (
-                save_root, config.dataset)
+            save_path_y_entropy = '%s/numpy_files/y_entropy-%s-noise_eigval_thr-%.4f.npz' % (
+                save_root, config.dataset, args.noise_eigval_thr)
             os.makedirs(os.path.dirname(save_path_y_entropy), exist_ok=True)
             if os.path.exists(save_path_y_entropy):
                 y_entropy = np.load(save_path_y_entropy)['y_entropy']
@@ -417,7 +422,7 @@ if __name__ == '__main__':
                 # Eigenvalues
                 labels_eigenvalues_P = exact_eigvals(labels_diffusion_matrix)
                 # Von Neumann Entropy
-                y_entropy = von_neumann_entropy(labels_eigenvalues_P)
+                y_entropy = von_neumann_entropy(labels_eigenvalues_P, args.noise_eigval_thr)
                 with open(save_path_y_entropy, 'wb+') as f:
                     np.savez(f, y_entropy=y_entropy)
                     print('Y entropy computed.')
@@ -426,6 +431,7 @@ if __name__ == '__main__':
                 embeddings=embeddings,
                 labels=labels,
                 knn=args.knn,
+                noise_eigval_thr=args.noise_eigval_thr,
                 z_entropy=vne,
                 y_entropy=y_entropy)
             mi_Y_list.append(mi_Y)

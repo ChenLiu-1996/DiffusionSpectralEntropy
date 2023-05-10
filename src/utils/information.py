@@ -320,6 +320,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
 def mutual_information_per_class_append(embeddings: np.array,
                                         labels: np.array,
                                         knn: int = 10,
+                                        noise_eigval_thr = 1e-3,
                                         z_entropy: float = None,
                                         y_entropy: float = None):
     '''
@@ -344,7 +345,7 @@ def mutual_information_per_class_append(embeddings: np.array,
     # Eigenvalues
     eigenvalues_P = exact_eigvals(diffusion_matrix)
     # Von Neumann Entropy
-    joint_entropy = von_neumann_entropy(eigenvalues_P)
+    joint_entropy = von_neumann_entropy(eigenvalues_P, noise_eigval_thr)
 
     if y_entropy is None:
         # Diffusion Matrix
@@ -352,7 +353,7 @@ def mutual_information_per_class_append(embeddings: np.array,
         # Eigenvalues
         eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
-        y_entropy = von_neumann_entropy(eigenvalues_P)
+        y_entropy = von_neumann_entropy(eigenvalues_P, noise_eigval_thr)
 
     if z_entropy is None:
         # Diffusion Matrix
@@ -360,7 +361,7 @@ def mutual_information_per_class_append(embeddings: np.array,
         # Eigenvalues
         eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
-        z_entropy = von_neumann_entropy(eigenvalues_P)
+        z_entropy = von_neumann_entropy(eigenvalues_P, noise_eigval_thr)
 
     mi = z_entropy + y_entropy - joint_entropy
 
