@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.metrics import pairwise_distances
-# import phate
+import phate
 # import magic
 import warnings
 
@@ -22,20 +22,19 @@ warnings.filterwarnings("ignore")
 
 def diffusion_matrix_from_phate_distance(X: np.array, k: int = 10):
     # Phate Distance Matrix
-    phate_op = phate.PHATE(random_state=42,
-                           verbose=False,
-                           n_components=2,
-                           knn=k).fit(X)
-    diff_pot = phate_op.diff_potential  # -log(P^t)
-
+    phate_op = phate.PHATE(random_state=1, verbose=False, n_components=2, knn=k).fit(X)
+    diff_pot = phate_op.diff_potential # -log(P^t)
+    
     assert diff_pot.shape[0] == X.shape[0]
-    assert diff_pot.shape[1] == X.shape[0]
 
     phate_distance = pairwise_distances(diff_pot)
 
     # Normalize
-    Deg = np.diag((1 / np.sum(phate_distance, axis=1))**0.5)
-    P = Deg @ phate_distance @ Deg
+    D = (np.sum(phate_distance, axis=1))**0.5
+    P = np.divide(phate_distance, D)
+    P = (np.divide(P.T, D)).T
+    # Deg = np.diag((1 / np.sum(phate_distance, axis=1))**0.5)
+    # P = Deg @ phate_distance @ Deg
 
     return P
 
