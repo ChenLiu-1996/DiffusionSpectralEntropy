@@ -41,6 +41,7 @@ cd diffusion_curvature
 python -m pip install .
 python -m pip install phate
 python -m pip install DiffusionEMD
+python -m pip install magic-impute
 ```
 
 ### Usage.

@@ -391,6 +391,11 @@ if __name__ == '__main__':
                     np.savez(f, eigenvalues_P=eigenvalues_P)
                 print('Eigenvalues computed.')
 
+            eig_thr_list = [0.5, 0.2, 0.1, 5e-2, 1e-2, 1e-3, 1e-4]
+            log('# eigenvalues > thr: %s' % eig_thr_list, log_path)
+            log(str([np.sum(eigenvalues_P > thr) for thr in eig_thr_list]),
+                log_path)
+
             #
             '''Diffusion Entropy'''
             log('von Neumann Entropy: ', log_path)

@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.metrics import pairwise_distances
-import phate
+# import phate
+# import magic
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -39,10 +40,17 @@ def diffusion_matrix_from_phate_distance(X: np.array, k: int = 10):
     return P
 
 
+# def compute_diffusion_matrix(X: np.array, k: int = 10):
+#     magic_op = magic.MAGIC(random_state=1, knn=k, verbose=False)
+#     _ = magic_op.fit_transform(X)
+#     P = magic_op.graph.diff_op.toarray()
+#     return P
+
+
 def compute_diffusion_matrix(X: np.array,
                              k: int = 10,
                              density_norm_pow: float = 1.0,
-                             kernel_eps: float = 1e-5):
+                             filter_eps: float = 1e-6):
     '''
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
@@ -55,8 +63,8 @@ def compute_diffusion_matrix(X: np.array,
             == 0: classic Gaussian kernel
             == 1: completely removes density and provides a geometric equivalent to
                   uniform sampling of the underlying manifold
-        kernel_eps: a float
-            zero out entries below this value in the Gaussian kernel
+        filter_eps: a float
+            zero out entries in the Gaussian kernel smaller than this value
     Returns:
         P: a numpy array of size n x n that is the diffusion matrix
 
@@ -76,9 +84,10 @@ def compute_diffusion_matrix(X: np.array,
         Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
         W = Deg @ W @ Deg
 
-    if kernel_eps:
-        W[W < kernel_eps] = 0
-        W = W + np.eye(len(W)) * kernel_eps
+    # Noise value filtering.
+    if filter_eps:
+        W[W < filter_eps] = 0
+        W = W + np.eye(W.shape[0]) * min(filter_eps, 1e-4)
 
     # Gaussian kernel to diffusion matrix
     Deg = np.diag(1 / np.sum(W, axis=1)**0.5)
