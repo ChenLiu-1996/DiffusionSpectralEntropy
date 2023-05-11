@@ -37,6 +37,7 @@ cifar10_int2name = {
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
+    parser.add_argument('--zero-init', action='store_true')
     args = vars(parser.parse_args())
 
     args = AttributeHashmap(args)
@@ -44,7 +45,14 @@ if __name__ == '__main__':
 
     data_path_list = sorted(
         glob('./results_diffusion_entropy_top100/numpy_files/figure-data-*'))
-
+    if args.zero_init:
+        data_path_list = [
+            item for item in data_path_list if 'zeroinit' in item
+        ]
+    else:
+        data_path_list = [
+            item for item in data_path_list if 'zeroinit' not in item
+        ]
     data_hashmap = {}
 
     for data_path in data_path_list:
