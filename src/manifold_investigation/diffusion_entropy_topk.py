@@ -209,6 +209,7 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
     parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
+    parser.add_argument('--topk', type=int, default=100)
     parser.add_argument(
         '--chebyshev',
         action='store_true',
@@ -239,9 +240,8 @@ if __name__ == '__main__':
              (config.output_save_path, config.dataset, method_str,
               config.model, config.random_seed)))
 
-    TOPK = 100
     save_root = './results_diffusion_entropy/'
-    save_root_override = './results_diffusion_entropy_top%d/' % TOPK
+    save_root_override = './results_diffusion_entropy_top%d/' % args.topk
     os.makedirs(save_root, exist_ok=True)
     os.makedirs(save_root_override, exist_ok=True)
 
@@ -403,7 +403,7 @@ if __name__ == '__main__':
             #
             '''Diffusion Entropy'''
             log('von Neumann Entropy: ', log_path)
-            vne = von_neumann_entropy(eigenvalues_P, topk=TOPK)
+            vne = von_neumann_entropy(eigenvalues_P, topk=args.topk)
             vne_list.append(vne)
             log('Diffusion Entropy = %.4f' % vne, log_path)
 
@@ -433,7 +433,7 @@ if __name__ == '__main__':
                 labels=labels,
                 H_Z=vne,
                 sigma=args.gaussian_kernel_sigma,
-                vne_topk=TOPK,
+                vne_topk=args.topk,
                 chebyshev_approx=args.chebyshev)
             mi_Y_simple_list.append(mi_Y_simple)
             log('MI between z and Output (simple) = %.4f' % mi_Y_simple,
@@ -444,7 +444,7 @@ if __name__ == '__main__':
                 labels=labels,
                 H_ZgivenY_map=H_ZgivenY_map,
                 sigma=args.gaussian_kernel_sigma,
-                vne_topk=TOPK,
+                vne_topk=args.topk,
                 chebyshev_approx=args.chebyshev)
             mi_Y_sample_list.append(mi_Y_sample)
             log('MI between z and Output (sample) = %.4f' % mi_Y_sample,
