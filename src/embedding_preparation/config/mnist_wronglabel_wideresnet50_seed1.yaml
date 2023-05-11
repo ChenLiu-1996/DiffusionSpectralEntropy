@@ -12,3 +12,4 @@ num_workers: 4
 dataset: 'mnist'
 random_seed: 1
 bad_method: 'wronglabel'
+zero_init: False

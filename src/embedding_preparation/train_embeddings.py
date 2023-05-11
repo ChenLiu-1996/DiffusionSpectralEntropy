@@ -224,9 +224,9 @@ def train(config: AttributeHashmap) -> None:
 
     os.makedirs(config.checkpoint_dir, exist_ok=True)
     os.makedirs(config.log_dir, exist_ok=True)
-    log_path = '%s/%s-%s-%s-seed%s.log' % (config.log_dir, config.dataset,
-                                           config.contrastive, config.model,
-                                           config.random_seed)
+    log_path = '%s/%s-%s-%s-seed%s%s.log' % (
+        config.log_dir, config.dataset, config.contrastive, config.model,
+        config.random_seed, '-zeroinit' if config.zero_init else '')
 
     # Log the config.
     config_str = 'Config: \n'
@@ -238,7 +238,12 @@ def train(config: AttributeHashmap) -> None:
     model = get_model(model_name=config.model,
                       num_classes=config.num_classes,
                       small_image=config.small_image).to(device)
-    model.init_params()
+
+    if not config.zero_init:
+        model.init_params()
+    else:
+        print('Using zero initialization.')
+        model.zero_init()
 
     if config.contrastive == 'NA':
         opt = torch.optim.AdamW(list(model.encoder.parameters()) +
@@ -374,17 +379,18 @@ def train(config: AttributeHashmap) -> None:
             filepath=log_path,
             to_console=False)
 
-        model_save_path = '%s/%s-%s-%s-seed%s-epoch%s-valAcc%.3f%s' % (
+        model_save_path = '%s/%s-%s-%s-seed%s%s-epoch%s-valAcc%.3f%s' % (
             config.checkpoint_dir, config.dataset, config.contrastive,
-            config.model, config.random_seed, str(epoch_idx).zfill(4),
-            state_dict['val_acc'], '.pth')
+            config.model, config.random_seed, '-zeroinit' if config.zero_init
+            else '', str(epoch_idx).zfill(4), state_dict['val_acc'], '.pth')
         torch.save(model.state_dict(), model_save_path)
         if state_dict['val_acc'] > best_val_acc:
             best_val_acc = state_dict['val_acc']
             best_model = model.state_dict()
-            model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
+            model_save_path = '%s/%s-%s-%s-seed%s%s-%s' % (
                 config.checkpoint_dir, config.dataset, config.contrastive,
-                config.model, config.random_seed, 'val_acc_best.pth')
+                config.model, config.random_seed,
+                '-zeroinit' if config.zero_init else '', 'val_acc_best.pth')
             torch.save(best_model, model_save_path)
             log('Best model (so far) successfully saved.',
                 filepath=log_path,
@@ -394,9 +400,10 @@ def train(config: AttributeHashmap) -> None:
                 if state_dict[
                         'val_acc'] > val_acc_percentage and not is_model_saved[
                             'val_acc_%s%%' % val_acc_percentage]:
-                    model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
+                    model_save_path = '%s/%s-%s-%s-seed%s%s-%s' % (
                         config.checkpoint_dir, config.dataset,
                         config.contrastive, config.model, config.random_seed,
+                        '-zeroinit' if config.zero_init else '',
                         'val_acc_%s%%.pth' % val_acc_percentage)
                     torch.save(best_model, model_save_path)
                     is_model_saved['val_acc_%s%%' % val_acc_percentage] = True
@@ -541,12 +548,13 @@ def infer(config: AttributeHashmap) -> None:
                       small_image=config.small_image).to(device)
 
     checkpoint_paths = sorted(
-        glob('%s/%s-%s-%s-seed%s*.pth' %
+        glob('%s/%s-%s-%s-seed%s%s*.pth' %
              (config.checkpoint_dir, config.dataset, config.contrastive,
-              config.model, config.random_seed)))
-    log_path = '%s/%s-%s-%s-seed%s.log' % (config.log_dir, config.dataset,
-                                           config.contrastive, config.model,
-                                           config.random_seed)
+              config.model, config.random_seed,
+              '-zeroinit' if config.zero_init else '')))
+    log_path = '%s/%s-%s-%s-seed%s%s.log' % (
+        config.log_dir, config.dataset, config.contrastive, config.model,
+        config.random_seed, '-zeroinit' if config.zero_init else '')
 
     for checkpoint in tqdm(checkpoint_paths):
         checkpoint_name = checkpoint.split('/')[-1].replace('.pth', '')
@@ -626,9 +634,10 @@ if __name__ == '__main__':
     config = update_config_dirs(AttributeHashmap(config))
 
     # Update checkpoint dir.
-    config.checkpoint_dir = '%s/%s-%s-%s-seed%s/' % (
+    config.checkpoint_dir = '%s/%s-%s-%s-seed%s%s/' % (
         config.checkpoint_dir, config.dataset, config.contrastive,
-        config.model, config.random_seed)
+        config.model, config.random_seed,
+        '-zeroinit' if config.zero_init else '')
 
     seed_everything(config.random_seed)
 

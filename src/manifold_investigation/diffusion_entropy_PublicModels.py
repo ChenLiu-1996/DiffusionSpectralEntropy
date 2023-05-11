@@ -477,7 +477,7 @@ def diffusion_entropy(args: AttributeHashmap):
                 chebyshev_approx=args.chebyshev)
 
             summary[version][
-                'mi_class'] = mutual_information_per_class_random_sample(
+                'mi_Y_sample'], _ = mutual_information_per_class_random_sample(
                     embeddings=embeddings,
                     labels=labels,
                     vne_topk=args.topk,
@@ -580,7 +580,7 @@ def plot_summary(summary: dict,
         version = key
         version_list.append(version)
         vne_list.append(summary[version]['vne'])
-        mi_class_list.append(summary[version]['mi_class'])
+        mi_class_list.append(summary[version]['mi_Y_sample'])
         acc_list_nominal.append(summary[version]['top1_acc_nominal'])
         acc_list_actual.append(summary[version]['top1_acc_actual'])
 

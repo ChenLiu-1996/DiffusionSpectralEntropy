@@ -12,3 +12,4 @@ num_workers: 4
 dataset: 'cifar10'
 contrastive: 'NA'
 random_seed: 1
+zero_init: False

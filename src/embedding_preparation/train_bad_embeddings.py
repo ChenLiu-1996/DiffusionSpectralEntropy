@@ -42,7 +42,9 @@ def print_state_dict(state_dict: dict) -> str:
 
 def get_dataloaders(
     config: AttributeHashmap
-) -> Tuple[Tuple[torch.utils.data.DataLoader, ], AttributeHashmap]:
+) -> Tuple[Tuple[
+        torch.utils.data.DataLoader,
+], AttributeHashmap]:
     if config.dataset == 'mnist':
         config.in_channels = 1
         config.num_classes = 10
@@ -195,9 +197,9 @@ def train(config: AttributeHashmap) -> None:
 
     os.makedirs(config.checkpoint_dir, exist_ok=True)
     os.makedirs(config.log_dir, exist_ok=True)
-    log_path = '%s/%s-%s-%s-seed%s.log' % (config.log_dir, config.dataset,
-                                           config.bad_method, config.model,
-                                           config.random_seed)
+    log_path = '%s/%s-%s-%s-seed%s%s.log' % (
+        config.log_dir, config.dataset, config.bad_method, config.model,
+        config.random_seed, '-zeroinit' if config.zero_init else '')
 
     # Log the config.
     config_str = 'Config: \n'
@@ -209,7 +211,12 @@ def train(config: AttributeHashmap) -> None:
     model = get_model(model_name=config.model,
                       num_classes=config.num_classes,
                       small_image=config.small_image).to(device)
-    model.init_params()
+
+    if not config.zero_init:
+        model.init_params()
+    else:
+        print('Using zero initialization.')
+        model.zero_init()
 
     opt = torch.optim.AdamW(list(model.encoder.parameters()) +
                             list(model.linear.parameters()),
@@ -293,17 +300,19 @@ def train(config: AttributeHashmap) -> None:
             filepath=log_path,
             to_console=False)
 
-        model_save_path = '%s/%s-%s-%s-seed%s-epoch%s-valAcc%.3f-divergence%.3f%s' % (
+        model_save_path = '%s/%s-%s-%s-seed%s%s-epoch%s-valAcc%.3f-divergence%.3f%s' % (
             config.checkpoint_dir, config.dataset, config.bad_method,
-            config.model, config.random_seed, str(epoch_idx).zfill(4),
+            config.model, config.random_seed,
+            '-zeroinit' if config.zero_init else '', str(epoch_idx).zfill(4),
             state_dict['val_acc'], state_dict['divergence'], '.pth')
         torch.save(model.state_dict(), model_save_path)
         if state_dict['divergence'] > biggest_acc_divergence:
             biggest_acc_divergence = state_dict['divergence']
             best_model = model.state_dict()
-            model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
+            model_save_path = '%s/%s-%s-%s-seed%s%s-%s' % (
                 config.checkpoint_dir, config.dataset, config.bad_method,
-                config.model, config.random_seed, 'acc_divergence_biggest.pth')
+                config.model, config.random_seed, '-zeroinit'
+                if config.zero_init else '', 'acc_divergence_biggest.pth')
             torch.save(best_model, model_save_path)
             log('Most train/val divergent model (so far) successfully saved.',
                 filepath=log_path,
@@ -312,9 +321,10 @@ def train(config: AttributeHashmap) -> None:
             for acc_divergence_percentage in acc_divergence_pct_list:
                 if state_dict['divergence'] > acc_divergence_percentage and \
                         not is_model_saved['acc_divergence_%s%%' % acc_divergence_percentage]:
-                    model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
+                    model_save_path = '%s/%s-%s-%s-seed%s%s-%s' % (
                         config.checkpoint_dir, config.dataset,
-                        config.bad_method, config.model, config.random_seed,
+                        config.bad_method, config.model, config.random_see,
+                        '-zeroinit' if config.zero_init else '',
                         'acc_divergence_%s%%.pth' % acc_divergence_percentage)
                     torch.save(best_model, model_save_path)
                     is_model_saved['acc_divergence_%s%%' %
@@ -378,12 +388,13 @@ def infer(config: AttributeHashmap) -> None:
                       small_image=config.small_image).to(device)
 
     checkpoint_paths = sorted(
-        glob('%s/%s-%s-%s-seed%s*.pth' %
+        glob('%s/%s-%s-%s-seed%s%s*.pth' %
              (config.checkpoint_dir, config.dataset, config.bad_method,
-              config.model, config.random_seed)))
-    log_path = '%s/%s-%s-%s-seed%s.log' % (config.log_dir, config.dataset,
-                                           config.bad_method, config.model,
-                                           config.random_seed)
+              config.model, config.random_seed,
+              '-zeroinit' if config.zero_init else '')))
+    log_path = '%s/%s-%s-%s-seed%s%s.log' % (
+        config.log_dir, config.dataset, config.bad_method, config.model,
+        config.random_seed, '-zeroinit' if config.zero_init else '')
 
     for checkpoint in tqdm(checkpoint_paths):
         checkpoint_name = checkpoint.split('/')[-1].replace('.pth', '')
@@ -463,9 +474,9 @@ if __name__ == '__main__':
     config = update_config_dirs(AttributeHashmap(config))
 
     # Update checkpoint dir.
-    config.checkpoint_dir = '%s/%s-%s-%s-seed%s/' % (
+    config.checkpoint_dir = '%s/%s-%s-%s-seed%s%s/' % (
         config.checkpoint_dir, config.dataset, config.bad_method, config.model,
-        config.random_seed)
+        config.random_seed, '-zeroinit' if config.zero_init else '')
 
     seed_everything(config.random_seed)
 
