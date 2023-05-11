@@ -50,9 +50,7 @@ def diffusion_matrix_from_phate_distance(X: np.array, k: int = 10):
 #     return P
 
 
-def compute_diffusion_matrix(X: np.array,
-                             k: int = 10,
-                             density_norm_pow: float = 1.0):
+def compute_diffusion_matrix(X: np.array, sigma: float = 10.0):
     '''
     Adapted from
     https://github.com/professorwug/diffusion_curvature/blob/master/diffusion_curvature/core.py
@@ -61,10 +59,8 @@ def compute_diffusion_matrix(X: np.array,
     Using the "anisotropic" kernel
     Inputs:
         X: a numpy array of size n x d
-        density_norm_pow: a float in [0, 1]
-            == 0: classic Gaussian kernel
-            == 1: completely removes density and provides a geometric equivalent to
-                  uniform sampling of the underlying manifold
+        sigma: a float
+            conceptually, the neighborhood size of Gaussian kernel.
     Returns:
         P: a numpy array of size n x n that is the diffusion matrix
 
@@ -76,19 +72,26 @@ def compute_diffusion_matrix(X: np.array,
     # Construct the distance matrix.
     D = pairwise_distances(X)
 
-    sigma = median_heuristic(D)
+    # Gaussian kernel
     W = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp((-D**2) / (2 * sigma**2))
 
     # Anisotropic density normalization.
-    if density_norm_pow > 0:
-        Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
-        W = Deg @ W @ Deg
+    # if density_norm_pow > 0:
+    #     Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
+    #     W = Deg @ W @ Deg
 
     # Gaussian kernel to diffusion matrix
     Deg = np.diag(1 / np.sum(W, axis=1)**0.5)
     P = Deg @ W @ Deg
 
     return P
+
+
+def estimate_gaussian_kernel_sigma(X: np.array):
+    # Construct the distance matrix.
+    D = pairwise_distances(X)
+    sigma = median_heuristic(D)
+    return sigma
 
 
 def median_heuristic(

@@ -38,7 +38,7 @@ def simple_bin(cond_x: np.array, num_digit: int):
     return assignments, cnts
 
 
-def comp_diffusion_embedding(X: np.array, knn: int):
+def comp_diffusion_embedding(X: np.array, sigma: float = 10.0):
     '''
         Compute diffusion embedding of X
     Args:
@@ -48,7 +48,7 @@ def comp_diffusion_embedding(X: np.array, knn: int):
         diff_embed: [N, N]
     '''
     # Diffusion matrix
-    diffusion_matrix = compute_diffusion_matrix(X, k=knn)
+    diffusion_matrix = compute_diffusion_matrix(X, sigma=sigma)
     eigenvalues_P, eigenvectors_P = np.linalg.eig(diffusion_matrix)
 
     # Sort eigenvalues
@@ -63,12 +63,13 @@ def comp_diffusion_embedding(X: np.array, knn: int):
 
 def mutual_information(orig_x: np.array,
                        cond_x: np.array,
-                       knn: int,
+                       sigma: float = 10.0,
                        class_method: str = 'bin',
                        num_digit: int = 2,
                        num_spectral: int = None,
                        diff_embed: np.array = None,
                        num_clusters: int = 100,
+                       vne_topk: int = None,
                        orig_entropy: float = None):
     '''
         To compute the conditioned entropy H(orig_x|cond_x), we categorize the cond_x into discrete classes,
@@ -144,11 +145,11 @@ def mutual_information(orig_x: np.array,
             s_vne = 0.0
         else:
             # Diffusion Matrix
-            s_diffusion_matrix = compute_diffusion_matrix(samples, k=knn)
+            s_diffusion_matrix = compute_diffusion_matrix(samples, sigma=sigma)
             # Eigenvalues
             s_eigenvalues_P = exact_eigvals(s_diffusion_matrix)
             # Von Neumann Entropy
-            s_vne = von_neumann_entropy(s_eigenvalues_P)
+            s_vne = von_neumann_entropy(s_eigenvalues_P, topk=vne_topk)
 
         vne_by_classes.append(s_vne)
 
@@ -159,11 +160,11 @@ def mutual_information(orig_x: np.array,
 
     if orig_entropy is None:
         # Diffusion Matrix
-        diffusion_matrix = compute_diffusion_matrix(samples, k=knn)
+        diffusion_matrix = compute_diffusion_matrix(samples, sigma=sigma)
         # Eigenvalues
         eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
-        orig_entropy = von_neumann_entropy(eigenvalues_P)
+        orig_entropy = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
 
     mi = orig_entropy - conditioned_entropy
 
@@ -174,7 +175,8 @@ def mutual_information_per_class_simple(embeddings: np.array,
                                         labels: np.array,
                                         H_Z: float = None,
                                         H_ZgivenY_map: Dict = None,
-                                        knn: int = 10,
+                                        sigma: float = 10.0,
+                                        vne_topk: int = None,
                                         chebyshev_approx: bool = False):
     '''
     Using the formula:
@@ -191,12 +193,12 @@ def mutual_information_per_class_simple(embeddings: np.array,
 
     # H(Z)
     if H_Z is None:
-        diffusion_matrix = compute_diffusion_matrix(embeddings, k=knn)
+        diffusion_matrix = compute_diffusion_matrix(embeddings, sigma=sigma)
         if chebyshev_approx:
             eigs = approx_eigvals(diffusion_matrix)
         else:
             eigs = exact_eigvals(diffusion_matrix)
-        H_Z = von_neumann_entropy(eigs)
+        H_Z = von_neumann_entropy(eigs, topk=vne_topk)
 
     # H(Z | Y)
     classes_list, class_cnts = np.unique(labels, return_counts=True)
@@ -210,7 +212,7 @@ def mutual_information_per_class_simple(embeddings: np.array,
             Z_curr_class = embeddings[inds, :]
             # Diffusion Matrix
             diffusion_matrix_curr_class = compute_diffusion_matrix(
-                Z_curr_class, k=knn)
+                Z_curr_class, sigma=sigma)
             # Eigenvalues
             if chebyshev_approx:
                 eigenvalues_curr_class = approx_eigvals(
@@ -219,7 +221,8 @@ def mutual_information_per_class_simple(embeddings: np.array,
                 eigenvalues_curr_class = exact_eigvals(
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
-            H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
+            H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class,
+                                            topk=vne_topk)
             H_ZgivenY_map[str(class_idx)] = H_ZgivenY
 
         H_givenY_by_class.append(H_ZgivenY)
@@ -237,7 +240,8 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                                                labels: np.array,
                                                H_ZgivenY_map: Dict = None,
                                                num_repetitions: int = 5,
-                                               knn: int = 10,
+                                               sigma: float = 10.0,
+                                               vne_topk: int = None,
                                                chebyshev_approx: bool = False):
     '''
     Randomly assign class labels to entire embeds graph
@@ -274,7 +278,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
             Z_curr_class = embeddings[inds, :]
             # Diffusion Matrix
             diffusion_matrix_curr_class = compute_diffusion_matrix(
-                Z_curr_class, k=knn)
+                Z_curr_class, sigma=sigma)
             # Eigenvalues
             if chebyshev_approx:
                 eigenvalues_curr_class = approx_eigvals(
@@ -283,7 +287,8 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                 eigenvalues_curr_class = exact_eigvals(
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
-            H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class)
+            H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class,
+                                            topk=vne_topk)
             H_ZgivenY_map[str(class_idx)] = H_ZgivenY
 
         # H(Z), estimated by randomly sampling the same number of points.
@@ -296,7 +301,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
             Z_random = embeddings[rand_inds, :]
             # Diffusion Matrix
             diffusion_matrix_random_set = compute_diffusion_matrix(Z_random,
-                                                                   k=knn)
+                                                                   sigma=sigma)
             # Eigenvalues
             if chebyshev_approx:
                 eigenvalues_random_set = approx_eigvals(
@@ -305,7 +310,8 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                 eigenvalues_random_set = exact_eigvals(
                     diffusion_matrix_random_set)
             # Von Neumann Entropy
-            H_Z_rep = von_neumann_entropy(eigenvalues_random_set)
+            H_Z_rep = von_neumann_entropy(eigenvalues_random_set,
+                                          topk=vne_topk)
             H_Z_list.append(H_Z_rep)
 
         H_Z = np.mean(H_Z_list)
@@ -319,9 +325,9 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
 
 def mutual_information_per_class_append(embeddings: np.array,
                                         labels: np.array,
-                                        knn: int = 10,
-                                        noise_eigval_thr = 1e-3,
+                                        sigma: float = 10.0,
                                         joint_entropy: float = None,
+                                        vne_topk: int = None,
                                         z_entropy: float = None,
                                         y_entropy: float = None):
     '''
@@ -343,27 +349,27 @@ def mutual_information_per_class_append(embeddings: np.array,
         # H(Z, Y) by appending one-hot label embeds to the Z
         joint_embeds = np.hstack((embeddings, labels_embeds))
         # Diffusion Matrix
-        diffusion_matrix = compute_diffusion_matrix(joint_embeds, k=knn)
+        diffusion_matrix = compute_diffusion_matrix(joint_embeds, sigma=sigma)
         # Eigenvalues
         eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
-        joint_entropy = von_neumann_entropy(eigenvalues_P, noise_eigval_thr)
+        joint_entropy = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
 
     if y_entropy is None:
         # Diffusion Matrix
-        diffusion_matrix = compute_diffusion_matrix(labels_embeds, k=knn)
+        diffusion_matrix = compute_diffusion_matrix(labels_embeds, sigma=sigma)
         # Eigenvalues
         eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
-        y_entropy = von_neumann_entropy(eigenvalues_P, noise_eigval_thr)
+        y_entropy = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
 
     if z_entropy is None:
         # Diffusion Matrix
-        diffusion_matrix = compute_diffusion_matrix(embeddings, k=knn)
+        diffusion_matrix = compute_diffusion_matrix(embeddings, sigma=sigma)
         # Eigenvalues
         eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
-        z_entropy = von_neumann_entropy(eigenvalues_P, noise_eigval_thr)
+        z_entropy = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
 
     mi = z_entropy + y_entropy - joint_entropy
 
@@ -419,8 +425,7 @@ def exact_eigvals(A: np.array):
     return eigenvalues
 
 
-def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 0):
-    # def von_neumann_entropy(eigs: np.array, topk: int = 100):
+def von_neumann_entropy(eigs: np.array, topk: int = None):
     '''
     von Neumann Entropy over a data graph.
 
@@ -441,10 +446,9 @@ def von_neumann_entropy(eigs: np.array, noise_eigval_thr: float = 0):
     eigenvalues = np.abs(eigenvalues)
 
     # Drop the trivial eigenvalues that are corresponding to noise eigenvectors.
-    eigenvalues[eigenvalues < noise_eigval_thr] = 0
-    # # Retain the most significant (non-trivial) eigenvalues
-    # if len(eigenvalues) > topk:
-    #     eigenvalues = eigenvalues[:topk]
+    if topk is not None:
+        if len(eigenvalues) > topk:
+            eigenvalues = eigenvalues[:topk]
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps

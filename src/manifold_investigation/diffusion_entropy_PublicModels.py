@@ -21,7 +21,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 from attribute_hashmap import AttributeHashmap
-from information import mutual_information_per_class, von_neumann_entropy, approx_eigvals, exact_eigvals, mutual_information_per_class_random_sample
+from information import von_neumann_entropy, approx_eigvals, exact_eigvals, mutual_information_per_class_random_sample
 from log_utils import log
 from seed import seed_everything
 from scheduler import LinearWarmupCosineAnnealingLR
@@ -39,7 +39,8 @@ from vicregl_model import VICRegLModel
 
 def compute_diffusion_entropy(embeddings: torch.Tensor,
                               eig_npy_path: str,
-                              knn: int,
+                              vne_topk: int,
+                              sigma: float,
                               chebyshev_approx: bool = True) -> float:
 
     if os.path.exists(eig_npy_path):
@@ -48,7 +49,7 @@ def compute_diffusion_entropy(embeddings: torch.Tensor,
         print('Pre-computed eigenvalues loaded.')
     else:
         # Diffusion Matrix
-        diffusion_matrix = compute_diffusion_matrix(embeddings, k=knn)
+        diffusion_matrix = compute_diffusion_matrix(embeddings, sigma=sigma)
         print('Diffusion matrix computed.')
 
         # Diffusion Eigenvalues
@@ -63,7 +64,7 @@ def compute_diffusion_entropy(embeddings: torch.Tensor,
             np.savez(f, eigenvalues_P=eigenvalues_P)
 
     # von Neumann Entropy
-    vne = von_neumann_entropy(eigenvalues_P)
+    vne = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
 
     return vne
 
@@ -471,14 +472,16 @@ def diffusion_entropy(args: AttributeHashmap):
             summary[version]['vne'] = compute_diffusion_entropy(
                 embeddings=embeddings,
                 eig_npy_path=eig_npy_path,
-                knn=args.knn,
+                vne_topk=args.topk,
+                sigma=args.gaussian_kernel_sigma,
                 chebyshev_approx=args.chebyshev)
 
             summary[version][
                 'mi_class'] = mutual_information_per_class_random_sample(
-                    embeddings,
-                    labels,
-                    knn=args.knn,
+                    embeddings=embeddings,
+                    labels=labels,
+                    vne_topk=args.topk,
+                    sigma=args.gaussian_kernel_sigma,
                     chebyshev_approx=args.chebyshev)
 
             #
@@ -678,6 +681,8 @@ if __name__ == '__main__':
                         type=str,
                         default='mnist')
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
+    parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
+    parser.add_argument('--topk', type=int, default=100)
     parser.add_argument(
         '--chebyshev',
         action='store_true',

@@ -23,7 +23,7 @@ sys.path.insert(0, import_dir + '/embedding_preparation')
 from attribute_hashmap import AttributeHashmap
 from information import approx_eigvals, exact_eigvals, \
     mutual_information_per_class_simple, mutual_information_per_class_random_sample, \
-        shannon_entropy, mutual_information, comp_diffusion_embedding
+        shannon_entropy, von_neumann_entropy, mutual_information, comp_diffusion_embedding
 from diffusion import compute_diffusion_matrix
 from log_utils import log
 from path_utils import update_config_dirs
@@ -41,36 +41,6 @@ cifar10_int2name = {
     8: 'ship',
     9: 'truck',
 }
-
-
-def von_neumann_entropy(eigs: np.array, topk: int = 100):
-    '''
-    von Neumann Entropy over a data graph.
-
-    H(G) = - sum_i [eig_i log eig_i]
-
-    where each `eig_i` is a non-trivial eigenvalue of G.
-    '''
-
-    eigenvalues = eigs.copy()
-    eigenvalues = eigenvalues.astype(np.float64)  # mitigates rounding error.
-
-    eigenvalues = np.array(sorted(eigenvalues)[::-1])
-
-    # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
-    eigenvalues = eigenvalues[1:]
-
-    # Eigenvalues may be negative. Only care about the magnitude, not the sign.
-    eigenvalues = np.abs(eigenvalues)
-
-    # Retain the most significant (non-trivial) eigenvalues
-    if len(eigenvalues) > topk:
-        eigenvalues = eigenvalues[:topk]
-
-    prob = eigenvalues / eigenvalues.sum()
-    prob = prob + np.finfo(float).eps
-
-    return -np.sum(prob * np.log2(prob))
 
 
 def plot_figures(data_arrays: Dict[str, Iterable],
@@ -238,6 +208,7 @@ if __name__ == '__main__':
                         help='Path to config yaml file.',
                         required=True)
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
+    parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
     parser.add_argument(
         '--chebyshev',
         action='store_true',
@@ -268,8 +239,9 @@ if __name__ == '__main__':
              (config.output_save_path, config.dataset, method_str,
               config.model, config.random_seed)))
 
+    TOPK = 100
     save_root = './results_diffusion_entropy/'
-    save_root_override = './results_diffusion_entropy_topk/'
+    save_root_override = './results_diffusion_entropy_top%d/' % TOPK
     os.makedirs(save_root, exist_ok=True)
     os.makedirs(save_root_override, exist_ok=True)
 
@@ -408,8 +380,8 @@ if __name__ == '__main__':
                 eigenvalues_P = data_numpy['eigenvalues_P']
                 print('Pre-computed eigenvalues loaded.')
             else:
-                diffusion_matrix = compute_diffusion_matrix(embeddings,
-                                                            k=args.knn)
+                diffusion_matrix = compute_diffusion_matrix(
+                    embeddings, sigma=args.gaussian_kernel_sigma)
                 print('Diffusion matrix computed.')
 
                 if args.chebyshev:
@@ -431,7 +403,7 @@ if __name__ == '__main__':
             #
             '''Diffusion Entropy'''
             log('von Neumann Entropy: ', log_path)
-            vne = von_neumann_entropy(eigenvalues_P)
+            vne = von_neumann_entropy(eigenvalues_P, topk=TOPK)
             vne_list.append(vne)
             log('Diffusion Entropy = %.4f' % vne, log_path)
 
@@ -460,7 +432,8 @@ if __name__ == '__main__':
                 embeddings=embeddings,
                 labels=labels,
                 H_Z=vne,
-                knn=args.knn,
+                sigma=args.gaussian_kernel_sigma,
+                vne_topk=TOPK,
                 chebyshev_approx=args.chebyshev)
             mi_Y_simple_list.append(mi_Y_simple)
             log('MI between z and Output (simple) = %.4f' % mi_Y_simple,
@@ -470,7 +443,8 @@ if __name__ == '__main__':
                 embeddings=embeddings,
                 labels=labels,
                 H_ZgivenY_map=H_ZgivenY_map,
-                knn=args.knn,
+                sigma=args.gaussian_kernel_sigma,
+                vne_topk=TOPK,
                 chebyshev_approx=args.chebyshev)
             mi_Y_sample_list.append(mi_Y_sample)
             log('MI between z and Output (sample) = %.4f' % mi_Y_sample,

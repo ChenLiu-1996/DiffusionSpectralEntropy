@@ -129,6 +129,10 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                data_arrays['mi_Y_sample'],
                c='mediumblue',
                s=120)
+    # ax.scatter(data_arrays['epoch'],
+    #            data_arrays['mi_Y_submatrix'],
+    #            c='darkred',
+    #            s=120)
     # ax.scatter(data_arrays['epoch'], data_arrays['mi_X'], c='green', s=120)
     # ax.scatter(data_arrays['epoch'],
     #            data_arrays['mi_X_spectral'],
@@ -181,10 +185,11 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                spearmanr(data_arrays['acc'], data_arrays['mi_Y_simple'])[0],
                spearmanr(data_arrays['acc'], data_arrays['mi_Y_simple'])[1]) +
             '\nI(z;Y) sample, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-            % (pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
-               pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1],
-               spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
-               spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1]),
+            %
+            (pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
+             pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1],
+             spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
+             spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1]),  #+
             # '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
             # % (pearsonr(data_arrays['acc'], data_arrays['mi_X'])[0],
             #    pearsonr(data_arrays['acc'], data_arrays['mi_X'])[1],
@@ -208,6 +213,7 @@ if __name__ == '__main__':
                         help='Path to config yaml file.',
                         required=True)
     parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
+    parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
     parser.add_argument(
         '--chebyshev',
         action='store_true',
@@ -376,8 +382,8 @@ if __name__ == '__main__':
                 eigenvalues_P = data_numpy['eigenvalues_P']
                 print('Pre-computed eigenvalues loaded.')
             else:
-                diffusion_matrix = compute_diffusion_matrix(embeddings,
-                                                            k=args.knn)
+                diffusion_matrix = compute_diffusion_matrix(
+                    embeddings, sigma=args.gaussian_kernel_sigma)
                 print('Diffusion matrix computed.')
 
                 if args.chebyshev:
@@ -428,7 +434,7 @@ if __name__ == '__main__':
                 embeddings=embeddings,
                 labels=labels,
                 H_Z=vne,
-                knn=args.knn,
+                sigma=args.gaussian_kernel_sigma,
                 chebyshev_approx=args.chebyshev)
             mi_Y_simple_list.append(mi_Y_simple)
             log('MI between z and Output (simple) = %.4f' % mi_Y_simple,
@@ -438,7 +444,7 @@ if __name__ == '__main__':
                 embeddings=embeddings,
                 labels=labels,
                 H_ZgivenY_map=H_ZgivenY_map,
-                knn=args.knn,
+                sigma=args.gaussian_kernel_sigma,
                 chebyshev_approx=args.chebyshev)
             mi_Y_sample_list.append(mi_Y_sample)
             log('MI between z and Output (sample) = %.4f' % mi_Y_sample,

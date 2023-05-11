@@ -66,7 +66,7 @@ if __name__ == '__main__':
             embeddings = np.random.uniform(-1, 1, size=(N, D))
             if dim < D:
                 embeddings[:, dim:] = np.random.randn(1)
-            diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
+            diffusion_matrix = compute_diffusion_matrix(embeddings)
             eigenvalues_P = exact_eigvals(diffusion_matrix)
             vne = von_neumann_entropy(eigenvalues_P)
             vne_list_uniform[0][i].append(vne)
@@ -80,7 +80,7 @@ if __name__ == '__main__':
             embeddings = np.random.randn(N, D)
             if dim < D:
                 embeddings[:, dim:] = np.random.randn(1)
-            diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
+            diffusion_matrix = compute_diffusion_matrix(embeddings)
             eigenvalues_P = exact_eigvals(diffusion_matrix)
             vne = von_neumann_entropy(eigenvalues_P)
             vne_list_gaussian[0][i].append(vne)
