@@ -125,6 +125,7 @@ if __name__ == '__main__':
         phate_op = phate.PHATE(random_state=0,
                                n_jobs=1,
                                n_components=2,
+                               t=10,
                                verbose=False)
         data_phate = phate_op.fit_transform(embeddings)
         scprep.plot.scatter2d(data_phate,
