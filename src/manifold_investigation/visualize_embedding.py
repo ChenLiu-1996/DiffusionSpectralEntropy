@@ -49,15 +49,16 @@ if __name__ == '__main__':
 
     # NOTE: Take the fixed percentage checkpoints.
     embedding_folders = sorted(
-        glob('%s/embeddings/%s-%s-%s-seed%s-*acc_*' %
-             (config.output_save_path, config.dataset, method_str,
-              config.model, config.random_seed)))
+        glob(
+            '%s/embeddings/%s-%s-%s-seed%s%s-*acc_*' %
+            (config.output_save_path, config.dataset, method_str, config.model,
+             config.random_seed, '-zeroinit' if config.zero_init else '')))
 
     save_root = './results_visualize/'
     os.makedirs(save_root, exist_ok=True)
-    save_path_fig = '%s/visualize-%s-%s-%s-seed%s.png' % (
+    save_path_fig = '%s/visualize-%s-%s-%s-seed%s%s.png' % (
         save_root, config.dataset, method_str, config.model,
-        config.random_seed)
+        config.random_seed, '-zeroinit' if config.zero_init else '')
 
     plt.rcParams['font.family'] = 'serif'
     num_cols = len(embedding_folders)

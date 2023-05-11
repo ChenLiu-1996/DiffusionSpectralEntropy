@@ -240,39 +240,43 @@ if __name__ == '__main__':
 
     # NOTE: Take all the checkpoints for all epochs. Ignore the fixed percentage checkpoints.
     embedding_folders = sorted(
-        glob('%s/embeddings/%s-%s-%s-seed%s-epoch*' %
-             (config.output_save_path, config.dataset, method_str,
-              config.model, config.random_seed)))
+        glob(
+            '%s/embeddings/%s-%s-%s-seed%s%s-epoch*' %
+            (config.output_save_path, config.dataset, method_str, config.model,
+             config.random_seed, '-zeroinit' if config.zero_init else '')))
 
     save_root = './results_diffusion_entropy/'
     os.makedirs(save_root, exist_ok=True)
 
     save_paths_fig = {
         'fig_entropy':
-        '%s/diffusion-entropy-%s-%s-%s-seed%s-knn%s.png' %
+        '%s/diffusion-entropy-%s-%s-%s-seed%s%s-knn%s.png' %
         (save_root, config.dataset, method_str, config.model,
-         config.random_seed, args.knn),
+         config.random_seed, '-zeroinit' if config.zero_init else '',
+         args.knn),
         'fig_entropy_corr':
-        '%s/diffusion-entropy-corr-%s-%s-%s-seed%s-knn%s.png' %
+        '%s/diffusion-entropy-corr-%s-%s-%s-seed%s%s-knn%s.png' %
         (save_root, config.dataset, method_str, config.model,
-         config.random_seed, args.knn),
+         config.random_seed, '-zeroinit' if config.zero_init else '',
+         args.knn),
         'fig_mi':
-        '%s/class-mutual-information-%s-%s-%s-seed%s-knn%s.png' %
+        '%s/class-mutual-information-%s-%s-%s-seed%s%s-knn%s.png' %
         (save_root, config.dataset, method_str, config.model,
-         config.random_seed, args.knn),
+         config.random_seed, '-zeroinit' if config.zero_init else '',
+         args.knn),
         'fig_mi_corr':
-        '%s/class-mutual-information-corr-%s-%s-%s-seed%s-knn%s.png' %
+        '%s/class-mutual-information-corr-%s-%s-%s-seed%s%s-knn%s.png' %
         (save_root, config.dataset, method_str, config.model,
-         config.random_seed, args.knn)
+         config.random_seed, '-zeroinit' if config.zero_init else '', args.knn)
     }
 
-    save_path_final_npy = '%s/numpy_files/figure-data-%s-%s-%s-seed%s-knn%s.npy' % (
+    save_path_final_npy = '%s/numpy_files/figure-data-%s-%s-%s-seed%s%s-knn%s.npy' % (
         save_root, config.dataset, method_str, config.model,
-        config.random_seed, args.knn)
+        config.random_seed, '-zeroinit' if config.zero_init else '', args.knn)
 
-    log_path = '%s/log-%s-%s-%s-seed%s-knn%s.txt' % (
+    log_path = '%s/log-%s-%s-%s-seed%s-knn%s%s.txt' % (
         save_root, config.dataset, method_str, config.model,
-        config.random_seed, args.knn)
+        config.random_seed, '-zeroinit' if config.zero_init else '', args.knn)
 
     os.makedirs(os.path.dirname(save_path_final_npy), exist_ok=True)
     if os.path.exists(save_path_final_npy):
