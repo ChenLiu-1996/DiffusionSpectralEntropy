@@ -63,6 +63,10 @@ def compute_diffusion_entropy(embeddings: torch.Tensor,
         with open(eig_npy_path, 'wb+') as f:
             np.savez(f, eigenvalues_P=eigenvalues_P)
 
+    eig_thr_list = [0.5, 0.2, 0.1, 5e-2, 1e-2, 1e-3, 1e-4]
+    print('# eigenvalues > thr: %s' % eig_thr_list)
+    print(str([np.sum(eigenvalues_P > thr) for thr in eig_thr_list]))
+
     # von Neumann Entropy
     vne = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
 
@@ -348,8 +352,8 @@ def diffusion_entropy(args: AttributeHashmap):
     save_folder = './results_diffusion_entropy_PublicModels/%s' % args.dataset
     npy_folder = '%s/%s/' % (save_folder, 'numpy_files')
     pt_folder = '%s/%s/' % (save_folder, 'tuned_models')
-    log_path = '%s/log-%s-seed%s-knn%s.txt' % (save_folder, args.dataset,
-                                               args.random_seed, args.knn)
+    log_path = '%s/log-%s-seed%s.txt' % (save_folder, args.dataset,
+                                         args.random_seed)
 
     os.makedirs(npy_folder, exist_ok=True)
     os.makedirs(pt_folder, exist_ok=True)
@@ -362,7 +366,6 @@ def diffusion_entropy(args: AttributeHashmap):
         'barlowtwins': ['barlowtwins_bs2048_ep1000'],
         'moco': ['moco_v1_ep200', 'moco_v2_ep200', 'moco_v2_ep800'],
         'simsiam': ['simsiam_bs256_ep100', 'simsiam_bs512_ep100'],
-        # 'simsiam': ['simsiam_bs256_ep100'],
         'swav': [
             'swav_bs256_ep200',
             'swav_bs256_ep400',
@@ -476,8 +479,8 @@ def diffusion_entropy(args: AttributeHashmap):
                 sigma=args.gaussian_kernel_sigma,
                 chebyshev_approx=args.chebyshev)
 
-            summary[version][
-                'mi_Y_sample'], _ = mutual_information_per_class_random_sample(
+            summary[version]['mi_Y_sample'], _, summary[version][
+                'H_ZgivenY'] = mutual_information_per_class_random_sample(
                     embeddings=embeddings,
                     labels=labels,
                     vne_topk=args.topk,
@@ -569,7 +572,7 @@ def normalize(
 def plot_summary(summary: dict,
                  fig_prefix: str = None,
                  full_fine_tune: bool = False):
-    version_list, vne_list, mi_class_list, acc_list_nominal, acc_list_actual = [], [], [], [], []
+    version_list, vne_list, mi_Y_sample_list, H_ZgivenY_list, acc_list_nominal, acc_list_actual = [], [], [], [], [], []
 
     if full_fine_tune:
         ylabel = 'Fine Tuning Accuracy'
@@ -580,7 +583,8 @@ def plot_summary(summary: dict,
         version = key
         version_list.append(version)
         vne_list.append(summary[version]['vne'])
-        mi_class_list.append(summary[version]['mi_Y_sample'])
+        mi_Y_sample_list.append(summary[version]['mi_Y_sample'])
+        H_ZgivenY_list.append(summary[version]['H_ZgivenY'])
         acc_list_nominal.append(summary[version]['top1_acc_nominal'])
         acc_list_actual.append(summary[version]['top1_acc_actual'])
 
@@ -592,13 +596,15 @@ def plot_summary(summary: dict,
         model_color_map[name] = cm.rainbow(i / len(unique_model_names))
 
     vne_list = np.array(vne_list)
-    mi_class_list = np.array(mi_class_list)
+    mi_Y_sample_list = np.array(mi_Y_sample_list)
+    H_ZgivenY_list = np.array(H_ZgivenY_list)
     acc_list_nominal = np.array(acc_list_nominal)
     acc_list_actual = np.array(acc_list_actual)
+    sum_list = mi_Y_sample_list + 2 * H_ZgivenY_list
 
     plt.rcParams['font.family'] = 'serif'
-    fig_corr = plt.figure(figsize=(24, 8))
-    ax = fig_corr.add_subplot(1, 3, 1)
+    fig_corr = plt.figure(figsize=(32, 8))
+    ax = fig_corr.add_subplot(1, 4, 1)
     pearson_r, pearson_p = pearsonr(acc_list_nominal, acc_list_actual)
     spearman_r, spearman_p = spearmanr(acc_list_nominal, acc_list_actual)
     ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
@@ -623,12 +629,55 @@ def plot_summary(summary: dict,
     ax.legend(version_list)
     ax.spines[['right', 'top']].set_visible(False)
 
-    ax = fig_corr.add_subplot(1, 3, 2)
+    ax = fig_corr.add_subplot(1, 4, 2)
+    pearson_r, pearson_p = pearsonr(H_ZgivenY_list, acc_list_actual)
+    spearman_r, spearman_p = spearmanr(H_ZgivenY_list, acc_list_actual)
+    ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
+                 (pearson_r, pearson_p, spearman_r, spearman_p))
+    ax.set_xlabel(r'$H(Z | Y)$')
+    ax.set_ylabel(ylabel)
+
+    for i in range(len(version_list)):
+        ax.scatter(H_ZgivenY_list[i],
+                   acc_list_actual[i],
+                   color=model_color_map[version_list[i].split('_ep')[0]],
+                   s=int(version_list[i].split('_ep')[1]) / 5,
+                   cmap='tab10')
+    linear_fit_coeff = np.polyfit(H_ZgivenY_list, acc_list_actual, 1)
+    linear_fit_fn = np.poly1d(linear_fit_coeff)
+    x_arr = np.linspace(np.min(H_ZgivenY_list), np.max(H_ZgivenY_list), 100)
+    ax.plot(x_arr, linear_fit_fn(x_arr), 'k:')
+    ax.legend(version_list)
+    ax.spines[['right', 'top']].set_visible(False)
+
+    ax = fig_corr.add_subplot(1, 4, 3)
+    pearson_r, pearson_p = pearsonr(mi_Y_sample_list, acc_list_actual)
+    spearman_r, spearman_p = spearmanr(mi_Y_sample_list, acc_list_actual)
+    ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
+                 (pearson_r, pearson_p, spearman_r, spearman_p))
+    ax.set_xlabel(r'$I(Z; Y)$')
+    ax.set_ylabel(ylabel)
+
+    for i in range(len(version_list)):
+        ax.scatter(mi_Y_sample_list[i],
+                   acc_list_actual[i],
+                   color=model_color_map[version_list[i].split('_ep')[0]],
+                   s=int(version_list[i].split('_ep')[1]) / 5,
+                   cmap='tab10')
+    linear_fit_coeff = np.polyfit(mi_Y_sample_list, acc_list_actual, 1)
+    linear_fit_fn = np.poly1d(linear_fit_coeff)
+    x_arr = np.linspace(np.min(mi_Y_sample_list), np.max(mi_Y_sample_list),
+                        100)
+    ax.plot(x_arr, linear_fit_fn(x_arr), 'k:')
+    ax.legend(version_list)
+    ax.spines[['right', 'top']].set_visible(False)
+
+    ax = fig_corr.add_subplot(1, 4, 4)
     pearson_r, pearson_p = pearsonr(vne_list, acc_list_actual)
     spearman_r, spearman_p = spearmanr(vne_list, acc_list_actual)
     ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
                  (pearson_r, pearson_p, spearman_r, spearman_p))
-    ax.set_xlabel('Diffusion Entropy')
+    ax.set_xlabel(r'$H(Z)$')
     ax.set_ylabel(ylabel)
 
     for i in range(len(version_list)):
@@ -640,27 +689,6 @@ def plot_summary(summary: dict,
     linear_fit_coeff = np.polyfit(vne_list, acc_list_actual, 1)
     linear_fit_fn = np.poly1d(linear_fit_coeff)
     x_arr = np.linspace(np.min(vne_list), np.max(vne_list), 100)
-    ax.plot(x_arr, linear_fit_fn(x_arr), 'k:')
-    ax.legend(version_list)
-    ax.spines[['right', 'top']].set_visible(False)
-
-    ax = fig_corr.add_subplot(1, 3, 3)
-    pearson_r, pearson_p = pearsonr(mi_class_list, acc_list_actual)
-    spearman_r, spearman_p = spearmanr(mi_class_list, acc_list_actual)
-    ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' %
-                 (pearson_r, pearson_p, spearman_r, spearman_p))
-    ax.set_xlabel(r'Mutual Information $I(Z, Y)$')
-    ax.set_ylabel(ylabel)
-
-    for i in range(len(version_list)):
-        ax.scatter(mi_class_list[i],
-                   acc_list_actual[i],
-                   color=model_color_map[version_list[i].split('_ep')[0]],
-                   s=int(version_list[i].split('_ep')[1]) / 5,
-                   cmap='tab10')
-    linear_fit_coeff = np.polyfit(mi_class_list, acc_list_actual, 1)
-    linear_fit_fn = np.poly1d(linear_fit_coeff)
-    x_arr = np.linspace(np.min(mi_class_list), np.max(mi_class_list), 100)
     ax.plot(x_arr, linear_fit_fn(x_arr), 'k:')
     ax.legend(version_list)
     ax.spines[['right', 'top']].set_visible(False)
@@ -680,9 +708,8 @@ if __name__ == '__main__':
                         help='which dataset to run',
                         type=str,
                         default='mnist')
-    parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
-    parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
-    parser.add_argument('--topk', type=int, default=100)
+    parser.add_argument('--gaussian-kernel-sigma', type=float, default=20.0)
+    parser.add_argument('--topk', type=int, default=200)
     parser.add_argument(
         '--chebyshev',
         action='store_true',

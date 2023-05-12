@@ -227,7 +227,6 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
-    parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
     parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
     parser.add_argument('--topk', type=int, default=100)
     parser.add_argument(
@@ -256,47 +255,43 @@ if __name__ == '__main__':
 
     # NOTE: Take all the checkpoints for all epochs. Ignore the fixed percentage checkpoints.
     embedding_folders = sorted(
-        glob(
-            '%s/embeddings/%s-%s-%s-seed%s%s-epoch*' %
-            (config.output_save_path, config.dataset, method_str, config.model,
-             config.random_seed, '-zeroinit' if config.zero_init else '')))
+        glob('%s/embeddings/%s-%s-%s-seed%s-epoch*' %
+             (config.output_save_path, config.dataset, method_str,
+              config.model, config.random_seed)))
 
-    save_root = './results_diffusion_entropy/'
-    save_root_override = './results_diffusion_entropy_top%d/' % args.topk
+    save_root = './results_diffusion_entropy_top%d/' % args.topk
     os.makedirs(save_root, exist_ok=True)
-    os.makedirs(save_root_override, exist_ok=True)
 
     save_paths_fig = {
         'fig_entropy':
-        '%s/diffusion-entropy-%s-%s-%s-seed%s%s-knn%s.png' %
-        (save_root_override, config.dataset, method_str, config.model,
-         config.random_seed, '-zeroinit' if config.zero_init else '',
-         args.knn),
+        '%s/diffusion-entropy-%s-%s-%s-seed%s.png' %
+        (save_root, config.dataset, method_str, config.model,
+         config.random_seed),
         'fig_entropy_corr':
-        '%s/diffusion-entropy-corr-%s-%s-%s-seed%s%s-knn%s.png' %
-        (save_root_override, config.dataset, method_str, config.model,
-         config.random_seed, '-zeroinit' if config.zero_init else '',
-         args.knn),
+        '%s/diffusion-entropy-corr-%s-%s-%s-seed%s.png' %
+        (save_root, config.dataset, method_str, config.model,
+         config.random_seed),
         'fig_mi':
-        '%s/class-mutual-information-%s-%s-%s-seed%s%s-knn%s.png' %
-        (save_root_override, config.dataset, method_str, config.model,
-         config.random_seed, '-zeroinit' if config.zero_init else '',
-         args.knn),
+        '%s/class-mutual-information-%s-%s-%s-seed%s.png' %
+        (save_root, config.dataset, method_str, config.model,
+         config.random_seed),
         'fig_mi_corr':
-        '%s/class-mutual-information-corr-%s-%s-%s-seed%s%s-knn%s.png' %
-        (save_root_override, config.dataset, method_str, config.model,
-         config.random_seed, '-zeroinit' if config.zero_init else '', args.knn)
+        '%s/class-mutual-information-corr-%s-%s-%s-seed%s.png' %
+        (save_root, config.dataset, method_str, config.model,
+         config.random_seed)
     }
 
-    save_path_final_npy = '%s/numpy_files/figure-data-%s-%s-%s-seed%s%s-knn%s.npy' % (
-        save_root_override, config.dataset, method_str, config.model,
-        config.random_seed, '-zeroinit' if config.zero_init else '', args.knn)
+    save_path_final_npy = '%s/numpy_files/figure-data-%s-%s-%s-seed%s.npy' % (
+        save_root, config.dataset, method_str, config.model,
+        config.random_seed)
 
-    log_path = '%s/log-%s-%s-%s-seed%s%s-knn%s.txt' % (
-        save_root_override, config.dataset, method_str, config.model,
-        config.random_seed, '-zeroinit' if config.zero_init else '', args.knn)
+    log_path = '%s/log-%s-%s-%s-seed%s.txt' % (save_root, config.dataset,
+                                               method_str, config.model,
+                                               config.random_seed)
 
     os.makedirs(os.path.dirname(save_path_final_npy), exist_ok=True)
+    log('Gaussian kernel sigma: %s\n' % args.gaussian_kernel_sigma, log_path)
+
     if os.path.exists(save_path_final_npy):
         data_numpy = np.load(save_path_final_npy)
         data_arrays = {
@@ -360,35 +355,6 @@ if __name__ == '__main__':
                 labels = labels_updated
                 del labels_updated
 
-            # diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
-            # print('ready set go')
-            # import time
-            # t1 = time.time()
-            # eigenvalues_P1 = np.linalg.eigvals(diffusion_matrix)
-            # t2 = time.time()
-            # eigenvalues_P2 = approx_eigvals(diffusion_matrix)
-            # t3 = time.time()
-            # print(t2 - t1, t3 - t2)
-
-            # import seaborn as sns
-            # fig = plt.figure(figsize=(10, 10))
-            # ax = fig.add_subplot(2, 2, 1)
-            # sns.boxplot(x=eigenvalues_P1, color='skyblue', ax=ax)
-            # ax.set_xlim([-1, 1])
-            # ax = fig.add_subplot(2, 2, 2)
-            # sns.boxplot(x=eigenvalues_P2, color='skyblue', ax=ax)
-            # ax.set_xlim([-1, 1])
-            # ax = fig.add_subplot(2, 2, 3)
-            # ax.hist(eigenvalues_P1, color='white', edgecolor='k', bins=1000)
-            # ax.set_xlim([-1, 1])
-            # ax = fig.add_subplot(2, 2, 4)
-            # ax.hist(eigenvalues_P2, color='white', edgecolor='k', bins=1000)
-            # ax.set_xlim([-1, 1])
-            # fig.savefig('test.png')
-
-            # import pdb
-            # pdb.set_trace()
-
             #
             '''Shannon Entropy of embeddings'''
             se = shannon_entropy(embeddings)
@@ -435,24 +401,7 @@ if __name__ == '__main__':
             #
             '''Mutual Information between z and Output Class'''
             log('Mutual Information between z and Output Class: ', log_path)
-            # classes_list, classes_cnts = np.unique(labels, return_counts=True)
-            # vne_by_classes = []
-            # for class_idx in tqdm(classes_list):
-            #     inds = (labels == class_idx).reshape(-1)
-            #     samples = embeddings[inds, :]
-            #     # Diffusion Matrix
-            #     diffusion_matrix_curr_class = compute_diffusion_matrix(
-            #         samples, k=args.knn)
-            #     # Eigenvalues
-            #     eigenvalues_P_curr_class = np.linalg.eigvals(
-            #         diffusion_matrix_curr_class)
-            #     # Von Neumann Entropy
-            #     vne_curr_class = von_neumann_entropy(eigenvalues_P_curr_class)
-            #     vne_by_classes.append(vne_curr_class)
-            # mi = mutual_information_per_class(eigenvalues_P,
-            #                                   vne_by_classes,
-            #                                   classes_cnts.tolist(),
-            #                                   unconditioned_entropy=vne)
+
             mi_Y_simple, H_ZgivenY_map, H_ZgivenY = mutual_information_per_class_simple(
                 embeddings=embeddings,
                 labels=labels,
@@ -495,39 +444,6 @@ if __name__ == '__main__':
             #     'MI between z and Input = %.4f, Cond Entropy = %.4f, Cond Classes Num: %d '
             #     % (mi_X, mi_cond, cond_classes_nums), log_path)
             #
-            '''(Spectral Bin) Mutual Information between z and Input'''
-            # log('(Spectral Bin) Mutual Information between z and Input: ',
-            #     log_path)
-            # # Diffusion embeddings of orig_input
-            # save_path_diff_embed = '%s/numpy_files/diffusion-embeddings/%s.npz' % (
-            #     save_root, config.dataset)
-            # os.makedirs(os.path.dirname(save_path_diff_embed), exist_ok=True)
-            # if os.path.exists(save_path_diff_embed):
-            #     diff_embed = np.load(save_path_diff_embed)['diff_embed']
-            #     print(
-            #         'Pre-computed original data diffusion embeddings loaded.')
-            # else:
-            #     diff_embed = comp_diffusion_embedding(orig_input, knn=args.knn)
-            #     print('Original data diffusion embeddings computed.')
-            #     diff_embed = diff_embed.astype(np.float16)
-            #     with open(save_path_diff_embed, 'wb+') as f:
-            #         np.savez(f, diff_embed=diff_embed)
-
-            # mi_X_spectral, mi_cond_spectral, cond_classes_nums_spectral = mutual_information(
-            #     orig_x=embeddings,
-            #     cond_x=orig_input,
-            #     knn=args.knn,
-            #     class_method='spectral_bin',
-            #     num_digit=2,
-            #     num_spectral=None,
-            #     diff_embed=diff_embed,
-            #     orig_entropy=vne)
-
-            # mi_X_spectral_list.append(mi_X_spectral)
-            # log(
-            #     '(Spectral Bin) MI between z and Input = %.4f, Cond Entropy = %.4f, Cond Classes Num: %d '
-            #     % (mi_X_spectral, mi_cond_spectral, cond_classes_nums_spectral),
-            #     log_path)
 
             # Plotting
             data_arrays = {
