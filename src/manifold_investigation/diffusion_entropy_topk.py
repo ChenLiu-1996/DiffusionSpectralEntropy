@@ -115,12 +115,15 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     # MI wrt Output
     ax.plot(data_arrays['epoch'], data_arrays['mi_Y_simple'], c='grey')
     ax.plot(data_arrays['epoch'], data_arrays['mi_Y_sample'], c='mediumblue')
+    ax.plot(data_arrays['epoch'], data_arrays['H_ZgivenY'], c='mediumblue')
     # MI wrt Input
     # ax.plot(data_arrays['epoch'], data_arrays['mi_X'], c='green')
     # ax.plot(data_arrays['epoch'], data_arrays['mi_X_spectral'], c='red')
-    ax.legend(
-        ['I(z; Y) simple', 'I(z; Y) sample', 'I(z;X)', 'I(z;X) spectral'],
-        bbox_to_anchor=(1.00, 0.48))
+    ax.legend([
+        'I(z; Y) simple', 'I(z; Y) sample', 'H(Z | Y)', 'I(z;X)',
+        'I(z;X) spectral'
+    ],
+              bbox_to_anchor=(1.00, 0.48))
     ax.scatter(data_arrays['epoch'],
                data_arrays['mi_Y_simple'],
                c='grey',
@@ -128,6 +131,10 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     ax.scatter(data_arrays['epoch'],
                data_arrays['mi_Y_sample'],
                c='mediumblue',
+               s=120)
+    ax.scatter(data_arrays['epoch'],
+               data_arrays['H_ZgivenY'],
+               c='darkred',
                s=120)
     # ax.scatter(data_arrays['epoch'], data_arrays['mi_X'], c='green', s=120)
     # ax.scatter(data_arrays['epoch'],
@@ -154,6 +161,11 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                c='mediumblue',
                alpha=0.5,
                s=300)
+    ax.scatter(data_arrays['acc'],
+               data_arrays['H_ZgivenY'],
+               c='darkred',
+               alpha=0.5,
+               s=300)
     # ax.scatter(data_arrays['acc'],
     #            data_arrays['mi_X'],
     #            c='green',
@@ -166,7 +178,10 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     #            alpha=0.5,
     #            s=300,
     #            linewidths=5)
-    ax.legend(['I(z;Y) simple', 'I(z;Y) sample', 'I(z;X)', 'I(z;X) spectral'],
+    ax.legend([
+        'I(z; Y) simple', 'I(z; Y) sample', 'H(Z | Y)', 'I(z;X)',
+        'I(z;X) spectral'
+    ],
               bbox_to_anchor=(1.00, 0.48))
     fig_mi_corr.supylabel('Mutual Information', fontsize=40)
     fig_mi_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
@@ -175,16 +190,21 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     # # Display correlation.
     if len(data_arrays['acc']) > 1:
         fig_mi_corr.suptitle(
-            'I(z;Y) simple, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            'I(z; Y) simple, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
             % (pearsonr(data_arrays['acc'], data_arrays['mi_Y_simple'])[0],
                pearsonr(data_arrays['acc'], data_arrays['mi_Y_simple'])[1],
                spearmanr(data_arrays['acc'], data_arrays['mi_Y_simple'])[0],
                spearmanr(data_arrays['acc'], data_arrays['mi_Y_simple'])[1]) +
-            '\nI(z;Y) sample, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            '\nI(z; Y) sample, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
             % (pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
                pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1],
                spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
-               spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1]),
+               spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1]) +
+            '\nH(Z | Y) sample, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            % (pearsonr(data_arrays['acc'], data_arrays['H_ZgivenY'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['H_ZgivenY'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['H_ZgivenY'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['H_ZgivenY'])[1]),
             # '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
             # % (pearsonr(data_arrays['acc'], data_arrays['mi_X'])[0],
             #    pearsonr(data_arrays['acc'], data_arrays['mi_X'])[1],
