@@ -115,7 +115,7 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     # MI wrt Output
     ax.plot(data_arrays['epoch'], data_arrays['mi_Y_simple'], c='grey')
     ax.plot(data_arrays['epoch'], data_arrays['mi_Y_sample'], c='mediumblue')
-    ax.plot(data_arrays['epoch'], data_arrays['H_ZgivenY'], c='mediumblue')
+    ax.plot(data_arrays['epoch'], data_arrays['H_ZgivenY'], c='darkred')
     # MI wrt Input
     # ax.plot(data_arrays['epoch'], data_arrays['mi_X'], c='green')
     # ax.plot(data_arrays['epoch'], data_arrays['mi_X_spectral'], c='red')
