@@ -295,8 +295,8 @@ if __name__ == '__main__':
 
     else:
         epoch_list, acc_list, se_list, vne_list, \
-            mi_Y_simple_list, mi_Y_append_list, mi_Y_sample_list, mi_X_list, mi_X_spectral_list \
-                = [], [], [], [], [], [], [], [], []
+            mi_Y_simple_list, mi_Y_append_list, mi_Y_sample_list, H_ZgivenY_list, mi_X_list, mi_X_spectral_list \
+                = [], [], [], [], [], [], [], [], [], []
 
         for i, embedding_folder in enumerate(embedding_folders):
             epoch_list.append(
@@ -434,17 +434,18 @@ if __name__ == '__main__':
             #                                   vne_by_classes,
             #                                   classes_cnts.tolist(),
             #                                   unconditioned_entropy=vne)
-            mi_Y_simple, H_ZgivenY_map = mutual_information_per_class_simple(
+            mi_Y_simple, H_ZgivenY_map, H_ZgivenY = mutual_information_per_class_simple(
                 embeddings=embeddings,
                 labels=labels,
                 H_Z=vne,
                 sigma=args.gaussian_kernel_sigma,
                 chebyshev_approx=args.chebyshev)
             mi_Y_simple_list.append(mi_Y_simple)
+            H_ZgivenY_list.append(H_ZgivenY)
             log('MI between z and Output (simple) = %.4f' % mi_Y_simple,
                 log_path)
 
-            mi_Y_sample, _ = mutual_information_per_class_random_sample(
+            mi_Y_sample, _, _ = mutual_information_per_class_random_sample(
                 embeddings=embeddings,
                 labels=labels,
                 H_ZgivenY_map=H_ZgivenY_map,
@@ -515,6 +516,7 @@ if __name__ == '__main__':
                 'vne': vne_list,
                 'mi_Y_simple': mi_Y_simple_list,
                 'mi_Y_sample': mi_Y_sample_list,
+                'H_ZgivenY': H_ZgivenY_list,
                 # 'mi_X': mi_X_list,
                 # 'mi_X_spectral': mi_X_spectral_list,
             }
@@ -528,6 +530,7 @@ if __name__ == '__main__':
                      se=np.array(se_list),
                      vne=np.array(vne_list),
                      mi_Y_simple=np.array(mi_Y_simple_list),
-                     mi_Y_sample=np.array(mi_Y_sample_list))
+                     mi_Y_sample=np.array(mi_Y_sample_list),
+                     H_ZgivenY=np.array(H_ZgivenY_list))
             #  mi_X=np.array(mi_X_list)
             #  mi_X_spectral=np.array(mi_X_spectral_list))

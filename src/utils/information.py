@@ -202,11 +202,11 @@ def mutual_information_per_class_simple(embeddings: np.array,
 
     # H(Z | Y)
     classes_list, class_cnts = np.unique(labels, return_counts=True)
-    H_givenY_by_class = []
+    H_ZgivenY_by_class = []
 
     for class_idx in tqdm(classes_list):
         if map_predefined:
-            H_ZgivenY = H_ZgivenY_map[str(class_idx)]
+            H_ZgivenY_curr_class = H_ZgivenY_map[str(class_idx)]
         else:
             inds = (labels == class_idx).reshape(-1)
             Z_curr_class = embeddings[inds, :]
@@ -221,19 +221,19 @@ def mutual_information_per_class_simple(embeddings: np.array,
                 eigenvalues_curr_class = exact_eigvals(
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
-            H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class,
-                                            topk=vne_topk)
-            H_ZgivenY_map[str(class_idx)] = H_ZgivenY
+            H_ZgivenY_curr_class = von_neumann_entropy(eigenvalues_curr_class,
+                                                       topk=vne_topk)
+            H_ZgivenY_map[str(class_idx)] = H_ZgivenY_curr_class
 
-        H_givenY_by_class.append(H_ZgivenY)
+        H_ZgivenY_by_class.append(H_ZgivenY_curr_class)
 
     # I(Z; Y)
     H_ZgivenY = np.sum(class_cnts / np.sum(class_cnts) *
-                       np.array(H_givenY_by_class))
+                       np.array(H_ZgivenY_by_class))
 
     mi = H_Z - H_ZgivenY
 
-    return mi, H_ZgivenY_map
+    return mi, H_ZgivenY_map, H_ZgivenY
 
 
 def mutual_information_per_class_random_sample(embeddings: np.array,
@@ -262,6 +262,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
     '''
     classes_list, class_cnts = np.unique(labels, return_counts=True)
     mi_by_class = []
+    H_ZgivenY_by_class = []
 
     if H_ZgivenY_map is None:
         H_ZgivenY_map = {}
@@ -272,7 +273,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
     for class_idx in tqdm(classes_list):
         # H(Z | Y)
         if map_predefined:
-            H_ZgivenY = H_ZgivenY_map[str(class_idx)]
+            H_ZgivenY_curr_class = H_ZgivenY_map[str(class_idx)]
         else:
             inds = (labels == class_idx).reshape(-1)
             Z_curr_class = embeddings[inds, :]
@@ -287,9 +288,9 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                 eigenvalues_curr_class = exact_eigvals(
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
-            H_ZgivenY = von_neumann_entropy(eigenvalues_curr_class,
-                                            topk=vne_topk)
-            H_ZgivenY_map[str(class_idx)] = H_ZgivenY
+            H_ZgivenY_curr_class = von_neumann_entropy(eigenvalues_curr_class,
+                                                       topk=vne_topk)
+            H_ZgivenY_map[str(class_idx)] = H_ZgivenY_curr_class
 
         # H(Z), estimated by randomly sampling the same number of points.
         random.seed(0)
@@ -316,11 +317,14 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
 
         H_Z = np.mean(H_Z_list)
 
-        mi_by_class.append((H_Z - H_ZgivenY))
+        mi_by_class.append((H_Z - H_ZgivenY_curr_class))
+        H_ZgivenY_by_class.append(H_ZgivenY_curr_class)
 
     mi = np.sum(class_cnts / np.sum(class_cnts) * np.array(mi_by_class))
+    H_ZgivenY = np.sum(class_cnts / np.sum(class_cnts) *
+                       np.array(H_ZgivenY_by_class))
 
-    return mi, H_ZgivenY_map
+    return mi, H_ZgivenY_map, H_ZgivenY
 
 
 def mutual_information_per_class_append(embeddings: np.array,
