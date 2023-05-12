@@ -288,6 +288,7 @@ if __name__ == '__main__':
             'vne': data_numpy['vne'],
             'mi_Y_simple': data_numpy['mi_Y_simple'],
             'mi_Y_sample': data_numpy['mi_Y_sample'],
+            'H_ZgivenY': data_numpy['H_ZgivenY'],
             # 'mi_X': data_numpy['mi_X'],
             # 'mi_X_spectral': data_numpy['mi_X_spectral'],
         }
