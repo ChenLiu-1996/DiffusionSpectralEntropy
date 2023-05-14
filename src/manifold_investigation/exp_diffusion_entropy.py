@@ -205,7 +205,7 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
-    parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
+    parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
     parser.add_argument(
         '--chebyshev',
         action='store_true',
@@ -256,30 +256,30 @@ if __name__ == '__main__':
 
     save_paths_fig = {
         'fig_entropy':
-        '%s/diffusion-entropy-%s-%s-%s-seed%s-knn%s.png' %
+        '%s/diffusion-entropy-%s-%s-%s-seed%s.png' %
         (save_root, config.dataset, method_str, config.model,
-         config.random_seed, args.knn),
+         config.random_seed),
         'fig_entropy_corr':
-        '%s/diffusion-entropy-corr-%s-%s-%s-seed%s-knn%s.png' %
+        '%s/diffusion-entropy-corr-%s-%s-%s-seed%s.png' %
         (save_root, config.dataset, method_str, config.model,
-         config.random_seed, args.knn),
+         config.random_seed),
         'fig_mi':
-        '%s/class-mutual-information-%s-%s-%s-seed%s-knn%s.png' %
+        '%s/class-mutual-information-%s-%s-%s-seed%s.png' %
         (save_root, config.dataset, method_str, config.model,
-         config.random_seed, args.knn),
+         config.random_seed),
         'fig_mi_corr':
-        '%s/class-mutual-information-corr-%s-%s-%s-seed%s-knn%s.png' %
+        '%s/class-mutual-information-corr-%s-%s-%s-seed%s.png' %
         (save_root, config.dataset, method_str, config.model,
-         config.random_seed, args.knn)
+         config.random_seed)
     }
 
-    save_path_final_npy = '%s/numpy_files/figure-data-%s-%s-%s-seed%s-knn%s.npy' % (
+    save_path_final_npy = '%s/numpy_files/figure-data-%s-%s-%s-seed%s.npy' % (
         save_root, config.dataset, method_str, config.model,
-        config.random_seed, args.knn)
+        config.random_seed)
 
-    log_path = '%s/log-%s-%s-%s-seed%s-knn%s.txt' % (
+    log_path = '%s/log-%s-%s-%s-seed%s.txt' % (
         save_root, config.dataset, method_str, config.model,
-        config.random_seed, args.knn)
+        config.random_seed)
 
     os.makedirs(os.path.dirname(save_path_final_npy), exist_ok=True)
     if os.path.exists(save_path_final_npy):
@@ -298,7 +298,7 @@ if __name__ == '__main__':
         plot_figures(data_arrays=data_arrays, save_paths_fig=save_paths_fig)
 
     else:
-        epoch_list, acc_list, se_list, vne_list, vne_random_list, mi_Y_list, mi_Y_list_sample, mi_X_list, mi_X_spectral_list = [], [], [], [], [], [], [], []
+        epoch_list, acc_list, se_list, vne_list, vne_random_list, mi_Y_list, mi_Y_list_sample = [], [], [], [], [], [], []
 
         for i, embedding_folder in enumerate(embedding_folders):
             epoch_list.append(
@@ -391,8 +391,7 @@ if __name__ == '__main__':
                 coeffs_map = data_numpy['coeffs_map'] # [1 + (1+num_rep) x C, N]
                 print('Pre-computed eigenvalues & fourier coeffs loaded.')
             else:
-                diffusion_matrix = compute_diffusion_matrix(embeddings,
-                                                            k=args.knn)
+                diffusion_matrix = compute_diffusion_matrix(embeddings, sigma=args.gaussian_kernel_sigma)
                 print('Diffusion matrix computed.')
 
                 eigenvectors_P, eigenvalues_P = exact_eig(diffusion_matrix)
