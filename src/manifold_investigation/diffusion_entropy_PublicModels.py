@@ -708,8 +708,8 @@ if __name__ == '__main__':
                         help='which dataset to run',
                         type=str,
                         default='mnist')
-    parser.add_argument('--gaussian-kernel-sigma', type=float, default=20.0)
-    parser.add_argument('--topk', type=int, default=200)
+    parser.add_argument('--gaussian-kernel-sigma', type=float, default=40.0)
+    parser.add_argument('--topk', type=int, default=100)
     parser.add_argument(
         '--chebyshev',
         action='store_true',
