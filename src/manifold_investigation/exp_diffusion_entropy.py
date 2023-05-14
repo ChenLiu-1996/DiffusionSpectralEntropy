@@ -468,7 +468,7 @@ if __name__ == '__main__':
             #                                   classes_cnts.tolist(),
             #                                   unconditioned_entropy=vne)
             
-            mi_sample, H_ZgivenY = mi_fourier(coeffs_map[1:, :], labels, args.num_repetitions, args.topk)
+            mi_sample, H_ZgivenY = mi_fourier(coeffs_map[1:, :], labels, args.num_repetitions, args.topk, log_path)
             mi_full = vne - H_ZgivenY
             mi_Y_list.append(mi_full)
             log('MI between z and Output using full signal= %.4f' % mi_full, log_path)

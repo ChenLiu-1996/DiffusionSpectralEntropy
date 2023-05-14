@@ -5,6 +5,7 @@ from tqdm import tqdm
 import random
 from diffusion import compute_diffusion_matrix
 from DiffusionEMD.diffusion_emd import estimate_dos
+from log_utils import log
 
 
 def simple_bin(cond_x: np.array, num_digit: int):
@@ -82,7 +83,7 @@ def fourier_entropy(components: np.array, topk: int = 100):
     return -np.sum(prob * np.log2(prob))
 
 
-def mi_fourier(coeffs_map: np.array, labels: np.array, num_rep: int, topk: int):
+def mi_fourier(coeffs_map: np.array, labels: np.array, num_rep: int, topk: int, log_path: str):
     '''
         coeffs_map: [(1+num_rep) x num_classes, N]
 
@@ -101,10 +102,11 @@ def mi_fourier(coeffs_map: np.array, labels: np.array, num_rep: int, topk: int):
         
         c_entropy = fourier_entropy(coeffs[0, :], topk) # H(Z|Y=y)
 
-        r_entropy = 0.0
+        re_list = []
         for ri in np.arange(num_rep):
-            r_entropy += fourier_entropy(coeffs[1+ri, :], topk)
-        r_entropy /= num_rep
+            re_list.append(fourier_entropy(coeffs[1+ri, :], topk))
+        r_entropy = np.mean(re_list)
+        log(np.var(r_entropy), log_path)
 
         mi_by_class.append(r_entropy-c_entropy)
         H_ZgivenY_by_class.append(c_entropy)
