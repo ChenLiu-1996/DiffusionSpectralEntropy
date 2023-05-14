@@ -491,9 +491,11 @@ def exact_eig(A: np.array):
     '''
     if np.allclose(A, A.T, rtol=1e-5, atol=1e-8):
         # Symmetric matrix.
-        eigenvectors_P, eigenvalues_P = np.linalg.eig(A)
+        eigenvalues_P, eigenvectors_P = np.linalg.eig(A)
     else:
-        eigenvectors_P, eigenvalues_P = np.linalg.eigh(A)
+        eigenvalues_P, eigenvectors_P = np.linalg.eigh(A)
+
+    print('Eigen vals & vecs Done. ', eigenvalues_P.shape, eigenvectors_P.shape)
 
     # Sort eigenvalues
     sorted_idx = np.argsort(eigenvalues_P)[::-1]
