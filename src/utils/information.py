@@ -106,7 +106,7 @@ def mi_fourier(coeffs_map: np.array, labels: np.array, num_rep: int, topk: int, 
         for ri in np.arange(num_rep):
             re_list.append(fourier_entropy(coeffs[1+ri, :], topk))
         r_entropy = np.mean(re_list)
-        log(np.var(r_entropy), log_path)
+        log('variance: %.4f' % np.var(r_entropy), log_path)
 
         mi_by_class.append(r_entropy-c_entropy)
         H_ZgivenY_by_class.append(c_entropy)
