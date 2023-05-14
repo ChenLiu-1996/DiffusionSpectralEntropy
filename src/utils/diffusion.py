@@ -63,10 +63,6 @@ def compute_diffusion_matrix(X: np.array, sigma: float = 10.0):
             conceptually, the neighborhood size of Gaussian kernel.
     Returns:
         P: a numpy array of size n x n that is the diffusion matrix
-
-    NOTE: With a recent update (using anisotropic kernel instead of adaptive kernel),
-          the input argument `k` becomes a dummy argument.
-          It's not removed yet for backward compatibility.
     '''
 
     # Construct the distance matrix.
@@ -76,15 +72,13 @@ def compute_diffusion_matrix(X: np.array, sigma: float = 10.0):
     W = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp((-D**2) / (2 * sigma**2))
 
     # Anisotropic density normalization.
-    # if density_norm_pow > 0:
-    #     Deg = np.diag(1 / np.sum(W, axis=1)**density_norm_pow)
-    #     W = Deg @ W @ Deg
-
-    # Gaussian kernel to diffusion matrix
     Deg = np.diag(1 / np.sum(W, axis=1)**0.5)
-    P = Deg @ W @ Deg
+    W = Deg @ W @ Deg
 
-    return P
+    # Now the W has the exact same eigenvalues as the diffusion matrix `P`
+    # if we do `P = D^{-1} W` now, with `D = np.diag(np.sum(W, axis=1))`.
+
+    return W
 
 
 def estimate_gaussian_kernel_sigma(X: np.array):

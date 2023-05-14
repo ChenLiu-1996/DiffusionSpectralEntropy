@@ -95,7 +95,7 @@ def mi_fourier(coeffs_map: np.array, labels: np.array, num_rep: int, topk: int, 
 
     mi_by_class = []
     H_ZgivenY_by_class = []
-    for class_idx in tqdm(classes_list):
+    for class_idx in classes_list:
         sid = class_idx*(num_rep+1)
         eid = class_idx*(num_rep+1) + (num_rep+1)
         coeffs = coeffs_map[sid:eid, :]
@@ -329,7 +329,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
     else:
         map_predefined = True
 
-    for class_idx in tqdm(classes_list):
+    for class_idx in classes_list:
         # H(Z | Y)
         if map_predefined:
             H_ZgivenY_curr_class = H_ZgivenY_map[str(class_idx)]
@@ -498,8 +498,6 @@ def exact_eig(A: np.array):
         eigenvalues_P, eigenvectors_P = np.linalg.eigh(A)
     else:
         eigenvalues_P, eigenvectors_P = np.linalg.eig(A)
-
-    print('Eigen vals & vecs Done. ', eigenvalues_P.shape, eigenvectors_P.shape)
 
     # Sort eigenvalues
     sorted_idx = np.argsort(eigenvalues_P)[::-1]
