@@ -65,18 +65,18 @@ def fourier_entropy(components: np.array, topk: int = 100):
         components: coordinates in Fourier domain
         NOTE: components assumed to be pre-sorted according to eigenvals
     '''
-    eigenvalues = components.copy()
-    eigenvalues = eigenvalues.astype(np.float64)  # mitigates rounding error.
+    components = components.copy()
+    components = components.astype(np.float64)  # mitigates rounding error.
 
     # Components may be negative. Only care about the magnitude, not the sign.
-    eigenvalues = np.abs(eigenvalues)
+    components = np.abs(components)
 
     # Drop the Components that are corresponding to noise eigenvectors.
     if topk is not None:
-        if len(eigenvalues) > topk:
-            eigenvalues = eigenvalues[:topk]
+        if len(components) > topk:
+            components = components[:topk]
 
-    prob = eigenvalues / eigenvalues.sum()
+    prob = components / components.sum()
     prob = prob + np.finfo(float).eps
 
     return -np.sum(prob * np.log2(prob))
@@ -98,7 +98,7 @@ def mi_fourier(coeffs_map: np.array, labels: np.array, num_rep: int, topk: int):
         sid = class_idx*(num_rep+1)
         eid = class_idx*(num_rep+1) + (num_rep+1)
         coeffs = coeffs_map[sid:eid, :]
-        
+
         c_entropy = fourier_entropy(coeffs[0, :], topk) # H(Z|Y=y)
 
         r_entropy = 0.0
@@ -504,7 +504,7 @@ def exact_eig(A: np.array):
     eigenvalues_P = eigenvalues_P[sorted_idx]
     eigenvectors_P = eigenvectors_P[:, sorted_idx]
 
-    return eigenvalues_P, eigenvectors_P 
+    return eigenvalues_P, eigenvectors_P
 
 
 def von_neumann_entropy(eigs: np.array, topk: int = None):
