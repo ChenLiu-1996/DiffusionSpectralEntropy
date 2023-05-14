@@ -60,6 +60,63 @@ def comp_diffusion_embedding(X: np.array, sigma: float = 10.0):
 
     return diff_embed
 
+def fourier_entropy(components: np.array, topk: int = 100):
+    '''
+        components: coordinates in Fourier domain
+        NOTE: components assumed to be pre-sorted according to eigenvals
+    '''
+    eigenvalues = components.copy()
+    eigenvalues = eigenvalues.astype(np.float64)  # mitigates rounding error.
+
+    # Components may be negative. Only care about the magnitude, not the sign.
+    eigenvalues = np.abs(eigenvalues)
+
+    # Drop the Components that are corresponding to noise eigenvectors.
+    if topk is not None:
+        if len(eigenvalues) > topk:
+            eigenvalues = eigenvalues[:topk]
+
+    prob = eigenvalues / eigenvalues.sum()
+    prob = prob + np.finfo(float).eps
+
+    return -np.sum(prob * np.log2(prob))
+
+
+def mi_fourier(coeffs_map: np.array, labels: np.array, num_rep: int, topk: int):
+    '''
+        coeffs_map: [(1+num_rep) x num_classes, N]
+
+    Returns:
+        mi: mi using sample signals
+        H(Z|Y)
+    '''
+    classes_list, class_cnts = np.unique(labels, return_counts=True)
+
+    mi_by_class = []
+    H_ZgivenY_by_class = []
+    for class_idx in tqdm(classes_list):
+        sid = class_idx*(num_rep+1)
+        eid = class_idx*(num_rep+1) + (num_rep+1)
+        coeffs = coeffs_map[sid:eid, :]
+        
+        c_entropy = fourier_entropy(coeffs[0, :], topk) # H(Z|Y=y)
+
+        r_entropy = 0.0
+        for ri in np.arange(num_rep):
+            r_entropy += fourier_entropy(coeffs[1+ri, :], topk)
+        r_entropy /= num_rep
+
+        mi_by_class.append(r_entropy-c_entropy)
+        H_ZgivenY_by_class.append(c_entropy)
+
+    mi = np.sum(class_cnts / np.sum(class_cnts) *
+                       np.array(mi_by_class))
+    H_ZgivenY = np.sum(class_cnts / np.sum(class_cnts) *
+                       np.array(H_ZgivenY_by_class))
+
+    return mi, H_ZgivenY
+
+
 
 def mutual_information(orig_x: np.array,
                        cond_x: np.array,
@@ -427,6 +484,23 @@ def exact_eigvals(A: np.array):
         eigenvalues = np.linalg.eigvals(A)
 
     return eigenvalues
+
+def exact_eig(A: np.array):
+    '''
+    Compute the exact eigenvalues & vecs.
+    '''
+    if np.allclose(A, A.T, rtol=1e-5, atol=1e-8):
+        # Symmetric matrix.
+        eigenvectors_P, eigenvalues_P = np.linalg.eig(A)
+    else:
+        eigenvectors_P, eigenvalues_P = np.linalg.eigh(A)
+
+    # Sort eigenvalues
+    sorted_idx = np.argsort(eigenvalues_P)[::-1]
+    eigenvalues_P = eigenvalues_P[sorted_idx]
+    eigenvectors_P = eigenvectors_P[:, sorted_idx]
+
+    return eigenvectors_P, eigenvalues_P
 
 
 def von_neumann_entropy(eigs: np.array, topk: int = None):
