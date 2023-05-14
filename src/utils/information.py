@@ -489,6 +489,8 @@ def exact_eig(A: np.array):
     '''
     Compute the exact eigenvalues & vecs.
     '''
+
+    #return np.ones(A.shape[0]), np.ones((A.shape[0],A.shape[0]))
     if np.allclose(A, A.T, rtol=1e-5, atol=1e-8):
         # Symmetric matrix.
         eigenvalues_P, eigenvectors_P = np.linalg.eig(A)
@@ -502,7 +504,7 @@ def exact_eig(A: np.array):
     eigenvalues_P = eigenvalues_P[sorted_idx]
     eigenvectors_P = eigenvectors_P[:, sorted_idx]
 
-    return eigenvectors_P, eigenvalues_P
+    return eigenvalues_P, eigenvectors_P 
 
 
 def von_neumann_entropy(eigs: np.array, topk: int = None):

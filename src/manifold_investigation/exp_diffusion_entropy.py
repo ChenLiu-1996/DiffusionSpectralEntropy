@@ -129,7 +129,7 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     ax.legend(['I(z;Y) full', 'I(z;X) sample'],
               bbox_to_anchor=(1.00, 0.48))
     ax.scatter(data_arrays['epoch'],
-               data_arrays['mi_Y'],
+               data_arrays['mi'],
                c='mediumblue',
                s=120)
     ax.scatter(data_arrays['epoch'], data_arrays['mi_sample'], c='green', s=120)
@@ -394,20 +394,20 @@ if __name__ == '__main__':
                 diffusion_matrix = compute_diffusion_matrix(embeddings, sigma=args.gaussian_kernel_sigma)
                 print('Diffusion matrix computed.')
 
-                eigenvectors_P, eigenvalues_P = exact_eig(diffusion_matrix)
+                eigenvalues_P, eigenvectors_P = exact_eig(diffusion_matrix)
 
                 '''Fourier Coeffs'''
                 coeffs_map = []
                 num_classes = int(np.max(labels) + 1)
                 
                 # First one is the full nodes coeffs
-                signal = np.ones(N)
+                signal = np.ones((N,1))
                 coeffs = np.reshape(eigenvectors_P.T @ signal, (1,N))
                 coeffs_map.append(coeffs)
 
                 # Per Class coeffs
                 for class_idx in tqdm(np.arange(num_classes)):
-                    signal = np.zeros(N)
+                    signal = np.zeros((N,1))
                     signal[labels==class_idx] = 1.0
                     coeffs = np.reshape(eigenvectors_P.T @ np.reshape(signal, (N, 1)), (1,N)) # N x 1
                     coeffs_map.append(coeffs)
@@ -417,8 +417,8 @@ if __name__ == '__main__':
                         rand_inds = np.array(
                             random.sample(range(labels.shape[0]),
                                         k=np.sum(labels == class_idx)))
-                        signal = np.zeros(N)
-                        signal[labels==rand_inds] = 1.0
+                        signal = np.zeros((N,1))
+                        signal[rand_inds] = 1.0
                         coeffs = np.reshape(eigenvectors_P.T @ np.reshape(signal, (N, 1)), (1,N))
                         coeffs_map.append(coeffs)
                         
@@ -461,7 +461,7 @@ if __name__ == '__main__':
             #                                   classes_cnts.tolist(),
             #                                   unconditioned_entropy=vne)
             
-            mi_sample, H_ZgivenY = mi_fourier(coeffs_map[1:, :], args.num_repetitions)
+            mi_sample, H_ZgivenY = mi_fourier(coeffs_map[1:, :], labels, args.num_repetitions, args.topk)
             mi_full = vne - H_ZgivenY
             mi_Y_list.append(mi_full)
             log('MI between z and Output using full signal= %.4f' % mi_full, log_path)
