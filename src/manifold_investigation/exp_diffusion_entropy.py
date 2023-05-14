@@ -62,8 +62,15 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                          data_arrays['vne'],
                          c='mediumblue',
                          s=120)
-    lns = ln1 + ln2
-    ax.legend(lns, ['Shannon entropy', 'spectral von Neumann entropy'])
+    ln3 = ax_secondary.plot(data_arrays['epoch'],
+                            data_arrays['vne_random'],
+                            c='green')
+    ax_secondary.scatter(data_arrays['epoch'],
+                         data_arrays['vne_random'],
+                         c='green',
+                         s=120)
+    lns = ln1 + ln2 + ln3
+    ax.legend(lns, ['Shannon entropy', 'Fourier entropy using full signal', 'Fourier entropy using random signals'])
     fig_entropy.supylabel('Diffusion Entropy', fontsize=40)
     fig_entropy.supxlabel('Epochs Trained', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
@@ -93,7 +100,7 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                                alpha=0.5,
                                s=300)
     lns = [ln1] + [ln2] + [ln3]
-    ax.legend(lns, ['Shannon entropy', 'Fourier entropy using full signal', 'Fourier entropy using random signal'])
+    ax.legend(lns, ['Shannon entropy', 'Fourier entropy using full signal', 'Fourier entropy using random signals'])
     fig_entropy_corr.supylabel('Diffusion Entropy', fontsize=40)
     fig_entropy_corr.supxlabel('Downstream Classification Accuracy',
                                fontsize=40)
