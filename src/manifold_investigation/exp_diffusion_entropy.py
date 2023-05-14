@@ -70,7 +70,10 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                          c='green',
                          s=120)
     lns = ln1 + ln2 + ln3
-    ax.legend(lns, ['Shannon entropy', 'Fourier entropy using full signal', 'Fourier entropy using random signals'])
+    ax.legend(lns, [
+        'Shannon entropy', 'Fourier entropy using full signal',
+        'Fourier entropy using random signals'
+    ])
     fig_entropy.supylabel('Diffusion Entropy', fontsize=40)
     fig_entropy.supxlabel('Epochs Trained', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
@@ -100,7 +103,10 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                                alpha=0.5,
                                s=300)
     lns = [ln1] + [ln2] + [ln3]
-    ax.legend(lns, ['Shannon entropy', 'Fourier entropy using full signal', 'Fourier entropy using random signals'])
+    ax.legend(lns, [
+        'Shannon entropy', 'Fourier entropy using full signal',
+        'Fourier entropy using random signals'
+    ])
     fig_entropy_corr.supylabel('Diffusion Entropy', fontsize=40)
     fig_entropy_corr.supxlabel('Downstream Classification Accuracy',
                                fontsize=40)
@@ -109,16 +115,16 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     # Display correlation.
     if len(data_arrays['acc']) > 1:
         fig_entropy_corr.suptitle(
-            'VNE_FULL Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f)' %
-            (pearsonr(data_arrays['acc'], data_arrays['vne'])[0],
-             pearsonr(data_arrays['acc'], data_arrays['vne'])[1],
-             spearmanr(data_arrays['acc'], data_arrays['vne'])[0],
-             spearmanr(data_arrays['acc'], data_arrays['vne'])[1]) + 
-             'VNE_RANDOM Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f)' %
-            (pearsonr(data_arrays['acc'], data_arrays['vne_random'])[0],
-             pearsonr(data_arrays['acc'], data_arrays['vne_random'])[1],
-             spearmanr(data_arrays['acc'], data_arrays['vne_random'])[0],
-             spearmanr(data_arrays['acc'], data_arrays['vne_random'])[1]),
+            'VNE_FULL Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f)'
+            % (pearsonr(data_arrays['acc'], data_arrays['vne'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['vne'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['vne'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['vne'])[1]) +
+            'VNE_RANDOM Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f)'
+            % (pearsonr(data_arrays['acc'], data_arrays['vne_random'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['vne_random'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['vne_random'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['vne_random'])[1]),
             fontsize=40)
     fig_entropy_corr.savefig(save_paths_fig['fig_entropy_corr'])
     plt.close(fig=fig_entropy_corr)
@@ -133,13 +139,12 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     # MI wrt Input
     # ax.plot(data_arrays['epoch'], data_arrays['mi_X'], c='green')
     # ax.plot(data_arrays['epoch'], data_arrays['mi_X_spectral'], c='red')
-    ax.legend(['I(z;Y) full', 'I(z;Y) sample'],
-              bbox_to_anchor=(1.00, 0.48))
+    ax.legend(['I(z;Y) full', 'I(z;Y) sample'], bbox_to_anchor=(1.00, 0.48))
+    ax.scatter(data_arrays['epoch'], data_arrays['mi'], c='mediumblue', s=120)
     ax.scatter(data_arrays['epoch'],
-               data_arrays['mi'],
-               c='mediumblue',
+               data_arrays['mi_sample'],
+               c='green',
                s=120)
-    ax.scatter(data_arrays['epoch'], data_arrays['mi_sample'], c='green', s=120)
     # ax.scatter(data_arrays['epoch'],
     #            data_arrays['mi_X_spectral'],
     #            c='red',
@@ -171,8 +176,7 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     #            alpha=0.5,
     #            s=300,
     #            linewidths=5)
-    ax.legend(['I(z;Y) full', 'I(z;Y) sample'],
-              bbox_to_anchor=(1.00, 0.48))
+    ax.legend(['I(z;Y) full', 'I(z;Y) sample'], bbox_to_anchor=(1.00, 0.48))
     fig_mi_corr.supylabel('Mutual Information', fontsize=40)
     fig_mi_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
@@ -186,10 +190,11 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                spearmanr(data_arrays['acc'], data_arrays['mi'])[0],
                spearmanr(data_arrays['acc'], data_arrays['mi'])[1]) +
             'I(z;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-            % (pearsonr(data_arrays['acc'], data_arrays['mi_sample'])[0],
-               pearsonr(data_arrays['acc'], data_arrays['mi_sample'])[1],
-               spearmanr(data_arrays['acc'], data_arrays['mi_sample'])[0],
-               spearmanr(data_arrays['acc'], data_arrays['mi_sample'])[1]),  # +
+            %
+            (pearsonr(data_arrays['acc'], data_arrays['mi_sample'])[0],
+             pearsonr(data_arrays['acc'], data_arrays['mi_sample'])[1],
+             spearmanr(data_arrays['acc'], data_arrays['mi_sample'])[0],
+             spearmanr(data_arrays['acc'], data_arrays['mi_sample'])[1]),  # +
             # '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
             # % (pearsonr(data_arrays['acc'], data_arrays['mi_X'])[0],
             #    pearsonr(data_arrays['acc'], data_arrays['mi_X'])[1],
@@ -222,21 +227,15 @@ if __name__ == '__main__':
         help='Only enter if you want to override the config!!!',
         type=int,
         default=None)
-    parser.add_argument(
-        '--noise_eigval_thr',
-        help='noise_eigval_thr',
-        type=float,
-        default=1e-3)
-    parser.add_argument(
-        '--num_repetitions',
-        help='random num_repetitions',
-        type=int,
-        default=10)
-    parser.add_argument(
-        '--topk',
-        help='topk comps',
-        type=int,
-        default=100)
+    parser.add_argument('--noise_eigval_thr',
+                        help='noise_eigval_thr',
+                        type=float,
+                        default=1e-3)
+    parser.add_argument('--num_repetitions',
+                        help='random num_repetitions',
+                        type=int,
+                        default=10)
+    parser.add_argument('--topk', help='topk comps', type=int, default=100)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -284,9 +283,9 @@ if __name__ == '__main__':
         save_root, config.dataset, method_str, config.model,
         config.random_seed)
 
-    log_path = '%s/log-%s-%s-%s-seed%s.txt' % (
-        save_root, config.dataset, method_str, config.model,
-        config.random_seed)
+    log_path = '%s/log-%s-%s-%s-seed%s.txt' % (save_root, config.dataset,
+                                               method_str, config.model,
+                                               config.random_seed)
 
     os.makedirs(os.path.dirname(save_path_final_npy), exist_ok=True)
     if os.path.exists(save_path_final_npy):
@@ -395,53 +394,56 @@ if __name__ == '__main__':
             if os.path.exists(save_path_eigenvalues):
                 data_numpy = np.load(save_path_eigenvalues)
                 eigenvalues_P = data_numpy['eigenvalues_P']
-                coeffs_map = data_numpy['coeffs_map'] # [1 + (1+num_rep) x C, N]
+                # [1 + (1 + num_rep) x C, N]
+                coeffs_map = data_numpy['coeffs_map']
                 print('Pre-computed eigenvalues & fourier coeffs loaded.')
             else:
-                diffusion_matrix = compute_diffusion_matrix(embeddings, sigma=args.gaussian_kernel_sigma)
+                diffusion_matrix = compute_diffusion_matrix(
+                    embeddings, sigma=args.gaussian_kernel_sigma)
                 print('Diffusion matrix computed.')
 
                 eigenvalues_P, eigenvectors_P = exact_eig(diffusion_matrix)
-
                 '''Fourier Coeffs'''
                 coeffs_map = []
                 num_classes = int(np.max(labels) + 1)
-                
+
                 # First one is the full nodes coeffs
-                signal = np.ones((N,1))
-                coeffs = np.reshape(eigenvectors_P.T @ signal, (1,N))
+                signal = np.ones((N, 1))
+                coeffs = np.reshape(eigenvectors_P.T @ signal, (1, N))
                 coeffs_map.append(coeffs)
 
                 # Per Class coeffs
                 for class_idx in tqdm(np.arange(num_classes)):
-                    signal = np.zeros((N,1))
-                    signal[labels==class_idx] = 1.0
-                    coeffs = np.reshape(eigenvectors_P.T @ np.reshape(signal, (N, 1)), (1,N)) # N x 1
+                    signal = np.zeros((N, 1))
+                    signal[labels == class_idx] = 1.0
+                    coeffs = np.reshape(eigenvectors_P.T @ signal, (1, N))
                     coeffs_map.append(coeffs)
 
                     # Random signals coeffs
                     for _ in np.arange(args.num_repetitions):
                         rand_inds = np.array(
                             random.sample(range(labels.shape[0]),
-                                        k=np.sum(labels == class_idx)))
-                        signal = np.zeros((N,1))
+                                          k=np.sum(labels == class_idx)))
+                        signal = np.zeros((N, 1))
                         signal[rand_inds] = 1.0
-                        coeffs = np.reshape(eigenvectors_P.T @ np.reshape(signal, (N, 1)), (1,N))
+                        coeffs = np.reshape(eigenvectors_P.T @ signal, (1, N))
                         coeffs_map.append(coeffs)
-                        
+
                 coeffs_map = np.vstack(coeffs_map)
 
                 # Lower precision to save disk space.
                 eigenvalues_P = eigenvalues_P.astype(np.float16)
                 coeffs_map = coeffs_map.astype(np.float32)
                 with open(save_path_eigenvalues, 'wb+') as f:
-                    np.savez(f, eigenvalues_P=eigenvalues_P, coeffs_map=coeffs_map)
+                    np.savez(f,
+                             eigenvalues_P=eigenvalues_P,
+                             coeffs_map=coeffs_map)
                 print('Eigenvalues & Fourier Coeffs computed.')
 
             #
             '''Diffusion Entropy'''
             log('fourier_entropy Entropy: ', log_path)
-            full_coeffs = coeffs_map[0, :] # First Row
+            full_coeffs = coeffs_map[0, :]  # First Row
             vne = fourier_entropy(full_coeffs, args.topk)
             vne_list.append(vne)
             log('Fourier Diffusion Entropy = %.4f' % vne, log_path)
@@ -467,18 +469,24 @@ if __name__ == '__main__':
             #                                   vne_by_classes,
             #                                   classes_cnts.tolist(),
             #                                   unconditioned_entropy=vne)
-            
-            mi_sample, H_ZgivenY = mi_fourier(coeffs_map[1:, :], labels, args.num_repetitions, args.topk)
+
+            mi_sample, H_ZgivenY = mi_fourier(coeffs_map[1:, :], labels,
+                                              args.num_repetitions, args.topk)
             mi_full = vne - H_ZgivenY
             mi_Y_list.append(mi_full)
-            log('MI between z and Output using full signal= %.4f' % mi_full, log_path)
+            log('MI between z and Output using full signal= %.4f' % mi_full,
+                log_path)
             mi_Y_list_sample.append(mi_sample)
-            log('MI between z and Output using random signal = %.4f' % mi_sample, log_path)
+            log(
+                'MI between z and Output using random signal = %.4f' %
+                mi_sample, log_path)
 
             vne_random = mi_sample + H_ZgivenY
             vne_random_list.append(vne_random)
-            log('Fourier Diffusion Entropy Using random signals = %.4f' % vne_random, log_path)
-            
+            log(
+                'Fourier Diffusion Entropy Using random signals = %.4f' %
+                vne_random, log_path)
+
             #
             '''Mutual Information between z and Input'''
             # log('Mutual Information between z and Input: ', log_path)
