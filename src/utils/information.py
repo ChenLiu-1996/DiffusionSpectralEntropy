@@ -493,9 +493,9 @@ def exact_eig(A: np.array):
     #return np.ones(A.shape[0]), np.ones((A.shape[0],A.shape[0]))
     if np.allclose(A, A.T, rtol=1e-5, atol=1e-8):
         # Symmetric matrix.
-        eigenvalues_P, eigenvectors_P = np.linalg.eig(A)
-    else:
         eigenvalues_P, eigenvectors_P = np.linalg.eigh(A)
+    else:
+        eigenvalues_P, eigenvectors_P = np.linalg.eig(A)
 
     print('Eigen vals & vecs Done. ', eigenvalues_P.shape, eigenvectors_P.shape)
 
