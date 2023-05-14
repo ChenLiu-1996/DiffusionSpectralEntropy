@@ -184,7 +184,7 @@ def plot_figures(data_arrays: Dict[str, Iterable],
             % (pearsonr(data_arrays['acc'], data_arrays['mi'])[0],
                pearsonr(data_arrays['acc'], data_arrays['mi'])[1],
                spearmanr(data_arrays['acc'], data_arrays['mi'])[0],
-               spearmanr(data_arrays['acc'], data_arrays['mi'])[1]), +
+               spearmanr(data_arrays['acc'], data_arrays['mi'])[1]) +
             'I(z;Y) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
             % (pearsonr(data_arrays['acc'], data_arrays['mi_sample'])[0],
                pearsonr(data_arrays['acc'], data_arrays['mi_sample'])[1],
