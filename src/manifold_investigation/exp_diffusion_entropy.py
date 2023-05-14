@@ -251,7 +251,7 @@ if __name__ == '__main__':
              (config.output_save_path, config.dataset, method_str,
               config.model, config.random_seed)))
 
-    save_root = './append_diffusion_entropy/'
+    save_root = './fourier_diffusion_entropy/'
     os.makedirs(save_root, exist_ok=True)
 
     save_paths_fig = {
