@@ -133,7 +133,7 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     # MI wrt Input
     # ax.plot(data_arrays['epoch'], data_arrays['mi_X'], c='green')
     # ax.plot(data_arrays['epoch'], data_arrays['mi_X_spectral'], c='red')
-    ax.legend(['I(z;Y) full', 'I(z;X) sample'],
+    ax.legend(['I(z;Y) full', 'I(z;Y) sample'],
               bbox_to_anchor=(1.00, 0.48))
     ax.scatter(data_arrays['epoch'],
                data_arrays['mi'],
