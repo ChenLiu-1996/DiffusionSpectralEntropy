@@ -61,6 +61,7 @@ def comp_diffusion_embedding(X: np.array, sigma: float = 10.0):
 
     return diff_embed
 
+
 def fourier_entropy(components: np.array, topk: int = 100):
     '''
         components: coordinates in Fourier domain
@@ -83,7 +84,8 @@ def fourier_entropy(components: np.array, topk: int = 100):
     return -np.sum(prob * np.log2(prob))
 
 
-def mi_fourier(coeffs_map: np.array, labels: np.array, num_rep: int, topk: int, log_path: str):
+def mi_fourier(coeffs_map: np.array, labels: np.array, num_rep: int, topk: int,
+               log_path: str):
     '''
         coeffs_map: [(1+num_rep) x num_classes, N]
 
@@ -96,28 +98,26 @@ def mi_fourier(coeffs_map: np.array, labels: np.array, num_rep: int, topk: int, 
     mi_by_class = []
     H_ZgivenY_by_class = []
     for class_idx in classes_list:
-        sid = class_idx*(num_rep+1)
-        eid = class_idx*(num_rep+1) + (num_rep+1)
+        sid = class_idx * (num_rep + 1)
+        eid = class_idx * (num_rep + 1) + (num_rep + 1)
         coeffs = coeffs_map[sid:eid, :]
 
-        c_entropy = fourier_entropy(coeffs[0, :], topk) # H(Z|Y=y)
+        c_entropy = fourier_entropy(coeffs[0, :], topk)  # H(Z|Y=y)
 
         re_list = []
         for ri in np.arange(num_rep):
-            re_list.append(fourier_entropy(coeffs[1+ri, :], topk))
+            re_list.append(fourier_entropy(coeffs[1 + ri, :], topk))
         r_entropy = np.mean(re_list)
         log('variance: %.4f' % np.var(r_entropy), log_path)
 
-        mi_by_class.append(r_entropy-c_entropy)
+        mi_by_class.append(r_entropy - c_entropy)
         H_ZgivenY_by_class.append(c_entropy)
 
-    mi = np.sum(class_cnts / np.sum(class_cnts) *
-                       np.array(mi_by_class))
+    mi = np.sum(class_cnts / np.sum(class_cnts) * np.array(mi_by_class))
     H_ZgivenY = np.sum(class_cnts / np.sum(class_cnts) *
                        np.array(H_ZgivenY_by_class))
 
     return mi, H_ZgivenY
-
 
 
 def mutual_information(orig_x: np.array,
@@ -487,6 +487,7 @@ def exact_eigvals(A: np.array):
 
     return eigenvalues
 
+
 def exact_eig(A: np.array):
     '''
     Compute the exact eigenvalues & vecs.
@@ -532,6 +533,9 @@ def von_neumann_entropy(eigs: np.array, topk: int = None):
         if len(eigenvalues) > topk:
             eigenvalues = eigenvalues[:topk]
 
+    # # Power eigenvalues to `power_t` to mitigate effect of noise.
+    # eigenvalues = eigenvalues**power_t
+
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps
 
@@ -562,3 +566,101 @@ def shannon_entropy(X: np.array, num_bins_per_dim: int = 2):
     prob = prob + np.finfo(float).eps
 
     return -np.sum(prob * np.log2(prob))
+
+
+def find_knee_point(y, x=None):
+    """
+    https://github.com/KrishnaswamyLab/PHATE/blob/main/Python/phate/vne.py
+
+    Returns the x-location of a (single) knee of curve y=f(x)
+
+    Parameters
+    ----------
+
+    y : array, shape=[n]
+        data for which to find the knee point
+
+    x : array, optional, shape=[n], default=np.arange(len(y))
+        indices of the data points of y,
+        if these are not in order and evenly spaced
+
+    Returns
+    -------
+    knee_point : int
+    The index (or x value) of the knee point on y
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import phate
+    >>> x = np.arange(20)
+    >>> y = np.exp(-x/10)
+    >>> phate.vne.find_knee_point(y,x)
+    8
+
+    """
+    try:
+        y.shape
+    except AttributeError:
+        y = np.array(y)
+
+    if len(y) < 3:
+        raise ValueError("Cannot find knee point on vector of length 3")
+    elif len(y.shape) > 1:
+        raise ValueError("y must be 1-dimensional")
+
+    if x is None:
+        x = np.arange(len(y))
+    else:
+        try:
+            x.shape
+        except AttributeError:
+            x = np.array(x)
+        if not x.shape == y.shape:
+            raise ValueError("x and y must be the same shape")
+        else:
+            # ensure x is sorted float
+            idx = np.argsort(x)
+            x = x[idx]
+            y = y[idx]
+
+    n = np.arange(2, len(y) + 1).astype(np.float32)
+    # figure out the m and b (in the y=mx+b sense) for the "left-of-knee"
+    sigma_xy = np.cumsum(x * y)[1:]
+    sigma_x = np.cumsum(x)[1:]
+    sigma_y = np.cumsum(y)[1:]
+    sigma_xx = np.cumsum(x * x)[1:]
+    det = n * sigma_xx - sigma_x * sigma_x
+    mfwd = (n * sigma_xy - sigma_x * sigma_y) / det
+    bfwd = -(sigma_x * sigma_xy - sigma_xx * sigma_y) / det
+
+    # figure out the m and b (in the y=mx+b sense) for the "right-of-knee"
+    sigma_xy = np.cumsum(x[::-1] * y[::-1])[1:]
+    sigma_x = np.cumsum(x[::-1])[1:]
+    sigma_y = np.cumsum(y[::-1])[1:]
+    sigma_xx = np.cumsum(x[::-1] * x[::-1])[1:]
+    det = n * sigma_xx - sigma_x * sigma_x
+    mbck = ((n * sigma_xy - sigma_x * sigma_y) / det)[::-1]
+    bbck = (-(sigma_x * sigma_xy - sigma_xx * sigma_y) / det)[::-1]
+
+    # figure out the sum of per-point errors for left- and right- of-knee fits
+    error_curve = np.full_like(y, np.nan)
+    for breakpt in np.arange(1, len(y) - 1):
+        delsfwd = (mfwd[breakpt - 1] * x[:breakpt + 1] +
+                   bfwd[breakpt - 1]) - y[:breakpt + 1]
+        delsbck = (mbck[breakpt - 1] * x[breakpt:] +
+                   bbck[breakpt - 1]) - y[breakpt:]
+
+        error_curve[breakpt] = np.sum(np.abs(delsfwd)) + np.sum(
+            np.abs(delsbck))
+
+    # find location of the min of the error curve
+    loc = np.argmin(error_curve[1:-1]) + 1
+    knee_point = x[loc]
+    return knee_point
+
+
+# def find_optimal_t():
+#     t, h = von_neumann_entropy(power_t=1)
+#     t_opt = vne.find_knee_point(y=h, x=t)
+#     return t_opt
