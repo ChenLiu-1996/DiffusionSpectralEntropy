@@ -34,20 +34,24 @@ if __name__ == '__main__':
 
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['legend.fontsize'] = 15
+
     N = 500
     D = 1024
     num_dim = 20
     num_repetition = 5
     matrix_mix_sizes = [400, 420, 440, 460, 480, 500]
-    noise_level_list = [0, 5e-2, 1e-1, 2e-1, 3e-1, 5e-1]
+    t_list = [1, 2, 3, 5]
+    noise_level_list = [1e-2, 1e-1, 3e-1]
 
     alpha_list = np.linspace(0, 1, num_dim)
     dim_list = np.linspace(D // num_dim, D, num_dim, dtype=np.int16)
     vne_list_matrix = [[[] for _ in range(num_repetition)]
                        for _ in matrix_mix_sizes]
-    vne_list_uniform = [[[] for _ in range(num_repetition)]
+    vne_list_uniform = [[[[] for _ in range(num_repetition)]
+                         for _ in range(len(t_list))]
                         for _ in range(len(noise_level_list))]
-    vne_list_gaussian = [[[] for _ in range(num_repetition)]
+    vne_list_gaussian = [[[[] for _ in range(num_repetition)]
+                          for _ in range(len(t_list))]
                          for _ in range(len(noise_level_list))]
 
     for i in range(num_repetition):
@@ -57,32 +61,33 @@ if __name__ == '__main__':
             for alpha in alpha_list:
                 matrix = matrix_I * alpha + matrix_PD * (1 - alpha)
                 eigenvalues_P = exact_eigvals(matrix)
-                vne = von_neumann_entropy(eigenvalues_P)
+                vne = von_neumann_entropy(eigenvalues_P, t=1)
                 vne_list_matrix[j][i].append(vne)
 
         for dim in tqdm(dim_list):
-            for j, noise_level in enumerate(noise_level_list):
-                # Uniform distribution over [-1, 1] with distribution dimension == dim.
-                embeddings = np.random.uniform(-1, 1, size=(N, D))
-                if dim < D:
-                    embeddings[:, dim:] = np.random.randn(1)
-                embeddings += noise_level * np.random.uniform(
-                    -1, 1, size=(N, D))
-                diffusion_matrix = compute_diffusion_matrix(embeddings)
-                eigenvalues_P = exact_eigvals(diffusion_matrix)
-                vne = von_neumann_entropy(eigenvalues_P)
-                vne_list_uniform[j][i].append(vne)
+            for j, t in enumerate(t_list):
+                for k, noise_level in enumerate(noise_level_list):
+                    # Uniform distribution over [-1, 1] with distribution dimension == dim.
+                    embeddings = np.random.uniform(-1, 1, size=(N, D))
+                    if dim < D:
+                        embeddings[:, dim:] = np.random.randn(1)
+                    embeddings += noise_level * np.random.uniform(
+                        -1, 1, size=(N, D))
+                    diffusion_matrix = compute_diffusion_matrix(embeddings)
+                    eigenvalues_P = exact_eigvals(diffusion_matrix)
+                    vne = von_neumann_entropy(eigenvalues_P, t=t)
+                    vne_list_uniform[k][j][i].append(vne)
 
-                # Normal distribution with distribution dimension == dim.
-                embeddings = np.random.randn(N, D)
-                if dim < D:
-                    embeddings[:, dim:] = np.random.randn(1)
-                embeddings += noise_level * np.random.uniform(
-                    -1, 1, size=(N, D))
-                diffusion_matrix = compute_diffusion_matrix(embeddings)
-                eigenvalues_P = exact_eigvals(diffusion_matrix)
-                vne = von_neumann_entropy(eigenvalues_P)
-                vne_list_gaussian[j][i].append(vne)
+                    # Normal distribution with distribution dimension == dim.
+                    embeddings = np.random.randn(N, D)
+                    if dim < D:
+                        embeddings[:, dim:] = np.random.randn(1)
+                    embeddings += noise_level * np.random.uniform(
+                        -1, 1, size=(N, D))
+                    diffusion_matrix = compute_diffusion_matrix(embeddings)
+                    eigenvalues_P = exact_eigvals(diffusion_matrix)
+                    vne = von_neumann_entropy(eigenvalues_P, t=t)
+                    vne_list_gaussian[k][j][i].append(vne)
 
     vne_list_matrix = np.array(vne_list_matrix)
     vne_list_uniform = np.array(vne_list_uniform)
@@ -190,41 +195,55 @@ if __name__ == '__main__':
 
     ax = fig_vne.add_subplot(gs[1:, 3:6])
     ax.spines[['right', 'top']].set_visible(False)
-    for j, _ in enumerate(noise_level_list):
-        ax.plot(dim_list,
-                np.mean(vne_list_uniform[j, ...], axis=0),
-                color=cm.get_cmap('tab10').colors[j])
-    ax.legend(['|noise| = %d%%' % (item * 100) for item in noise_level_list],
+    linestyle_list = ['solid', 'dashed', 'dotted']
+    for j in range(len(t_list)):
+        for k in range(len(noise_level_list)):
+            ax.plot(dim_list,
+                    np.mean(vne_list_uniform[k, j, ...], axis=0),
+                    color=cm.get_cmap('tab10').colors[j],
+                    linestyle=linestyle_list[k])
+    ax.legend([
+        r'$t$ = %d, |noise| = %d%%' % (t, noise * 100) for t in t_list
+        for noise in noise_level_list
+    ],
               loc='lower right',
-              ncol=3)
-    for j, _ in enumerate(noise_level_list):
-        ax.fill_between(dim_list,
-                        np.mean(vne_list_uniform[j, ...], axis=0) -
-                        np.std(vne_list_uniform[j, ...], axis=0),
-                        np.mean(vne_list_uniform[j, ...], axis=0) +
-                        np.std(vne_list_uniform[j, ...], axis=0),
-                        cmap='tab10',
-                        alpha=0.2)
+              ncol=2)
+    for j in range(len(t_list)):
+        for k in range(len(noise_level_list)):
+            ax.fill_between(dim_list,
+                            np.mean(vne_list_uniform[k, j, ...], axis=0) -
+                            np.std(vne_list_uniform[k, j, ...], axis=0),
+                            np.mean(vne_list_uniform[k, j, ...], axis=0) +
+                            np.std(vne_list_uniform[k, j, ...], axis=0),
+                            color=cm.get_cmap('tab10').colors[j],
+                            alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
     ax.set_xlabel('Data Distribution Dimension $d$', fontsize=25)
 
     ax = fig_vne.add_subplot(gs[1:, 6:])
     ax.spines[['right', 'top']].set_visible(False)
-    for j, _ in enumerate(noise_level_list):
-        ax.plot(dim_list,
-                np.mean(vne_list_gaussian[j, ...], axis=0),
-                color=cm.get_cmap('tab10').colors[j])
-    ax.legend(['|noise| = %d%%' % (item * 100) for item in noise_level_list],
+    linestyle_list = ['solid', 'dashed', 'dotted']
+    for j in range(len(t_list)):
+        for k in range(len(noise_level_list)):
+            ax.plot(dim_list,
+                    np.mean(vne_list_gaussian[k, j, ...], axis=0),
+                    color=cm.get_cmap('tab10').colors[j],
+                    linestyle=linestyle_list[k])
+    ax.legend([
+        r'$t$ = %d, |noise| = %d%%' % (t, noise * 100) for t in t_list
+        for noise in noise_level_list
+    ],
               loc='lower right',
-              ncol=3)
-    for j, _ in enumerate(noise_level_list):
-        ax.fill_between(dim_list,
-                        np.mean(vne_list_gaussian[j, ...], axis=0) -
-                        np.std(vne_list_gaussian[j, ...], axis=0),
-                        np.mean(vne_list_gaussian[j, ...], axis=0) +
-                        np.std(vne_list_gaussian[j, ...], axis=0),
-                        cmap='tab10',
-                        alpha=0.2)
+              ncol=2)
+    for j in range(len(t_list)):
+        for k in range(len(noise_level_list)):
+            ax.fill_between(dim_list,
+                            np.mean(vne_list_gaussian[k, j, ...], axis=0) -
+                            np.std(vne_list_gaussian[k, j, ...], axis=0),
+                            np.mean(vne_list_gaussian[k, j, ...], axis=0) +
+                            np.std(vne_list_gaussian[k, j, ...], axis=0),
+                            color=cm.get_cmap('tab10').colors[j],
+                            alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
     ax.set_xlabel('Data Distribution Dimension $d$', fontsize=25)
 

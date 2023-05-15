@@ -212,7 +212,7 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
-    parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
+    parser.add_argument('--t', type=int, default=2)
     parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
     parser.add_argument(
         '--chebyshev',
@@ -246,37 +246,35 @@ if __name__ == '__main__':
              config.random_seed, '-zeroinit' if config.zero_init else '')))
 
     save_root = './results_diffusion_entropy/'
+    save_root_override = './results_diffusion_entropy_t=%d/' % args.t
     os.makedirs(save_root, exist_ok=True)
 
     save_paths_fig = {
         'fig_entropy':
-        '%s/diffusion-entropy-%s-%s-%s-seed%s%s-knn%s.png' %
-        (save_root, config.dataset, method_str, config.model,
-         config.random_seed, '-zeroinit' if config.zero_init else '',
-         args.knn),
+        '%s/diffusion-entropy-%s-%s-%s-seed%s.png' %
+        (save_root_override, config.dataset, method_str, config.model,
+         config.random_seed),
         'fig_entropy_corr':
-        '%s/diffusion-entropy-corr-%s-%s-%s-seed%s%s-knn%s.png' %
-        (save_root, config.dataset, method_str, config.model,
-         config.random_seed, '-zeroinit' if config.zero_init else '',
-         args.knn),
+        '%s/diffusion-entropy-corr-%s-%s-%s-seed%s.png' %
+        (save_root_override, config.dataset, method_str, config.model,
+         config.random_seed),
         'fig_mi':
-        '%s/class-mutual-information-%s-%s-%s-seed%s%s-knn%s.png' %
-        (save_root, config.dataset, method_str, config.model,
-         config.random_seed, '-zeroinit' if config.zero_init else '',
-         args.knn),
+        '%s/class-mutual-information-%s-%s-%s-seed%s.png' %
+        (save_root_override, config.dataset, method_str, config.model,
+         config.random_seed),
         'fig_mi_corr':
-        '%s/class-mutual-information-corr-%s-%s-%s-seed%s%s-knn%s.png' %
-        (save_root, config.dataset, method_str, config.model,
-         config.random_seed, '-zeroinit' if config.zero_init else '', args.knn)
+        '%s/class-mutual-information-corr-%s-%s-%s-seed%s.png' %
+        (save_root_override, config.dataset, method_str, config.model,
+         config.random_seed)
     }
 
-    save_path_final_npy = '%s/numpy_files/figure-data-%s-%s-%s-seed%s%s-knn%s.npy' % (
-        save_root, config.dataset, method_str, config.model,
-        config.random_seed, '-zeroinit' if config.zero_init else '', args.knn)
+    save_path_final_npy = '%s/numpy_files/figure-data-%s-%s-%s-seed%s.npy' % (
+        save_root_override, config.dataset, method_str, config.model,
+        config.random_seed)
 
-    log_path = '%s/log-%s-%s-%s-seed%s-knn%s%s.txt' % (
-        save_root, config.dataset, method_str, config.model,
-        config.random_seed, '-zeroinit' if config.zero_init else '', args.knn)
+    log_path = '%s/log-%s-%s-%s-seed%s.txt' % (
+        save_root_override, config.dataset, method_str, config.model,
+        config.random_seed)
 
     os.makedirs(os.path.dirname(save_path_final_npy), exist_ok=True)
     if os.path.exists(save_path_final_npy):
@@ -404,13 +402,16 @@ if __name__ == '__main__':
 
             eig_thr_list = [0.5, 0.2, 0.1, 5e-2, 1e-2, 1e-3, 1e-4]
             log('# eigenvalues > thr: %s' % eig_thr_list, log_path)
-            log(str([np.sum(eigenvalues_P > thr) for thr in eig_thr_list]),
+            log('t = 1: ' + str([np.sum(eigenvalues_P > thr) for thr in eig_thr_list]),
+                log_path)
+            log('t = %d: ' % args.t +
+                str([np.sum(eigenvalues_P**args.t > thr) for thr in eig_thr_list]),
                 log_path)
 
             #
             '''Diffusion Entropy'''
             log('von Neumann Entropy: ', log_path)
-            vne = von_neumann_entropy(eigenvalues_P)
+            vne = von_neumann_entropy(eigenvalues_P, t=args.t)
             vne_list.append(vne)
             log('Diffusion Entropy = %.4f' % vne, log_path)
 
@@ -440,6 +441,7 @@ if __name__ == '__main__':
                 labels=labels,
                 H_Z=vne,
                 sigma=args.gaussian_kernel_sigma,
+                vne_t=args.t,
                 chebyshev_approx=args.chebyshev)
             mi_Y_simple_list.append(mi_Y_simple)
             H_ZgivenY_list.append(H_ZgivenY)
@@ -451,6 +453,7 @@ if __name__ == '__main__':
                 labels=labels,
                 H_ZgivenY_map=H_ZgivenY_map,
                 sigma=args.gaussian_kernel_sigma,
+                vne_t=args.t,
                 chebyshev_approx=args.chebyshev)
             mi_Y_sample_list.append(mi_Y_sample)
             log('MI between z and Output (sample) = %.4f' % mi_Y_sample,

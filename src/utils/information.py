@@ -128,7 +128,7 @@ def mutual_information(orig_x: np.array,
                        num_spectral: int = None,
                        diff_embed: np.array = None,
                        num_clusters: int = 100,
-                       vne_topk: int = None,
+                       vne_t: int = 2,
                        orig_entropy: float = None):
     '''
         To compute the conditioned entropy H(orig_x|cond_x), we categorize the cond_x into discrete classes,
@@ -208,7 +208,7 @@ def mutual_information(orig_x: np.array,
             # Eigenvalues
             s_eigenvalues_P = exact_eigvals(s_diffusion_matrix)
             # Von Neumann Entropy
-            s_vne = von_neumann_entropy(s_eigenvalues_P, topk=vne_topk)
+            s_vne = von_neumann_entropy(s_eigenvalues_P, t=vne_t)
 
         vne_by_classes.append(s_vne)
 
@@ -223,7 +223,7 @@ def mutual_information(orig_x: np.array,
         # Eigenvalues
         eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
-        orig_entropy = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
+        orig_entropy = von_neumann_entropy(eigenvalues_P, t=vne_t)
 
     mi = orig_entropy - conditioned_entropy
 
@@ -235,7 +235,7 @@ def mutual_information_per_class_simple(embeddings: np.array,
                                         H_Z: float = None,
                                         H_ZgivenY_map: Dict = None,
                                         sigma: float = 10.0,
-                                        vne_topk: int = None,
+                                        vne_t: int = 2,
                                         chebyshev_approx: bool = False):
     '''
     Using the formula:
@@ -257,7 +257,7 @@ def mutual_information_per_class_simple(embeddings: np.array,
             eigs = approx_eigvals(diffusion_matrix)
         else:
             eigs = exact_eigvals(diffusion_matrix)
-        H_Z = von_neumann_entropy(eigs, topk=vne_topk)
+        H_Z = von_neumann_entropy(eigs, t=vne_t)
 
     # H(Z | Y)
     classes_list, class_cnts = np.unique(labels, return_counts=True)
@@ -281,7 +281,7 @@ def mutual_information_per_class_simple(embeddings: np.array,
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
             H_ZgivenY_curr_class = von_neumann_entropy(eigenvalues_curr_class,
-                                                       topk=vne_topk)
+                                                       t=vne_t)
             H_ZgivenY_map[str(class_idx)] = H_ZgivenY_curr_class
 
         H_ZgivenY_by_class.append(H_ZgivenY_curr_class)
@@ -300,7 +300,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                                                H_ZgivenY_map: Dict = None,
                                                num_repetitions: int = 5,
                                                sigma: float = 10.0,
-                                               vne_topk: int = None,
+                                               vne_t: int = 2,
                                                chebyshev_approx: bool = False):
     '''
     Randomly assign class labels to entire embeds graph
@@ -348,7 +348,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
             H_ZgivenY_curr_class = von_neumann_entropy(eigenvalues_curr_class,
-                                                       topk=vne_topk)
+                                                       t=vne_t)
             H_ZgivenY_map[str(class_idx)] = H_ZgivenY_curr_class
 
         # H(Z), estimated by randomly sampling the same number of points.
@@ -371,7 +371,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                     diffusion_matrix_random_set)
             # Von Neumann Entropy
             H_Z_rep = von_neumann_entropy(eigenvalues_random_set,
-                                          topk=vne_topk)
+                                          t=vne_t)
             H_Z_list.append(H_Z_rep)
 
         H_Z = np.mean(H_Z_list)
@@ -390,7 +390,7 @@ def mutual_information_per_class_append(embeddings: np.array,
                                         labels: np.array,
                                         sigma: float = 10.0,
                                         joint_entropy: float = None,
-                                        vne_topk: int = None,
+                                        vne_t: int = 2,
                                         z_entropy: float = None,
                                         y_entropy: float = None):
     '''
@@ -416,7 +416,7 @@ def mutual_information_per_class_append(embeddings: np.array,
         # Eigenvalues
         eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
-        joint_entropy = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
+        joint_entropy = von_neumann_entropy(eigenvalues_P, t=vne_t)
 
     if y_entropy is None:
         # Diffusion Matrix
@@ -424,7 +424,7 @@ def mutual_information_per_class_append(embeddings: np.array,
         # Eigenvalues
         eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
-        y_entropy = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
+        y_entropy = von_neumann_entropy(eigenvalues_P, t=vne_t)
 
     if z_entropy is None:
         # Diffusion Matrix
@@ -432,7 +432,7 @@ def mutual_information_per_class_append(embeddings: np.array,
         # Eigenvalues
         eigenvalues_P = exact_eigvals(diffusion_matrix)
         # Von Neumann Entropy
-        z_entropy = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
+        z_entropy = von_neumann_entropy(eigenvalues_P, t=vne_t)
 
     mi = z_entropy + y_entropy - joint_entropy
 
@@ -508,13 +508,13 @@ def exact_eig(A: np.array):
     return eigenvalues_P, eigenvectors_P
 
 
-def von_neumann_entropy(eigs: np.array, topk: int = None):
+def von_neumann_entropy(eigs: np.array, t: int = 1):
     '''
     von Neumann Entropy over a data graph.
 
-    H(G) = - sum_i [eig_i log eig_i]
+    H(G) = - sum_i [eig_i^t log eig_i^t]
 
-    where each `eig_i` is a non-trivial eigenvalue of G.
+    where each `eig_i` is an eigenvalue of G.
     '''
 
     eigenvalues = eigs.copy()
@@ -528,13 +528,8 @@ def von_neumann_entropy(eigs: np.array, topk: int = None):
     # Eigenvalues may be negative. Only care about the magnitude, not the sign.
     eigenvalues = np.abs(eigenvalues)
 
-    # Drop the trivial eigenvalues that are corresponding to noise eigenvectors.
-    if topk is not None:
-        if len(eigenvalues) > topk:
-            eigenvalues = eigenvalues[:topk]
-
-    # # Power eigenvalues to `power_t` to mitigate effect of noise.
-    # eigenvalues = eigenvalues**power_t
+    # Power eigenvalues to `t` to mitigate effect of noise.
+    eigenvalues = eigenvalues**t
 
     prob = eigenvalues / eigenvalues.sum()
     prob = prob + np.finfo(float).eps
@@ -660,7 +655,13 @@ def find_knee_point(y, x=None):
     return knee_point
 
 
-# def find_optimal_t():
-#     t, h = von_neumann_entropy(power_t=1)
-#     t_opt = vne.find_knee_point(y=h, x=t)
+# def find_optimal_t(embeddings: np.array):
+#     t_arr = np.linspace(1, 100, 100, dtype=np.uint8)
+#     h_list = []
+#     for t in t_arr:
+#         h = von_neumann_entropy(embeddings, t=t)
+#         h_list.append(h)
+#     h_list = np.array(h_list)
+#     t_opt = find_knee_point(y=h_list, x=t_arr)
+
 #     return t_opt
