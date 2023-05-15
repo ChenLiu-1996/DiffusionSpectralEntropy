@@ -62,7 +62,7 @@ def compute_diffusion_matrix(X: np.array, sigma: float = 10.0):
         sigma: a float
             conceptually, the neighborhood size of Gaussian kernel.
     Returns:
-        P: a numpy array of size n x n that is the diffusion matrix
+        W: a numpy array of size n x n that has the same eigenvalues as the diffusion matrix.
     '''
 
     # Construct the distance matrix.
