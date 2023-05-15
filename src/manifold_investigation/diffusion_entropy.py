@@ -212,7 +212,7 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
-    parser.add_argument('--t', type=int, default=2)
+    parser.add_argument('--t', type=int, default=1)
     parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
     parser.add_argument(
         '--chebyshev',
