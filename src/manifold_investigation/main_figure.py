@@ -54,15 +54,13 @@ if __name__ == '__main__':
     data_path_list = [item for item in data_path_list_mnist
                       ] + [item for item in data_path_list_cifar10]
 
-    import pdb
-    pdb.set_trace()
     data_hashmap = {}
 
     for data_path in data_path_list:
         dataset_name = data_path.split('figure-data-')[1].split('-')[0]
         method_name = data_path.split(dataset_name + '-')[1].split('-')[0]
         network_name = data_path.split(method_name + '-')[1].split('-')[0]
-        seed_name = data_path.split(network_name + '-')[1].split('-')[0]
+        seed_name = data_path.split(network_name + '-')[1].split('.npy')[0]
 
         method_name = 'supervised' if method_name == 'NA' else method_name
 

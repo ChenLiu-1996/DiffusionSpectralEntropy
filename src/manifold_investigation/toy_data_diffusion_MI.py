@@ -116,7 +116,7 @@ if __name__ == '__main__':
     num_corruption_ratio = 20
     num_repetition = 5
 
-    num_branch_list = [4, 10, 20]  # Currently hard-coded. Has to be 3 items.
+    num_branch_list = [5, 10, 20]  # Currently hard-coded. Has to be 3 items.
     t_list = [1, 2, 3, 5]
     noise_level_list = [1e-2, 1e-1, 3e-1]
 
