@@ -39,7 +39,7 @@ from vicregl_model import VICRegLModel
 
 def compute_diffusion_entropy(embeddings: torch.Tensor,
                               eig_npy_path: str,
-                              vne_topk: int,
+                              vne_t: int,
                               sigma: float,
                               chebyshev_approx: bool = True) -> float:
 
@@ -65,10 +65,12 @@ def compute_diffusion_entropy(embeddings: torch.Tensor,
 
     eig_thr_list = [0.5, 0.2, 0.1, 5e-2, 1e-2, 1e-3, 1e-4]
     print('# eigenvalues > thr: %s' % eig_thr_list)
-    print(str([np.sum(eigenvalues_P > thr) for thr in eig_thr_list]))
+    print('t = 1: ' + str([np.sum(eigenvalues_P > thr) for thr in eig_thr_list]))
+    print('t = %d: ' % args.t +
+          str([np.sum(eigenvalues_P**args.t > thr) for thr in eig_thr_list]))
 
     # von Neumann Entropy
-    vne = von_neumann_entropy(eigenvalues_P, topk=vne_topk)
+    vne = von_neumann_entropy(eigenvalues_P, t=vne_t)
 
     return vne
 
@@ -475,7 +477,7 @@ def diffusion_entropy(args: AttributeHashmap):
             summary[version]['vne'] = compute_diffusion_entropy(
                 embeddings=embeddings,
                 eig_npy_path=eig_npy_path,
-                vne_topk=args.topk,
+                vne_t=args.t,
                 sigma=args.gaussian_kernel_sigma,
                 chebyshev_approx=args.chebyshev)
 
@@ -483,7 +485,7 @@ def diffusion_entropy(args: AttributeHashmap):
                 'H_ZgivenY'] = mutual_information_per_class_random_sample(
                     embeddings=embeddings,
                     labels=labels,
-                    vne_topk=args.topk,
+                    vne_t=args.t,
                     sigma=args.gaussian_kernel_sigma,
                     chebyshev_approx=args.chebyshev)
 
@@ -708,8 +710,8 @@ if __name__ == '__main__':
                         help='which dataset to run',
                         type=str,
                         default='mnist')
-    parser.add_argument('--gaussian-kernel-sigma', type=float, default=40.0)
-    parser.add_argument('--topk', type=int, default=100)
+    parser.add_argument('--gaussian-kernel-sigma', type=float, default=20.0)
+    parser.add_argument('--t', type=int, default=2)
     parser.add_argument(
         '--chebyshev',
         action='store_true',

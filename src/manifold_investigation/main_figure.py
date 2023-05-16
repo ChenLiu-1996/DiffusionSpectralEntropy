@@ -43,17 +43,19 @@ if __name__ == '__main__':
     args = AttributeHashmap(args)
     seed_everything(1)
 
-    data_path_list = sorted(
-        glob('./results_diffusion_entropy_%s/numpy_files/figure-data-*' %
-             ('top%s' % args.topk if args.topk is not None else '')))
-    if args.zero_init:
-        data_path_list = [
-            item for item in data_path_list if 'zeroinit' in item
-        ]
-    else:
-        data_path_list = [
-            item for item in data_path_list if 'zeroinit' not in item
-        ]
+    data_path_list_mnist = sorted(
+        glob(
+            './results_diffusion_entropy_t=1/numpy_files/figure-data-*mnist*'))
+    data_path_list_cifar10 = sorted(
+        glob(
+            './results_diffusion_entropy_t=2/numpy_files/figure-data-*cifar10*'
+        ))
+
+    data_path_list = [item for item in data_path_list_mnist
+                      ] + [item for item in data_path_list_cifar10]
+
+    import pdb
+    pdb.set_trace()
     data_hashmap = {}
 
     for data_path in data_path_list:
@@ -73,7 +75,6 @@ if __name__ == '__main__':
                 'vne': data_numpy['vne'],
                 'mi_Y_sample': data_numpy['mi_Y_sample'],
                 'H_ZgivenY': data_numpy['H_ZgivenY'],
-                # 'mi_input': data_numpy['mi_input'],
             }
 
     plt.rcParams['font.family'] = 'serif'
