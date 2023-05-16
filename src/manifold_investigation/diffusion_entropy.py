@@ -23,7 +23,7 @@ sys.path.insert(0, import_dir + '/embedding_preparation')
 from attribute_hashmap import AttributeHashmap
 from information import approx_eigvals, exact_eigvals, \
     mutual_information_per_class_simple, mutual_information_per_class_random_sample, \
-        von_neumann_entropy, shannon_entropy, mutual_information, comp_diffusion_embedding
+        von_neumann_entropy, shannon_entropy, mutual_information_wrt_Input_sample, comp_diffusion_embedding
 from diffusion import compute_diffusion_matrix
 from log_utils import log
 from path_utils import update_config_dirs
@@ -116,11 +116,9 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     ax.plot(data_arrays['epoch'], data_arrays['mi_Y_simple'], c='grey')
     ax.plot(data_arrays['epoch'], data_arrays['mi_Y_sample'], c='mediumblue')
     # MI wrt Input
-    # ax.plot(data_arrays['epoch'], data_arrays['mi_X'], c='green')
-    # ax.plot(data_arrays['epoch'], data_arrays['mi_X_spectral'], c='red')
-    ax.legend(
-        ['I(z; Y) simple', 'I(z; Y) sample', 'I(z;X)', 'I(z;X) spectral'],
-        bbox_to_anchor=(1.00, 0.48))
+    ax.plot(data_arrays['epoch'], data_arrays['mi_X'], c='green')
+    ax.legend(['I(z; Y) simple', 'I(z; Y) sample', 'I(z;X)'],
+              bbox_to_anchor=(1.00, 0.48))
     ax.scatter(data_arrays['epoch'],
                data_arrays['mi_Y_simple'],
                c='grey',
@@ -129,15 +127,7 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                data_arrays['mi_Y_sample'],
                c='mediumblue',
                s=120)
-    # ax.scatter(data_arrays['epoch'],
-    #            data_arrays['mi_Y_submatrix'],
-    #            c='darkred',
-    #            s=120)
-    # ax.scatter(data_arrays['epoch'], data_arrays['mi_X'], c='green', s=120)
-    # ax.scatter(data_arrays['epoch'],
-    #            data_arrays['mi_X_spectral'],
-    #            c='red',
-    #            s=120)
+    ax.scatter(data_arrays['epoch'], data_arrays['mi_X'], c='green', s=120)
     fig_mi.supylabel('Mutual Information', fontsize=40)
     fig_mi.supxlabel('Epochs Trained', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
@@ -158,19 +148,13 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                c='mediumblue',
                alpha=0.5,
                s=300)
-    # ax.scatter(data_arrays['acc'],
-    #            data_arrays['mi_X'],
-    #            c='green',
-    #            alpha=0.5,
-    #            s=300,
-    #            linewidths=5)
-    # ax.scatter(data_arrays['acc'],
-    #            data_arrays['mi_X_spectral'],
-    #            c='red',
-    #            alpha=0.5,
-    #            s=300,
-    #            linewidths=5)
-    ax.legend(['I(z;Y) simple', 'I(z;Y) sample', 'I(z;X)', 'I(z;X) spectral'],
+    ax.scatter(data_arrays['acc'],
+               data_arrays['mi_X'],
+               c='green',
+               alpha=0.5,
+               s=300,
+               linewidths=5)
+    ax.legend(['I(z;Y) simple', 'I(z;Y) sample', 'I(z;X)'],
               bbox_to_anchor=(1.00, 0.48))
     fig_mi_corr.supylabel('Mutual Information', fontsize=40)
     fig_mi_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
@@ -185,21 +169,15 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                spearmanr(data_arrays['acc'], data_arrays['mi_Y_simple'])[0],
                spearmanr(data_arrays['acc'], data_arrays['mi_Y_simple'])[1]) +
             '\nI(z;Y) sample, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-            %
-            (pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
-             pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1],
-             spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
-             spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1]),  #+
-            # '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-            # % (pearsonr(data_arrays['acc'], data_arrays['mi_X'])[0],
-            #    pearsonr(data_arrays['acc'], data_arrays['mi_X'])[1],
-            #    spearmanr(data_arrays['acc'], data_arrays['mi_X'])[0],
-            #    spearmanr(data_arrays['acc'], data_arrays['mi_X'])[1]),  #+
-            # '\nSpectral I(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);'
-            # % (pearsonr(data_arrays['acc'], data_arrays['mi_X_spectral'])[0],
-            #    pearsonr(data_arrays['acc'], data_arrays['mi_X_spectral'])[1],
-            #    spearmanr(data_arrays['acc'], data_arrays['mi_X_spectral'])[0],
-            #    spearmanr(data_arrays['acc'], data_arrays['mi_X_spectral'])[1]),
+            % (pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1]) +
+            '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            % (pearsonr(data_arrays['acc'], data_arrays['mi_X'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['mi_X'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['mi_X'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['mi_X'])[1]),
             fontsize=30)
     fig_mi_corr.savefig(save_paths_fig['fig_mi_corr'])
     plt.close(fig=fig_mi_corr)
@@ -212,7 +190,7 @@ if __name__ == '__main__':
     parser.add_argument('--config',
                         help='Path to config yaml file.',
                         required=True)
-    parser.add_argument('--t', type=int, default=1)
+    parser.add_argument('--t', type=int, default=2)
     parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
     parser.add_argument(
         '--chebyshev',
@@ -287,15 +265,15 @@ if __name__ == '__main__':
             'mi_Y_simple': data_numpy['mi_Y_simple'],
             'mi_Y_sample': data_numpy['mi_Y_sample'],
             'H_ZgivenY': data_numpy['H_ZgivenY'],
-            # 'mi_X': data_numpy['mi_X'],
-            # 'mi_X_spectral': data_numpy['mi_X_spectral'],
+            'mi_X': data_numpy['mi_X'],
         }
         plot_figures(data_arrays=data_arrays, save_paths_fig=save_paths_fig)
 
     else:
         epoch_list, acc_list, se_list, vne_list, \
-            mi_Y_simple_list, mi_Y_append_list, mi_Y_sample_list, H_ZgivenY_list, mi_X_list, mi_X_spectral_list \
-                = [], [], [], [], [], [], [], [], [], []
+            mi_Y_simple_list, mi_Y_append_list, mi_Y_sample_list, H_ZgivenY_list, mi_X_list \
+                = [], [], [], [], [], [], [], [], []
+        input_clusters = None
 
         for i, embedding_folder in enumerate(embedding_folders):
             epoch_list.append(
@@ -340,35 +318,6 @@ if __name__ == '__main__':
                 labels = labels_updated
                 del labels_updated
 
-            # diffusion_matrix = compute_diffusion_matrix(embeddings, k=args.knn)
-            # print('ready set go')
-            # import time
-            # t1 = time.time()
-            # eigenvalues_P1 = np.linalg.eigvals(diffusion_matrix)
-            # t2 = time.time()
-            # eigenvalues_P2 = approx_eigvals(diffusion_matrix)
-            # t3 = time.time()
-            # print(t2 - t1, t3 - t2)
-
-            # import seaborn as sns
-            # fig = plt.figure(figsize=(10, 10))
-            # ax = fig.add_subplot(2, 2, 1)
-            # sns.boxplot(x=eigenvalues_P1, color='skyblue', ax=ax)
-            # ax.set_xlim([-1, 1])
-            # ax = fig.add_subplot(2, 2, 2)
-            # sns.boxplot(x=eigenvalues_P2, color='skyblue', ax=ax)
-            # ax.set_xlim([-1, 1])
-            # ax = fig.add_subplot(2, 2, 3)
-            # ax.hist(eigenvalues_P1, color='white', edgecolor='k', bins=1000)
-            # ax.set_xlim([-1, 1])
-            # ax = fig.add_subplot(2, 2, 4)
-            # ax.hist(eigenvalues_P2, color='white', edgecolor='k', bins=1000)
-            # ax.set_xlim([-1, 1])
-            # fig.savefig('test.png')
-
-            # import pdb
-            # pdb.set_trace()
-
             #
             '''Shannon Entropy of embeddings'''
             se = shannon_entropy(embeddings)
@@ -402,11 +351,14 @@ if __name__ == '__main__':
 
             eig_thr_list = [0.5, 0.2, 0.1, 5e-2, 1e-2, 1e-3, 1e-4]
             log('# eigenvalues > thr: %s' % eig_thr_list, log_path)
-            log('t = 1: ' + str([np.sum(eigenvalues_P > thr) for thr in eig_thr_list]),
+            log(
+                't = 1: ' +
+                str([np.sum(eigenvalues_P > thr) for thr in eig_thr_list]),
                 log_path)
-            log('t = %d: ' % args.t +
-                str([np.sum(eigenvalues_P**args.t > thr) for thr in eig_thr_list]),
-                log_path)
+            log(
+                't = %d: ' % args.t + str([
+                    np.sum(eigenvalues_P**args.t > thr) for thr in eig_thr_list
+                ]), log_path)
 
             #
             '''Diffusion Entropy'''
@@ -418,24 +370,7 @@ if __name__ == '__main__':
             #
             '''Mutual Information between z and Output Class'''
             log('Mutual Information between z and Output Class: ', log_path)
-            # classes_list, classes_cnts = np.unique(labels, return_counts=True)
-            # vne_by_classes = []
-            # for class_idx in tqdm(classes_list):
-            #     inds = (labels == class_idx).reshape(-1)
-            #     samples = embeddings[inds, :]
-            #     # Diffusion Matrix
-            #     diffusion_matrix_curr_class = compute_diffusion_matrix(
-            #         samples, k=args.knn)
-            #     # Eigenvalues
-            #     eigenvalues_P_curr_class = np.linalg.eigvals(
-            #         diffusion_matrix_curr_class)
-            #     # Von Neumann Entropy
-            #     vne_curr_class = von_neumann_entropy(eigenvalues_P_curr_class)
-            #     vne_by_classes.append(vne_curr_class)
-            # mi = mutual_information_per_class(eigenvalues_P,
-            #                                   vne_by_classes,
-            #                                   classes_cnts.tolist(),
-            #                                   unconditioned_entropy=vne)
+
             mi_Y_simple, H_ZgivenY_map, H_ZgivenY = mutual_information_per_class_simple(
                 embeddings=embeddings,
                 labels=labels,
@@ -461,56 +396,19 @@ if __name__ == '__main__':
 
             #
             '''Mutual Information between z and Input'''
-            # log('Mutual Information between z and Input: ', log_path)
-            # orig_input = np.reshape(orig_input,
-            #                         (N, -1))  # [N, W, H, C] -> [N, W*H*C]
-            # # MI with input H(z) - H(z|input)
-            # mi_X, mi_cond, cond_classes_nums = mutual_information(
-            #     orig_x=embeddings,
-            #     cond_x=orig_input,
-            #     knn=args.knn,
-            #     class_method='bin',
-            #     num_digit=2,
-            #     orig_entropy=vne)
+            orig_input = np.reshape(orig_input,
+                                    (N, -1))  # [N, W, H, C] -> [N, W*H*C]
 
-            # mi_X_list.append(mi_X)
-            # log(
-            #     'MI between z and Input = %.4f, Cond Entropy = %.4f, Cond Classes Num: %d '
-            #     % (mi_X, mi_cond, cond_classes_nums), log_path)
-            #
-            '''(Spectral Bin) Mutual Information between z and Input'''
-            # log('(Spectral Bin) Mutual Information between z and Input: ',
-            #     log_path)
-            # # Diffusion embeddings of orig_input
-            # save_path_diff_embed = '%s/numpy_files/diffusion-embeddings/%s.npz' % (
-            #     save_root, config.dataset)
-            # os.makedirs(os.path.dirname(save_path_diff_embed), exist_ok=True)
-            # if os.path.exists(save_path_diff_embed):
-            #     diff_embed = np.load(save_path_diff_embed)['diff_embed']
-            #     print(
-            #         'Pre-computed original data diffusion embeddings loaded.')
-            # else:
-            #     diff_embed = comp_diffusion_embedding(orig_input, knn=args.knn)
-            #     print('Original data diffusion embeddings computed.')
-            #     diff_embed = diff_embed.astype(np.float16)
-            #     with open(save_path_diff_embed, 'wb+') as f:
-            #         np.savez(f, diff_embed=diff_embed)
-
-            # mi_X_spectral, mi_cond_spectral, cond_classes_nums_spectral = mutual_information(
-            #     orig_x=embeddings,
-            #     cond_x=orig_input,
-            #     knn=args.knn,
-            #     class_method='spectral_bin',
-            #     num_digit=2,
-            #     num_spectral=None,
-            #     diff_embed=diff_embed,
-            #     orig_entropy=vne)
-
-            # mi_X_spectral_list.append(mi_X_spectral)
-            # log(
-            #     '(Spectral Bin) MI between z and Input = %.4f, Cond Entropy = %.4f, Cond Classes Num: %d '
-            #     % (mi_X_spectral, mi_cond_spectral, cond_classes_nums_spectral),
-            #     log_path)
+            mi_X, input_clusters = mutual_information_wrt_Input_sample(
+                embeddings=embeddings,
+                input=orig_input,
+                input_clusters=input_clusters,
+                sigma=args.gaussian_kernel_sigma,
+                vne_t=args.t,
+                chebyshev_approx=args.chebyshev)
+            mi_X_list.append(mi_X)
+            log('Mutual Information between z and Input = %.4f' % mi_X,
+                log_path)
 
             # Plotting
             data_arrays = {
@@ -521,8 +419,7 @@ if __name__ == '__main__':
                 'mi_Y_simple': mi_Y_simple_list,
                 'mi_Y_sample': mi_Y_sample_list,
                 'H_ZgivenY': H_ZgivenY_list,
-                # 'mi_X': mi_X_list,
-                # 'mi_X_spectral': mi_X_spectral_list,
+                'mi_X': mi_X_list,
             }
             plot_figures(data_arrays=data_arrays,
                          save_paths_fig=save_paths_fig)
@@ -535,6 +432,5 @@ if __name__ == '__main__':
                      vne=np.array(vne_list),
                      mi_Y_simple=np.array(mi_Y_simple_list),
                      mi_Y_sample=np.array(mi_Y_sample_list),
-                     H_ZgivenY=np.array(H_ZgivenY_list))
-            #  mi_X=np.array(mi_X_list)
-            #  mi_X_spectral=np.array(mi_X_spectral_list))
+                     H_ZgivenY=np.array(H_ZgivenY_list),
+                     mi_X=np.array(mi_X_list))

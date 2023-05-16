@@ -230,6 +230,91 @@ def mutual_information(orig_x: np.array,
     return mi, conditioned_entropy, len(classes_list)
 
 
+def mutual_information_wrt_Input_sample(embeddings: np.array,
+                                        input: np.array,
+                                        input_clusters: np.array = None,
+                                        n_clusters: int = 100,
+                                        num_repetitions: int = 5,
+                                        sigma: float = 10.0,
+                                        vne_t: int = 2,
+                                        chebyshev_approx: bool = False):
+    '''
+    Randomly assign class labels to entire embeds graph
+    for computing unconditioned entropy
+
+    Using the formula:
+        I(Z; X) = H(Z) - H(Z | X)
+            H(Z | X) is directly computed
+            H(Z) is estimated by sampling #pts = count(X=x) from Z
+        Note: the key is that we don't use the entire graph
+              (i.e., all Z) to compute H(Z).
+        Another important thing is that, since X does not naturally come
+        in groups, we need to cluster them.
+        Here we will use spectral clustering.
+    '''
+
+    if input_clusters is None:
+        from sklearn.cluster import SpectralClustering
+        cluster_op = SpectralClustering(n_clusters=n_clusters,
+                                        affinity='nearest_neighbors',
+                                        assign_labels='cluster_qr',
+                                        random_state=0).fit(input)
+        input_clusters = cluster_op.labels_
+
+    clusters_list, cluster_cnts = np.unique(input_clusters, return_counts=True)
+
+    mi_by_class = []
+    H_ZgivenY_by_class = []
+
+    for cluster_idx in clusters_list:
+        # H(Z | X)
+        inds = (input_clusters == cluster_idx).reshape(-1)
+        Z_curr_class = embeddings[inds, :]
+        # Diffusion Matrix
+        diffusion_matrix_curr_class = compute_diffusion_matrix(Z_curr_class,
+                                                               sigma=sigma)
+        # Eigenvalues
+        if chebyshev_approx:
+            eigenvalues_curr_class = approx_eigvals(
+                diffusion_matrix_curr_class)
+        else:
+            eigenvalues_curr_class = exact_eigvals(diffusion_matrix_curr_class)
+        # Von Neumann Entropy
+        H_ZgivenX_curr_class = von_neumann_entropy(eigenvalues_curr_class,
+                                                   t=vne_t)
+
+        # H(Z), estimated by randomly sampling the same number of points.
+        random.seed(0)
+        H_Z_list = []
+        for _ in np.arange(num_repetitions):
+            rand_inds = np.array(
+                random.sample(range(input_clusters.shape[0]),
+                              k=np.sum(input_clusters == cluster_idx)))
+            Z_random = embeddings[rand_inds, :]
+            # Diffusion Matrix
+            diffusion_matrix_random_set = compute_diffusion_matrix(Z_random,
+                                                                   sigma=sigma)
+            # Eigenvalues
+            if chebyshev_approx:
+                eigenvalues_random_set = approx_eigvals(
+                    diffusion_matrix_random_set)
+            else:
+                eigenvalues_random_set = exact_eigvals(
+                    diffusion_matrix_random_set)
+            # Von Neumann Entropy
+            H_Z_rep = von_neumann_entropy(eigenvalues_random_set, t=vne_t)
+            H_Z_list.append(H_Z_rep)
+
+        H_Z = np.mean(H_Z_list)
+
+        mi_by_class.append((H_Z - H_ZgivenX_curr_class))
+        H_ZgivenY_by_class.append(H_ZgivenX_curr_class)
+
+    mi = np.sum(cluster_cnts / np.sum(cluster_cnts) * np.array(mi_by_class))
+
+    return mi, input_clusters
+
+
 def mutual_information_per_class_simple(embeddings: np.array,
                                         labels: np.array,
                                         H_Z: float = None,
@@ -370,8 +455,7 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                 eigenvalues_random_set = exact_eigvals(
                     diffusion_matrix_random_set)
             # Von Neumann Entropy
-            H_Z_rep = von_neumann_entropy(eigenvalues_random_set,
-                                          t=vne_t)
+            H_Z_rep = von_neumann_entropy(eigenvalues_random_set, t=vne_t)
             H_Z_list.append(H_Z_rep)
 
         H_Z = np.mean(H_Z_list)
