@@ -37,18 +37,17 @@ if __name__ == '__main__':
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['legend.fontsize'] = 15
 
+    num_branches = 5
     num_repetition = 5
-    num_branches = 10
 
-    D_list = [20, 40, 60, 80, 100]
+    D_list = np.linspace(10, 100, 10, dtype=int)
 
     t_list = [1, 2, 3, 5]
-    ratio_list = [1.0, 0.5, 0.3, 0.1]
-    ses = [[[[] for _ in range(num_repetition)]
-            for _ in range(len(ratio_list))]
-           for _ in range(len(t_list))]
-   
-    num_points = 100 * num_branches
+    ratio_list = [1, 0.5, 0.3, 0.1]
+    ses_tree = [[[[] for _ in range(num_repetition)]
+                 for _ in range(len(ratio_list))] for _ in range(len(t_list))]
+
+    num_points = 500 * num_branches
     random.seed(0)
 
     for i in range(num_repetition):
@@ -60,46 +59,47 @@ if __name__ == '__main__':
             for j, ratio in enumerate(ratio_list):
                 for k, t in enumerate(t_list):
                     rand_inds = np.array(
-                        random.sample(range(num_points),k=int(num_points * ratio)))
+                        random.sample(range(num_points),
+                                      k=int(num_points * ratio)))
                     samples = tree_data[rand_inds, :]
 
-                    diffusion_matrix = compute_diffusion_matrix(samples, args.gaussian_kernel_sigma)
+                    diffusion_matrix = compute_diffusion_matrix(
+                        samples, args.gaussian_kernel_sigma)
                     eigenvalues_P = exact_eigvals(diffusion_matrix)
                     se = von_neumann_entropy(eigenvalues_P, t=t)
-                    ses[k][j][i].append(se)
-    
+                    ses_tree[k][j][i].append(se)
 
     # Plot
-    ses = np.array(ses)
-    fig = plt.figure(figsize=(20, 20))
+    ses_tree = np.array(ses_tree)
+    fig = plt.figure(figsize=(15, 15))
     ax = fig.add_subplot(1, 1, 1)
     ax.spines[['right', 'top']].set_visible(False)
     linestyle_list = ['solid', 'dashdot', 'dashed', 'dotted']
-    for j in range(len(ratio_list)):
-        for k in range(len(t_list)):
+    for k in range(len(t_list)):
+        for j in range(len(ratio_list)):
             ax.plot(D_list,
-                    np.mean(ses[k, j, ...], axis=0),
+                    np.mean(ses_tree[k, j, ...], axis=0),
                     color=cm.get_cmap('tab10').colors[k],
-                    linestyle=linestyle_list[k])
+                    linestyle=linestyle_list[j])
     ax.legend([
-        r'$t$ = %d, ratio = %d%%' % (t, r * 100) for t in t_list
+        r'$t$ = %d, subsample %d%%' % (t, r * 100) for t in t_list
         for r in ratio_list
     ],
-              loc='lower right',
+              loc='upper left',
               ncol=2)
-    for j in range(len(ratio_list)):
-        for k in range(len(t_list)):
+    for k in range(len(t_list)):
+        for j in range(len(ratio_list)):
             ax.fill_between(D_list,
-                            np.mean(ses[k, j, ...], axis=0) -
-                            np.std(ses[k, j, ...], axis=0),
-                            np.mean(ses[k, j, ...], axis=0) +
-                            np.std(ses[k, j, ...], axis=0),
+                            np.mean(ses_tree[k, j, ...], axis=0) -
+                            np.std(ses_tree[k, j, ...], axis=0),
+                            np.mean(ses_tree[k, j, ...], axis=0) +
+                            np.std(ses_tree[k, j, ...], axis=0),
                             color=cm.get_cmap('tab10').colors[k],
                             alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
-    ax.set_xlabel('Data Distribution Dimension $d$', fontsize=25)
+    ax.set_xlabel('Tree Data Dimension $d$', fontsize=25)
     ax.set_ylabel('Diffusion Spectral Entropy', fontsize=25)
 
-                    
-
-
+    fig.tight_layout()
+    fig.savefig(save_path_fig)
+    plt.close(fig=fig)
