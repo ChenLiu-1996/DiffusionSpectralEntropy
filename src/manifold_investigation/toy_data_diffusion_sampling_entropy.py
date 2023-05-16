@@ -63,7 +63,7 @@ if __name__ == '__main__':
                         random.sample(range(num_points),k=int(num_points * ratio)))
                     samples = tree_data[rand_inds, :]
 
-                    diffusion_matrix = compute_diffusion_matrix(samples, args.sigma)
+                    diffusion_matrix = compute_diffusion_matrix(samples, args.gaussian_kernel_sigma)
                     eigenvalues_P = exact_eigvals(diffusion_matrix)
                     se = von_neumann_entropy(eigenvalues_P, t=t)
                     ses[k][j][i].append(se)
