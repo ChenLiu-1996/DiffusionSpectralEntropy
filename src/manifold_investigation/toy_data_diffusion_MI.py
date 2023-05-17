@@ -110,7 +110,7 @@ if __name__ == '__main__':
     save_path_fig = '%s/toy-data-MI.png' % (save_root)
 
     plt.rcParams['font.family'] = 'serif'
-    plt.rcParams['legend.fontsize'] = 15
+    plt.rcParams['legend.fontsize'] = 14
 
     D = 30
     num_corruption_ratio = 20
@@ -125,6 +125,9 @@ if __name__ == '__main__':
                                for _ in range(len(t_list))]
                               for _ in range(len(noise_level_list))]
                              for _ in range(len(num_branch_list))]
+    mi_Y_shannon_list_tree = [[[[] for _ in range(num_repetition)]
+                               for _ in range(len(noise_level_list))]
+                              for _ in range(len(num_branch_list))]
 
     for i in range(num_repetition):
         for corruption_ratio in tqdm(corruption_ratio_list):
@@ -150,12 +153,24 @@ if __name__ == '__main__':
                             vne_t=t,
                             sigma=args.gaussian_kernel_sigma,
                             chebyshev_approx=False)
-
                         mi_Y_sample_list_tree[b][k][j][i].append(mi_Y_sample)
 
-    mi_Y_sample_list_tree = np.array(mi_Y_sample_list_tree)
+                        if j == 0:
+                            mi_Y_shannon, _, _ = mutual_information_per_class_random_sample(
+                                embeddings=tree_data,
+                                labels=tree_clusters,
+                                H_ZgivenY_map=None,
+                                vne_t=t,
+                                use_shannon_entropy=True,
+                                sigma=args.gaussian_kernel_sigma,
+                                chebyshev_approx=False)
+                            mi_Y_shannon_list_tree[b][k][i].append(
+                                mi_Y_shannon)
 
-    fig_mi = plt.figure(figsize=(28, 10))
+    mi_Y_sample_list_tree = np.array(mi_Y_sample_list_tree)
+    mi_Y_shannon_list_tree = np.array(mi_Y_shannon_list_tree)
+
+    fig_mi = plt.figure(figsize=(32, 10))
     gs = GridSpec(4, 9, figure=fig_mi)
 
     for num_branch_idx, corruption_ratio, gs_y in zip(
@@ -179,7 +194,7 @@ if __name__ == '__main__':
                    alpha=1)
 
     for num_branch_idx, gs_y_begin in zip([0, 1, 2], [0, 3, 6]):
-        ax = fig_mi.add_subplot(gs[1:, gs_y_begin:gs_y_begin + 3])
+        ax = fig_mi.add_subplot(gs[1:3, gs_y_begin:gs_y_begin + 3])
         ax.spines[['right', 'top']].set_visible(False)
         linestyle_list = ['solid', 'dashed', 'dotted']
         for j in range(len(t_list)):
@@ -212,9 +227,37 @@ if __name__ == '__main__':
                     alpha=0.2)
         ax.axhline(y=0, color='gray', linestyle='-.')
         ax.tick_params(axis='both', which='major', labelsize=20)
+        if num_branch_idx == 0:
+            ax.set_ylabel('aDSMI', fontsize=20)
+
+        ax = fig_mi.add_subplot(gs[3:, gs_y_begin:gs_y_begin + 3])
+        ax.spines[['right', 'top']].set_visible(False)
+        linestyle_list = ['solid', 'dashed', 'dotted']
+        for k in range(len(noise_level_list)):
+            ax.plot(corruption_ratio_list,
+                    np.mean(mi_Y_shannon_list_tree[num_branch_idx, k, ...],
+                            axis=0),
+                    color=cm.get_cmap('tab10').colors[0],
+                    linestyle=linestyle_list[k])
+        ax.legend(
+            [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
+            loc='upper right',
+            ncol=3)
+        for k in range(len(noise_level_list)):
+            ax.fill_between(
+                corruption_ratio_list,
+                np.mean(mi_Y_shannon_list_tree[num_branch_idx, k, ...],
+                        axis=0) -
+                np.std(mi_Y_shannon_list_tree[num_branch_idx, k, ...], axis=0),
+                np.mean(mi_Y_shannon_list_tree[num_branch_idx, k, ...],
+                        axis=0) +
+                np.std(mi_Y_shannon_list_tree[num_branch_idx, k, ...], axis=0),
+                color=cm.get_cmap('tab10').colors[0],
+                alpha=0.2)
+        ax.tick_params(axis='both', which='major', labelsize=20)
         ax.set_xlabel('Label Corruption Ratio', fontsize=25)
         if num_branch_idx == 0:
-            ax.set_ylabel('Diffusion Spectral Mutual Information', fontsize=20)
+            ax.set_ylabel('CSMI', fontsize=20)
 
     fig_mi.tight_layout()
     fig_mi.savefig(save_path_fig)

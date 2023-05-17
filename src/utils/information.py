@@ -380,13 +380,15 @@ def mutual_information_per_class_simple(embeddings: np.array,
     return mi, H_ZgivenY_map, H_ZgivenY
 
 
-def mutual_information_per_class_random_sample(embeddings: np.array,
-                                               labels: np.array,
-                                               H_ZgivenY_map: Dict = None,
-                                               num_repetitions: int = 5,
-                                               sigma: float = 10.0,
-                                               vne_t: int = 2,
-                                               chebyshev_approx: bool = False):
+def mutual_information_per_class_random_sample(
+        embeddings: np.array,
+        labels: np.array,
+        H_ZgivenY_map: Dict = None,
+        num_repetitions: int = 5,
+        sigma: float = 10.0,
+        vne_t: int = 2,
+        use_shannon_entropy: bool = False,
+        chebyshev_approx: bool = False):
     '''
     Randomly assign class labels to entire embeds graph
     for computing unconditioned entropy
@@ -432,8 +434,11 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                 eigenvalues_curr_class = exact_eigvals(
                     diffusion_matrix_curr_class)
             # Von Neumann Entropy
-            H_ZgivenY_curr_class = von_neumann_entropy(eigenvalues_curr_class,
-                                                       t=vne_t)
+            if use_shannon_entropy:
+                H_ZgivenY_curr_class = shannon_entropy(eigenvalues_curr_class)
+            else:
+                H_ZgivenY_curr_class = von_neumann_entropy(
+                    eigenvalues_curr_class, t=vne_t)
             H_ZgivenY_map[str(class_idx)] = H_ZgivenY_curr_class
 
         # H(Z), estimated by randomly sampling the same number of points.
@@ -455,7 +460,10 @@ def mutual_information_per_class_random_sample(embeddings: np.array,
                 eigenvalues_random_set = exact_eigvals(
                     diffusion_matrix_random_set)
             # Von Neumann Entropy
-            H_Z_rep = von_neumann_entropy(eigenvalues_random_set, t=vne_t)
+            if use_shannon_entropy:
+                H_Z_rep = shannon_entropy(eigenvalues_random_set)
+            else:
+                H_Z_rep = von_neumann_entropy(eigenvalues_random_set, t=vne_t)
             H_Z_list.append(H_Z_rep)
 
         H_Z = np.mean(H_Z_list)
@@ -647,97 +655,96 @@ def shannon_entropy(X: np.array, num_bins_per_dim: int = 2):
     return -np.sum(prob * np.log2(prob))
 
 
-def find_knee_point(y, x=None):
-    """
-    https://github.com/KrishnaswamyLab/PHATE/blob/main/Python/phate/vne.py
+# def find_knee_point(y, x=None):
+#     """
+#     https://github.com/KrishnaswamyLab/PHATE/blob/main/Python/phate/vne.py
 
-    Returns the x-location of a (single) knee of curve y=f(x)
+#     Returns the x-location of a (single) knee of curve y=f(x)
 
-    Parameters
-    ----------
+#     Parameters
+#     ----------
 
-    y : array, shape=[n]
-        data for which to find the knee point
+#     y : array, shape=[n]
+#         data for which to find the knee point
 
-    x : array, optional, shape=[n], default=np.arange(len(y))
-        indices of the data points of y,
-        if these are not in order and evenly spaced
+#     x : array, optional, shape=[n], default=np.arange(len(y))
+#         indices of the data points of y,
+#         if these are not in order and evenly spaced
 
-    Returns
-    -------
-    knee_point : int
-    The index (or x value) of the knee point on y
+#     Returns
+#     -------
+#     knee_point : int
+#     The index (or x value) of the knee point on y
 
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import phate
-    >>> x = np.arange(20)
-    >>> y = np.exp(-x/10)
-    >>> phate.vne.find_knee_point(y,x)
-    8
+#     Examples
+#     --------
+#     >>> import numpy as np
+#     >>> import phate
+#     >>> x = np.arange(20)
+#     >>> y = np.exp(-x/10)
+#     >>> phate.vne.find_knee_point(y,x)
+#     8
 
-    """
-    try:
-        y.shape
-    except AttributeError:
-        y = np.array(y)
+#     """
+#     try:
+#         y.shape
+#     except AttributeError:
+#         y = np.array(y)
 
-    if len(y) < 3:
-        raise ValueError("Cannot find knee point on vector of length 3")
-    elif len(y.shape) > 1:
-        raise ValueError("y must be 1-dimensional")
+#     if len(y) < 3:
+#         raise ValueError("Cannot find knee point on vector of length 3")
+#     elif len(y.shape) > 1:
+#         raise ValueError("y must be 1-dimensional")
 
-    if x is None:
-        x = np.arange(len(y))
-    else:
-        try:
-            x.shape
-        except AttributeError:
-            x = np.array(x)
-        if not x.shape == y.shape:
-            raise ValueError("x and y must be the same shape")
-        else:
-            # ensure x is sorted float
-            idx = np.argsort(x)
-            x = x[idx]
-            y = y[idx]
+#     if x is None:
+#         x = np.arange(len(y))
+#     else:
+#         try:
+#             x.shape
+#         except AttributeError:
+#             x = np.array(x)
+#         if not x.shape == y.shape:
+#             raise ValueError("x and y must be the same shape")
+#         else:
+#             # ensure x is sorted float
+#             idx = np.argsort(x)
+#             x = x[idx]
+#             y = y[idx]
 
-    n = np.arange(2, len(y) + 1).astype(np.float32)
-    # figure out the m and b (in the y=mx+b sense) for the "left-of-knee"
-    sigma_xy = np.cumsum(x * y)[1:]
-    sigma_x = np.cumsum(x)[1:]
-    sigma_y = np.cumsum(y)[1:]
-    sigma_xx = np.cumsum(x * x)[1:]
-    det = n * sigma_xx - sigma_x * sigma_x
-    mfwd = (n * sigma_xy - sigma_x * sigma_y) / det
-    bfwd = -(sigma_x * sigma_xy - sigma_xx * sigma_y) / det
+#     n = np.arange(2, len(y) + 1).astype(np.float32)
+#     # figure out the m and b (in the y=mx+b sense) for the "left-of-knee"
+#     sigma_xy = np.cumsum(x * y)[1:]
+#     sigma_x = np.cumsum(x)[1:]
+#     sigma_y = np.cumsum(y)[1:]
+#     sigma_xx = np.cumsum(x * x)[1:]
+#     det = n * sigma_xx - sigma_x * sigma_x
+#     mfwd = (n * sigma_xy - sigma_x * sigma_y) / det
+#     bfwd = -(sigma_x * sigma_xy - sigma_xx * sigma_y) / det
 
-    # figure out the m and b (in the y=mx+b sense) for the "right-of-knee"
-    sigma_xy = np.cumsum(x[::-1] * y[::-1])[1:]
-    sigma_x = np.cumsum(x[::-1])[1:]
-    sigma_y = np.cumsum(y[::-1])[1:]
-    sigma_xx = np.cumsum(x[::-1] * x[::-1])[1:]
-    det = n * sigma_xx - sigma_x * sigma_x
-    mbck = ((n * sigma_xy - sigma_x * sigma_y) / det)[::-1]
-    bbck = (-(sigma_x * sigma_xy - sigma_xx * sigma_y) / det)[::-1]
+#     # figure out the m and b (in the y=mx+b sense) for the "right-of-knee"
+#     sigma_xy = np.cumsum(x[::-1] * y[::-1])[1:]
+#     sigma_x = np.cumsum(x[::-1])[1:]
+#     sigma_y = np.cumsum(y[::-1])[1:]
+#     sigma_xx = np.cumsum(x[::-1] * x[::-1])[1:]
+#     det = n * sigma_xx - sigma_x * sigma_x
+#     mbck = ((n * sigma_xy - sigma_x * sigma_y) / det)[::-1]
+#     bbck = (-(sigma_x * sigma_xy - sigma_xx * sigma_y) / det)[::-1]
 
-    # figure out the sum of per-point errors for left- and right- of-knee fits
-    error_curve = np.full_like(y, np.nan)
-    for breakpt in np.arange(1, len(y) - 1):
-        delsfwd = (mfwd[breakpt - 1] * x[:breakpt + 1] +
-                   bfwd[breakpt - 1]) - y[:breakpt + 1]
-        delsbck = (mbck[breakpt - 1] * x[breakpt:] +
-                   bbck[breakpt - 1]) - y[breakpt:]
+#     # figure out the sum of per-point errors for left- and right- of-knee fits
+#     error_curve = np.full_like(y, np.nan)
+#     for breakpt in np.arange(1, len(y) - 1):
+#         delsfwd = (mfwd[breakpt - 1] * x[:breakpt + 1] +
+#                    bfwd[breakpt - 1]) - y[:breakpt + 1]
+#         delsbck = (mbck[breakpt - 1] * x[breakpt:] +
+#                    bbck[breakpt - 1]) - y[breakpt:]
 
-        error_curve[breakpt] = np.sum(np.abs(delsfwd)) + np.sum(
-            np.abs(delsbck))
+#         error_curve[breakpt] = np.sum(np.abs(delsfwd)) + np.sum(
+#             np.abs(delsbck))
 
-    # find location of the min of the error curve
-    loc = np.argmin(error_curve[1:-1]) + 1
-    knee_point = x[loc]
-    return knee_point
-
+#     # find location of the min of the error curve
+#     loc = np.argmin(error_curve[1:-1]) + 1
+#     knee_point = x[loc]
+#     return knee_point
 
 # def find_optimal_t(embeddings: np.array):
 #     t_arr = np.linspace(1, 100, 100, dtype=np.uint8)
