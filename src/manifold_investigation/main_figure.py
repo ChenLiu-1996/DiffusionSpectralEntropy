@@ -72,6 +72,7 @@ if __name__ == '__main__':
                 'se': data_numpy['se'],
                 'vne': data_numpy['vne'],
                 'mi_Y_sample': data_numpy['mi_Y_sample'],
+                'mi_X': data_numpy['mi_X'],
                 'H_ZgivenY': data_numpy['H_ZgivenY'],
             }
 
@@ -81,6 +82,7 @@ if __name__ == '__main__':
     save_path_fig_se = './main_figure_SE.png'
     save_path_fig_vne = './main_figure_VNE.png'
     save_path_fig_mi = './main_figure_MI.png'
+    save_path_fig_mi_input = './main_figure_MI_input.png'
     save_path_fig_H_ZgivenY = './main_figure_H_ZgivenY.png'
 
     for method in ['supervised', 'simclr', 'wronglabel']:
@@ -94,6 +96,7 @@ if __name__ == '__main__':
                         'se': [],
                         'vne': [],
                         'mi_Y_sample': [],
+                        'mi_X': [],
                         'H_ZgivenY': [],
                     }
 
@@ -128,11 +131,11 @@ if __name__ == '__main__':
                     linewidth=3,
                     alpha=0.5)
             if gs_x == 0 and gs_y == 0:
-                ax.set_ylabel('Supervised', fontsize=25)
+                ax.set_ylabel('Supervised\nCSE', fontsize=25)
             if gs_x == 1 and gs_y == 0:
-                ax.set_ylabel('SimCLR', fontsize=25)
+                ax.set_ylabel('Contrastive\nCSE', fontsize=25)
             if gs_x == 2 and gs_y == 0:
-                ax.set_ylabel('Overfitting', fontsize=25)
+                ax.set_ylabel('Overfitting\nCSE', fontsize=25)
 
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
@@ -207,11 +210,11 @@ if __name__ == '__main__':
                     linewidth=3,
                     alpha=0.5)
             if gs_x == 0 and gs_y == 0:
-                ax.set_ylabel('Supervised', fontsize=25)
+                ax.set_ylabel('Supervised\nDSE ' + r'$S_D(Z)$', fontsize=25)
             if gs_x == 1 and gs_y == 0:
-                ax.set_ylabel('SimCLR', fontsize=25)
+                ax.set_ylabel('Contrastive\nDSE ' + r'$S_D(Z)$', fontsize=25)
             if gs_x == 2 and gs_y == 0:
-                ax.set_ylabel('Overfitting', fontsize=25)
+                ax.set_ylabel('Overfitting\nDSE ' + r'$S_D(Z)$', fontsize=25)
 
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
@@ -263,7 +266,7 @@ if __name__ == '__main__':
     fig_vne.savefig(save_path_fig_vne)
     plt.close(fig=fig_vne)
 
-    # Plot of Mutual Information vs. epoch.
+    # Plot of I(Z; Y)
     fig_mi = plt.figure(figsize=(30, 12))
     gs = GridSpec(3, 4, figure=fig_mi)
 
@@ -294,11 +297,11 @@ if __name__ == '__main__':
                     linewidth=3,
                     alpha=0.5)
             if gs_x == 0 and gs_y == 0:
-                ax.set_ylabel('Supervised', fontsize=25)
+                ax.set_ylabel('Supervised\nDSMI ' + r'$I_D(Z; Y)$', fontsize=25)
             if gs_x == 1 and gs_y == 0:
-                ax.set_ylabel('SimCLR', fontsize=25)
+                ax.set_ylabel('Contrastive\nDSMI ' + r'$I_D(Z; Y)$', fontsize=25)
             if gs_x == 2 and gs_y == 0:
-                ax.set_ylabel('Overfitting', fontsize=25)
+                ax.set_ylabel('Overfitting\nDSMI ' + r'$I_D(Z; Y)$', fontsize=25)
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
             if gs_x == 2:
@@ -341,7 +344,85 @@ if __name__ == '__main__':
     fig_mi.savefig(save_path_fig_mi)
     plt.close(fig=fig_mi)
 
-    # Plot of Mutual Information vs. epoch.
+    # Plot of I(Z; X)
+    fig_mi_X = plt.figure(figsize=(30, 12))
+    gs = GridSpec(3, 4, figure=fig_mi_X)
+
+    color_map = ['mediumblue', 'darkred', 'darkgreen']
+    for method, gs_x in zip(['supervised', 'simclr', 'wronglabel'], [0, 1, 2]):
+        for dataset, gs_y in zip(['mnist', 'cifar10'], [0, 1]):
+            ax = fig_mi_X.add_subplot(gs[gs_x, gs_y * 2])
+            ax.spines[['right', 'top']].set_visible(False)
+            ax.plot(data_hashmap['%s-%s-resnet50-seed1' %
+                                 (dataset, method)]['epoch'],
+                    data_hashmap['%s-%s-resnet50-seed1' %
+                                 (dataset, method)]['mi_X'],
+                    color=color_map[0],
+                    linewidth=3,
+                    alpha=0.5)
+            ax.plot(data_hashmap['%s-%s-resnet50-seed2' %
+                                 (dataset, method)]['epoch'],
+                    data_hashmap['%s-%s-resnet50-seed2' %
+                                 (dataset, method)]['mi_X'],
+                    color=color_map[1],
+                    linewidth=3,
+                    alpha=0.5)
+            ax.plot(data_hashmap['%s-%s-resnet50-seed3' %
+                                 (dataset, method)]['epoch'],
+                    data_hashmap['%s-%s-resnet50-seed3' %
+                                 (dataset, method)]['mi_X'],
+                    color=color_map[2],
+                    linewidth=3,
+                    alpha=0.5)
+            if gs_x == 0 and gs_y == 0:
+                ax.set_ylabel('Supervised\nDSMI ' + r'$I_D(Z; X)$', fontsize=25)
+            if gs_x == 1 and gs_y == 0:
+                ax.set_ylabel('Contrastive\nDSMI ' + r'$I_D(Z; X)$', fontsize=25)
+            if gs_x == 2 and gs_y == 0:
+                ax.set_ylabel('Overfitting\nDSMI ' + r'$I_D(Z; X)$', fontsize=25)
+            if gs_x == 0:
+                ax.set_title(dataset.upper(), fontsize=25)
+            if gs_x == 2:
+                ax.set_xlabel('Epochs Trained', fontsize=25)
+            ax.tick_params(axis='both', which='major', labelsize=20)
+
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+            ax = fig_mi_X.add_subplot(gs[gs_x, gs_y * 2 + 1])
+            ax.spines[['right', 'top']].set_visible(False)
+
+            ax.scatter(data_hashmap['%s-%s-resnet50-seed1' %
+                                    (dataset, method)]['acc'],
+                       data_hashmap['%s-%s-resnet50-seed1' %
+                                    (dataset, method)]['mi_X'],
+                       color=color_map[0],
+                       alpha=0.2)
+            ax.scatter(data_hashmap['%s-%s-resnet50-seed2' %
+                                    (dataset, method)]['acc'],
+                       data_hashmap['%s-%s-resnet50-seed2' %
+                                    (dataset, method)]['mi_X'],
+                       color=color_map[1],
+                       alpha=0.2)
+            ax.scatter(data_hashmap['%s-%s-resnet50-seed3' %
+                                    (dataset, method)]['acc'],
+                       data_hashmap['%s-%s-resnet50-seed3' %
+                                    (dataset, method)]['mi_X'],
+                       color=color_map[2],
+                       alpha=0.2)
+
+            if gs_x == 0:
+                ax.set_title(dataset.upper(), fontsize=25)
+            if gs_x == 2:
+                ax.set_xlabel('Downstream Accuracy', fontsize=25)
+            ax.tick_params(axis='both', which='major', labelsize=20)
+
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+    fig_mi_X.tight_layout()
+    fig_mi_X.savefig(save_path_fig_mi_input)
+    plt.close(fig=fig_mi_X)
+
+    # Plot H(Z|Y)
     fig_H_ZgivenY = plt.figure(figsize=(30, 12))
     gs = GridSpec(3, 4, figure=fig_H_ZgivenY)
 
@@ -372,11 +453,11 @@ if __name__ == '__main__':
                     linewidth=3,
                     alpha=0.5)
             if gs_x == 0 and gs_y == 0:
-                ax.set_ylabel('Supervised', fontsize=25)
+                ax.set_ylabel('Supervised\n' + r'$H(Z | Y)$', fontsize=25)
             if gs_x == 1 and gs_y == 0:
-                ax.set_ylabel('SimCLR', fontsize=25)
+                ax.set_ylabel('Contrastive\n' + r'$H(Z | Y)$', fontsize=25)
             if gs_x == 2 and gs_y == 0:
-                ax.set_ylabel('Overfitting', fontsize=25)
+                ax.set_ylabel('Overfitting\n' + r'$H(Z | Y)$', fontsize=25)
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
             if gs_x == 2:

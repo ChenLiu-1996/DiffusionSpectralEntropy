@@ -228,7 +228,7 @@ if __name__ == '__main__':
         ax.axhline(y=0, color='gray', linestyle='-.')
         ax.tick_params(axis='both', which='major', labelsize=20)
         if num_branch_idx == 0:
-            ax.set_ylabel('aDSMI', fontsize=20)
+            ax.set_ylabel('DSMI', fontsize=20)
 
         ax = fig_mi.add_subplot(gs[3:, gs_y_begin:gs_y_begin + 3])
         ax.spines[['right', 'top']].set_visible(False)
