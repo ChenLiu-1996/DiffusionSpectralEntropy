@@ -318,15 +318,14 @@ if __name__ == '__main__':
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
         ncol=3)
-    for j in range(len(t_list)):
-        for k in range(len(noise_level_list)):
-            ax.fill_between(dim_list,
-                            np.mean(se_list_gaussian[k, ...], axis=0) -
-                            np.std(se_list_gaussian[k, ...], axis=0),
-                            np.mean(se_list_gaussian[k, ...], axis=0) +
-                            np.std(se_list_gaussian[k, ...], axis=0),
-                            color=cm.get_cmap('tab10').colors[j],
-                            alpha=0.2)
+    for k in range(len(noise_level_list)):
+        ax.fill_between(dim_list,
+                        np.mean(se_list_gaussian[k, ...], axis=0) -
+                        np.std(se_list_gaussian[k, ...], axis=0),
+                        np.mean(se_list_gaussian[k, ...], axis=0) +
+                        np.std(se_list_gaussian[k, ...], axis=0),
+                        color=cm.get_cmap('tab10').colors[0],
+                        alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
     ax.set_xlabel('Data Distribution Dimension $d$', fontsize=25)
 
