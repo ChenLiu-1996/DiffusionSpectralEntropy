@@ -237,6 +237,7 @@ def mutual_information_wrt_Input_sample(embeddings: np.array,
                                         num_repetitions: int = 5,
                                         sigma: float = 10.0,
                                         vne_t: int = 2,
+                                        use_shannon_entropy: bool = False,
                                         chebyshev_approx: bool = False):
     '''
     Randomly assign class labels to entire embeds graph
@@ -279,9 +280,12 @@ def mutual_information_wrt_Input_sample(embeddings: np.array,
                 diffusion_matrix_curr_class)
         else:
             eigenvalues_curr_class = exact_eigvals(diffusion_matrix_curr_class)
-        # Von Neumann Entropy
-        H_ZgivenX_curr_class = von_neumann_entropy(eigenvalues_curr_class,
-                                                   t=vne_t)
+        # Entropy
+        if use_shannon_entropy:
+            H_ZgivenX_curr_class = shannon_entropy(eigenvalues_curr_class)
+        else:
+            H_ZgivenX_curr_class = von_neumann_entropy(eigenvalues_curr_class,
+                                                       t=vne_t)
 
         # H(Z), estimated by randomly sampling the same number of points.
         random.seed(0)
@@ -301,8 +305,11 @@ def mutual_information_wrt_Input_sample(embeddings: np.array,
             else:
                 eigenvalues_random_set = exact_eigvals(
                     diffusion_matrix_random_set)
-            # Von Neumann Entropy
-            H_Z_rep = von_neumann_entropy(eigenvalues_random_set, t=vne_t)
+            # Entropy
+            if use_shannon_entropy:
+                H_Z_rep = shannon_entropy(eigenvalues_random_set)
+            else:
+                H_Z_rep = von_neumann_entropy(eigenvalues_random_set, t=vne_t)
             H_Z_list.append(H_Z_rep)
 
         H_Z = np.mean(H_Z_list)

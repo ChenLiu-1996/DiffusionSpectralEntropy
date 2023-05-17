@@ -114,20 +114,22 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     ax.spines[['right', 'top']].set_visible(False)
     # MI wrt Output
     ax.plot(data_arrays['epoch'], data_arrays['mi_Y_simple'], c='grey')
-    ax.plot(data_arrays['epoch'], data_arrays['mi_Y_sample'], c='mediumblue')
+    ax.plot(data_arrays['epoch'], data_arrays['mi_Y'], c='mediumblue')
+    ax.plot(data_arrays['epoch'],
+            data_arrays['mi_Y_shannon'],
+            c='darkblue',
+            linestyle='-.')
     # MI wrt Input
     ax.plot(data_arrays['epoch'], data_arrays['mi_X'], c='green')
-    ax.legend(['I(z; Y) simple', 'I(z; Y) sample', 'I(z;X)'],
-              bbox_to_anchor=(1.00, 0.48))
-    ax.scatter(data_arrays['epoch'],
-               data_arrays['mi_Y_simple'],
-               c='grey',
-               s=120)
-    ax.scatter(data_arrays['epoch'],
-               data_arrays['mi_Y_sample'],
-               c='mediumblue',
-               s=120)
-    ax.scatter(data_arrays['epoch'], data_arrays['mi_X'], c='green', s=120)
+    ax.plot(data_arrays['epoch'],
+            data_arrays['mi_X_shannon'],
+            c='darkgreen',
+            linestyle='-.')
+    ax.legend([
+        'I(Z; Y) simple', 'I(Z; Y)', 'I(Z; Y) shannon', 'I(Z; X)',
+        'I(Z; X) shannon'
+    ],
+              loc='upper left')
     fig_mi.supylabel('Mutual Information', fontsize=40)
     fig_mi.supxlabel('Epochs Trained', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
@@ -144,18 +146,33 @@ def plot_figures(data_arrays: Dict[str, Iterable],
                alpha=0.5,
                s=300)
     ax.scatter(data_arrays['acc'],
-               data_arrays['mi_Y_sample'],
+               data_arrays['mi_Y'],
                c='mediumblue',
                alpha=0.5,
                s=300)
+    ax.scatter(data_arrays['acc'],
+               data_arrays['mi_Y_shannon'],
+               c='darkblue',
+               alpha=0.5,
+               s=300,
+               linewidths=5)
     ax.scatter(data_arrays['acc'],
                data_arrays['mi_X'],
                c='green',
                alpha=0.5,
                s=300,
                linewidths=5)
-    ax.legend(['I(z;Y) simple', 'I(z;Y) sample', 'I(z;X)'],
-              bbox_to_anchor=(1.00, 0.48))
+    ax.scatter(data_arrays['acc'],
+               data_arrays['mi_X_shannon'],
+               c='darkgreen',
+               alpha=0.5,
+               s=300,
+               linewidths=5)
+    ax.legend([
+        'I(Z; Y) simple', 'I(Z; Y)', 'I(Z; Y) shannon', 'I(Z; X)',
+        'I(Z; X) shannon'
+    ],
+              loc='upper left')
     fig_mi_corr.supylabel('Mutual Information', fontsize=40)
     fig_mi_corr.supxlabel('Downstream Classification Accuracy', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
@@ -163,22 +180,33 @@ def plot_figures(data_arrays: Dict[str, Iterable],
     # # Display correlation.
     if len(data_arrays['acc']) > 1:
         fig_mi_corr.suptitle(
-            'I(z;Y) simple, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            'I(Z; Y) simple, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
             % (pearsonr(data_arrays['acc'], data_arrays['mi_Y_simple'])[0],
                pearsonr(data_arrays['acc'], data_arrays['mi_Y_simple'])[1],
                spearmanr(data_arrays['acc'], data_arrays['mi_Y_simple'])[0],
                spearmanr(data_arrays['acc'], data_arrays['mi_Y_simple'])[1]) +
-            '\nI(z;Y) sample, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
-            % (pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
-               pearsonr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1],
-               spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[0],
-               spearmanr(data_arrays['acc'], data_arrays['mi_Y_sample'])[1]) +
-            '\nI(z;X) Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            '\nI(Z; Y), Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            % (pearsonr(data_arrays['acc'], data_arrays['mi_Y'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['mi_Y'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['mi_Y'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['mi_Y'])[1]) +
+            '\nI(Z; Y) shannon, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            % (pearsonr(data_arrays['acc'], data_arrays['mi_Y_shannon'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['mi_Y_shannon'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['mi_Y_shannon'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['mi_Y_shannon'])[1]) +
+            '\nI(Z; X), Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
             % (pearsonr(data_arrays['acc'], data_arrays['mi_X'])[0],
                pearsonr(data_arrays['acc'], data_arrays['mi_X'])[1],
                spearmanr(data_arrays['acc'], data_arrays['mi_X'])[0],
-               spearmanr(data_arrays['acc'], data_arrays['mi_X'])[1]),
+               spearmanr(data_arrays['acc'], data_arrays['mi_X'])[1]) +
+            '\nI(Z; X) shannon, Pearson R: %.3f (p = %.4f), Spearman R: %.3f (p = %.4f);\n'
+            % (pearsonr(data_arrays['acc'], data_arrays['mi_X_shannon'])[0],
+               pearsonr(data_arrays['acc'], data_arrays['mi_X_shannon'])[1],
+               spearmanr(data_arrays['acc'], data_arrays['mi_X_shannon'])[0],
+               spearmanr(data_arrays['acc'], data_arrays['mi_X_shannon'])[1]),
             fontsize=30)
+    fig_mi_corr.subplots_adjust(top=0.8)
     fig_mi_corr.savefig(save_paths_fig['fig_mi_corr'])
     plt.close(fig=fig_mi_corr)
 
@@ -263,16 +291,18 @@ if __name__ == '__main__':
             'se': data_numpy['se'],
             'vne': data_numpy['vne'],
             'mi_Y_simple': data_numpy['mi_Y_simple'],
-            'mi_Y_sample': data_numpy['mi_Y_sample'],
+            'mi_Y': data_numpy['mi_Y'],
             'H_ZgivenY': data_numpy['H_ZgivenY'],
             'mi_X': data_numpy['mi_X'],
+            'mi_Y_shannon': data_numpy['mi_Y_shannon'],
+            'mi_X_shannon': data_numpy['mi_X_shannon'],
         }
         plot_figures(data_arrays=data_arrays, save_paths_fig=save_paths_fig)
 
     else:
         epoch_list, acc_list, se_list, vne_list, \
-            mi_Y_simple_list, mi_Y_append_list, mi_Y_sample_list, H_ZgivenY_list, mi_X_list \
-                = [], [], [], [], [], [], [], [], []
+            mi_Y_simple_list, mi_Y_append_list, mi_Y_list, H_ZgivenY_list, mi_X_list, mi_Y_shannon_list, mi_X_shannon_list \
+                = [], [], [], [], [], [], [], [], [], [], []
         input_clusters = None
 
         for i, embedding_folder in enumerate(embedding_folders):
@@ -380,18 +410,29 @@ if __name__ == '__main__':
                 chebyshev_approx=args.chebyshev)
             mi_Y_simple_list.append(mi_Y_simple)
             H_ZgivenY_list.append(H_ZgivenY)
-            log('MI between z and Output (simple) = %.4f' % mi_Y_simple,
+            log('MI between z and Output (full graph) = %.4f' % mi_Y_simple,
                 log_path)
 
-            mi_Y_sample, _, _ = mutual_information_per_class_random_sample(
+            mi_Y, _, _ = mutual_information_per_class_random_sample(
                 embeddings=embeddings,
                 labels=labels,
                 H_ZgivenY_map=H_ZgivenY_map,
                 sigma=args.gaussian_kernel_sigma,
                 vne_t=args.t,
                 chebyshev_approx=args.chebyshev)
-            mi_Y_sample_list.append(mi_Y_sample)
-            log('MI between z and Output (sample) = %.4f' % mi_Y_sample,
+            mi_Y_list.append(mi_Y)
+            log('MI between z and Output = %.4f' % mi_Y, log_path)
+
+            mi_Y_shannon, _, _ = mutual_information_per_class_random_sample(
+                embeddings=embeddings,
+                labels=labels,
+                H_ZgivenY_map=None,
+                sigma=args.gaussian_kernel_sigma,
+                vne_t=args.t,
+                use_shannon_entropy=True,
+                chebyshev_approx=args.chebyshev)
+            mi_Y_shannon_list.append(mi_Y_shannon)
+            log('MI between z and Output (Shannon) = %.4f' % mi_Y_shannon,
                 log_path)
 
             #
@@ -410,6 +451,19 @@ if __name__ == '__main__':
             log('Mutual Information between z and Input = %.4f' % mi_X,
                 log_path)
 
+            mi_X_shannon, input_clusters = mutual_information_wrt_Input_sample(
+                embeddings=embeddings,
+                input=orig_input,
+                input_clusters=input_clusters,
+                sigma=args.gaussian_kernel_sigma,
+                vne_t=args.t,
+                use_shannon_entropy=True,
+                chebyshev_approx=args.chebyshev)
+            mi_X_shannon_list.append(mi_X_shannon)
+            log(
+                'Mutual Information between z and Input (Shannon) = %.4f' %
+                mi_X_shannon, log_path)
+
             # Plotting
             data_arrays = {
                 'epoch': epoch_list,
@@ -417,9 +471,11 @@ if __name__ == '__main__':
                 'se': se_list,
                 'vne': vne_list,
                 'mi_Y_simple': mi_Y_simple_list,
-                'mi_Y_sample': mi_Y_sample_list,
+                'mi_Y': mi_Y_list,
                 'H_ZgivenY': H_ZgivenY_list,
                 'mi_X': mi_X_list,
+                'mi_Y_shannon': mi_Y_shannon_list,
+                'mi_X_shannon': mi_X_shannon_list,
             }
             plot_figures(data_arrays=data_arrays,
                          save_paths_fig=save_paths_fig)
@@ -431,6 +487,8 @@ if __name__ == '__main__':
                      se=np.array(se_list),
                      vne=np.array(vne_list),
                      mi_Y_simple=np.array(mi_Y_simple_list),
-                     mi_Y_sample=np.array(mi_Y_sample_list),
+                     mi_Y=np.array(mi_Y_list),
                      H_ZgivenY=np.array(H_ZgivenY_list),
-                     mi_X=np.array(mi_X_list))
+                     mi_X=np.array(mi_X_list),
+                     mi_Y_shannon=np.array(mi_Y_shannon_list),
+                     mi_X_shannon=np.array(mi_X_shannon_list))
