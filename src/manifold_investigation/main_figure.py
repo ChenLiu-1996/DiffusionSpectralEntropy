@@ -71,19 +71,26 @@ if __name__ == '__main__':
                 'acc': data_numpy['acc'],
                 'se': data_numpy['se'],
                 'vne': data_numpy['vne'],
-                'mi_Y_sample': data_numpy['mi_Y_sample'],
+                'mi_Y': data_numpy['mi_Y'],
                 'mi_X': data_numpy['mi_X'],
+                'mi_Y_shannon': data_numpy['mi_Y_shannon'],
+                'mi_X_shannon': data_numpy['mi_X_shannon'],
                 'H_ZgivenY': data_numpy['H_ZgivenY'],
             }
 
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['legend.fontsize'] = 20
 
-    save_path_fig_se = './main_figure_SE.png'
-    save_path_fig_vne = './main_figure_VNE.png'
-    save_path_fig_mi = './main_figure_MI.png'
-    save_path_fig_mi_input = './main_figure_MI_input.png'
-    save_path_fig_H_ZgivenY = './main_figure_H_ZgivenY.png'
+    save_root = './main_figures/'
+    os.makedirs(save_root, exist_ok=True)
+
+    save_path_fig_se = save_root + 'main_figure_SE.png'
+    save_path_fig_vne = save_root + 'main_figure_VNE.png'
+    save_path_fig_mi = save_root + 'main_figure_MI.png'
+    save_path_fig_mi_input = save_root + 'main_figure_MI_input.png'
+    save_path_fig_mi_shannon = save_root + 'main_figure_MI_Shannon.png'
+    save_path_fig_mi_input_shannon = save_root + 'main_figure_MI_input_Shannon.png'
+    save_path_fig_H_ZgivenY = save_root + 'main_figure_H_ZgivenY.png'
 
     for method in ['supervised', 'simclr', 'wronglabel']:
         for dataset in ['mnist', 'cifar10']:
@@ -95,8 +102,10 @@ if __name__ == '__main__':
                         'acc': [],
                         'se': [],
                         'vne': [],
-                        'mi_Y_sample': [],
+                        'mi_Y': [],
                         'mi_X': [],
+                        'mi_Y_shannon': [],
+                        'mi_X_shannon': [],
                         'H_ZgivenY': [],
                     }
 
@@ -278,30 +287,33 @@ if __name__ == '__main__':
             ax.plot(data_hashmap['%s-%s-resnet50-seed1' %
                                  (dataset, method)]['epoch'],
                     data_hashmap['%s-%s-resnet50-seed1' %
-                                 (dataset, method)]['mi_Y_sample'],
+                                 (dataset, method)]['mi_Y'],
                     color=color_map[0],
                     linewidth=3,
                     alpha=0.5)
             ax.plot(data_hashmap['%s-%s-resnet50-seed2' %
                                  (dataset, method)]['epoch'],
                     data_hashmap['%s-%s-resnet50-seed2' %
-                                 (dataset, method)]['mi_Y_sample'],
+                                 (dataset, method)]['mi_Y'],
                     color=color_map[1],
                     linewidth=3,
                     alpha=0.5)
             ax.plot(data_hashmap['%s-%s-resnet50-seed3' %
                                  (dataset, method)]['epoch'],
                     data_hashmap['%s-%s-resnet50-seed3' %
-                                 (dataset, method)]['mi_Y_sample'],
+                                 (dataset, method)]['mi_Y'],
                     color=color_map[2],
                     linewidth=3,
                     alpha=0.5)
             if gs_x == 0 and gs_y == 0:
-                ax.set_ylabel('Supervised\nDSMI ' + r'$I_D(Z; Y)$', fontsize=25)
+                ax.set_ylabel('Supervised\nDSMI ' + r'$I_D(Z; Y)$',
+                              fontsize=25)
             if gs_x == 1 and gs_y == 0:
-                ax.set_ylabel('Contrastive\nDSMI ' + r'$I_D(Z; Y)$', fontsize=25)
+                ax.set_ylabel('Contrastive\nDSMI ' + r'$I_D(Z; Y)$',
+                              fontsize=25)
             if gs_x == 2 and gs_y == 0:
-                ax.set_ylabel('Overfitting\nDSMI ' + r'$I_D(Z; Y)$', fontsize=25)
+                ax.set_ylabel('Overfitting\nDSMI ' + r'$I_D(Z; Y)$',
+                              fontsize=25)
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
             if gs_x == 2:
@@ -316,19 +328,19 @@ if __name__ == '__main__':
             ax.scatter(data_hashmap['%s-%s-resnet50-seed1' %
                                     (dataset, method)]['acc'],
                        data_hashmap['%s-%s-resnet50-seed1' %
-                                    (dataset, method)]['mi_Y_sample'],
+                                    (dataset, method)]['mi_Y'],
                        color=color_map[0],
                        alpha=0.2)
             ax.scatter(data_hashmap['%s-%s-resnet50-seed2' %
                                     (dataset, method)]['acc'],
                        data_hashmap['%s-%s-resnet50-seed2' %
-                                    (dataset, method)]['mi_Y_sample'],
+                                    (dataset, method)]['mi_Y'],
                        color=color_map[1],
                        alpha=0.2)
             ax.scatter(data_hashmap['%s-%s-resnet50-seed3' %
                                     (dataset, method)]['acc'],
                        data_hashmap['%s-%s-resnet50-seed3' %
-                                    (dataset, method)]['mi_Y_sample'],
+                                    (dataset, method)]['mi_Y'],
                        color=color_map[2],
                        alpha=0.2)
 
@@ -343,6 +355,87 @@ if __name__ == '__main__':
     fig_mi.tight_layout()
     fig_mi.savefig(save_path_fig_mi)
     plt.close(fig=fig_mi)
+
+    # Plot of I(Z; Y), Shannon
+    fig_mi_shannon = plt.figure(figsize=(30, 12))
+    gs = GridSpec(3, 4, figure=fig_mi_shannon)
+
+    color_map = ['mediumblue', 'darkred', 'darkgreen']
+    for method, gs_x in zip(['supervised', 'simclr', 'wronglabel'], [0, 1, 2]):
+        for dataset, gs_y in zip(['mnist', 'cifar10'], [0, 1]):
+            ax = fig_mi_shannon.add_subplot(gs[gs_x, gs_y * 2])
+            ax.spines[['right', 'top']].set_visible(False)
+            ax.plot(data_hashmap['%s-%s-resnet50-seed1' %
+                                 (dataset, method)]['epoch'],
+                    data_hashmap['%s-%s-resnet50-seed1' %
+                                 (dataset, method)]['mi_Y_shannon'],
+                    color=color_map[0],
+                    linewidth=3,
+                    alpha=0.5)
+            ax.plot(data_hashmap['%s-%s-resnet50-seed2' %
+                                 (dataset, method)]['epoch'],
+                    data_hashmap['%s-%s-resnet50-seed2' %
+                                 (dataset, method)]['mi_Y_shannon'],
+                    color=color_map[1],
+                    linewidth=3,
+                    alpha=0.5)
+            ax.plot(data_hashmap['%s-%s-resnet50-seed3' %
+                                 (dataset, method)]['epoch'],
+                    data_hashmap['%s-%s-resnet50-seed3' %
+                                 (dataset, method)]['mi_Y_shannon'],
+                    color=color_map[2],
+                    linewidth=3,
+                    alpha=0.5)
+            if gs_x == 0 and gs_y == 0:
+                ax.set_ylabel('Supervised\nCSMI ' + r'$I(Z; Y)$',
+                              fontsize=25)
+            if gs_x == 1 and gs_y == 0:
+                ax.set_ylabel('Contrastive\nCSMI ' + r'$I(Z; Y)$',
+                              fontsize=25)
+            if gs_x == 2 and gs_y == 0:
+                ax.set_ylabel('Overfitting\nCSMI ' + r'$I(Z; Y)$',
+                              fontsize=25)
+            if gs_x == 0:
+                ax.set_title(dataset.upper(), fontsize=25)
+            if gs_x == 2:
+                ax.set_xlabel('Epochs Trained', fontsize=25)
+            ax.tick_params(axis='both', which='major', labelsize=20)
+
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+            ax = fig_mi_shannon.add_subplot(gs[gs_x, gs_y * 2 + 1])
+            ax.spines[['right', 'top']].set_visible(False)
+
+            ax.scatter(data_hashmap['%s-%s-resnet50-seed1' %
+                                    (dataset, method)]['acc'],
+                       data_hashmap['%s-%s-resnet50-seed1' %
+                                    (dataset, method)]['mi_Y_shannon'],
+                       color=color_map[0],
+                       alpha=0.2)
+            ax.scatter(data_hashmap['%s-%s-resnet50-seed2' %
+                                    (dataset, method)]['acc'],
+                       data_hashmap['%s-%s-resnet50-seed2' %
+                                    (dataset, method)]['mi_Y_shannon'],
+                       color=color_map[1],
+                       alpha=0.2)
+            ax.scatter(data_hashmap['%s-%s-resnet50-seed3' %
+                                    (dataset, method)]['acc'],
+                       data_hashmap['%s-%s-resnet50-seed3' %
+                                    (dataset, method)]['mi_Y_shannon'],
+                       color=color_map[2],
+                       alpha=0.2)
+
+            if gs_x == 0:
+                ax.set_title(dataset.upper(), fontsize=25)
+            if gs_x == 2:
+                ax.set_xlabel('Downstream Accuracy', fontsize=25)
+            ax.tick_params(axis='both', which='major', labelsize=20)
+
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+    fig_mi_shannon.tight_layout()
+    fig_mi_shannon.savefig(save_path_fig_mi_shannon)
+    plt.close(fig=fig_mi_shannon)
 
     # Plot of I(Z; X)
     fig_mi_X = plt.figure(figsize=(30, 12))
@@ -375,11 +468,14 @@ if __name__ == '__main__':
                     linewidth=3,
                     alpha=0.5)
             if gs_x == 0 and gs_y == 0:
-                ax.set_ylabel('Supervised\nDSMI ' + r'$I_D(Z; X)$', fontsize=25)
+                ax.set_ylabel('Supervised\nDSMI ' + r'$I_D(Z; X)$',
+                              fontsize=25)
             if gs_x == 1 and gs_y == 0:
-                ax.set_ylabel('Contrastive\nDSMI ' + r'$I_D(Z; X)$', fontsize=25)
+                ax.set_ylabel('Contrastive\nDSMI ' + r'$I_D(Z; X)$',
+                              fontsize=25)
             if gs_x == 2 and gs_y == 0:
-                ax.set_ylabel('Overfitting\nDSMI ' + r'$I_D(Z; X)$', fontsize=25)
+                ax.set_ylabel('Overfitting\nDSMI ' + r'$I_D(Z; X)$',
+                              fontsize=25)
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
             if gs_x == 2:
@@ -421,6 +517,87 @@ if __name__ == '__main__':
     fig_mi_X.tight_layout()
     fig_mi_X.savefig(save_path_fig_mi_input)
     plt.close(fig=fig_mi_X)
+
+    # Plot of I(Z; X), Shannon
+    fig_mi_X_shannon = plt.figure(figsize=(30, 12))
+    gs = GridSpec(3, 4, figure=fig_mi_X_shannon)
+
+    color_map = ['mediumblue', 'darkred', 'darkgreen']
+    for method, gs_x in zip(['supervised', 'simclr', 'wronglabel'], [0, 1, 2]):
+        for dataset, gs_y in zip(['mnist', 'cifar10'], [0, 1]):
+            ax = fig_mi_X_shannon.add_subplot(gs[gs_x, gs_y * 2])
+            ax.spines[['right', 'top']].set_visible(False)
+            ax.plot(data_hashmap['%s-%s-resnet50-seed1' %
+                                 (dataset, method)]['epoch'],
+                    data_hashmap['%s-%s-resnet50-seed1' %
+                                 (dataset, method)]['mi_X_shannon'],
+                    color=color_map[0],
+                    linewidth=3,
+                    alpha=0.5)
+            ax.plot(data_hashmap['%s-%s-resnet50-seed2' %
+                                 (dataset, method)]['epoch'],
+                    data_hashmap['%s-%s-resnet50-seed2' %
+                                 (dataset, method)]['mi_X_shannon'],
+                    color=color_map[1],
+                    linewidth=3,
+                    alpha=0.5)
+            ax.plot(data_hashmap['%s-%s-resnet50-seed3' %
+                                 (dataset, method)]['epoch'],
+                    data_hashmap['%s-%s-resnet50-seed3' %
+                                 (dataset, method)]['mi_X_shannon'],
+                    color=color_map[2],
+                    linewidth=3,
+                    alpha=0.5)
+            if gs_x == 0 and gs_y == 0:
+                ax.set_ylabel('Supervised\nCSMI ' + r'$I(Z; X)$',
+                              fontsize=25)
+            if gs_x == 1 and gs_y == 0:
+                ax.set_ylabel('Contrastive\nCSMI ' + r'$I(Z; X)$',
+                              fontsize=25)
+            if gs_x == 2 and gs_y == 0:
+                ax.set_ylabel('Overfitting\nCSMI ' + r'$I(Z; X)$',
+                              fontsize=25)
+            if gs_x == 0:
+                ax.set_title(dataset.upper(), fontsize=25)
+            if gs_x == 2:
+                ax.set_xlabel('Epochs Trained', fontsize=25)
+            ax.tick_params(axis='both', which='major', labelsize=20)
+
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+            ax = fig_mi_X_shannon.add_subplot(gs[gs_x, gs_y * 2 + 1])
+            ax.spines[['right', 'top']].set_visible(False)
+
+            ax.scatter(data_hashmap['%s-%s-resnet50-seed1' %
+                                    (dataset, method)]['acc'],
+                       data_hashmap['%s-%s-resnet50-seed1' %
+                                    (dataset, method)]['mi_X_shannon'],
+                       color=color_map[0],
+                       alpha=0.2)
+            ax.scatter(data_hashmap['%s-%s-resnet50-seed2' %
+                                    (dataset, method)]['acc'],
+                       data_hashmap['%s-%s-resnet50-seed2' %
+                                    (dataset, method)]['mi_X_shannon'],
+                       color=color_map[1],
+                       alpha=0.2)
+            ax.scatter(data_hashmap['%s-%s-resnet50-seed3' %
+                                    (dataset, method)]['acc'],
+                       data_hashmap['%s-%s-resnet50-seed3' %
+                                    (dataset, method)]['mi_X_shannon'],
+                       color=color_map[2],
+                       alpha=0.2)
+
+            if gs_x == 0:
+                ax.set_title(dataset.upper(), fontsize=25)
+            if gs_x == 2:
+                ax.set_xlabel('Downstream Accuracy', fontsize=25)
+            ax.tick_params(axis='both', which='major', labelsize=20)
+
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+    fig_mi_X_shannon.tight_layout()
+    fig_mi_X_shannon.savefig(save_path_fig_mi_input_shannon)
+    plt.close(fig=fig_mi_X_shannon)
 
     # Plot H(Z|Y)
     fig_H_ZgivenY = plt.figure(figsize=(30, 12))
