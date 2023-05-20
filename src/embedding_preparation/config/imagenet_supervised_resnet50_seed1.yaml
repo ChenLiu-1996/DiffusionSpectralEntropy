@@ -12,4 +12,3 @@ num_workers: 8
 dataset: 'imagenet'
 contrastive: 'NA'
 random_seed: 1
-zero_init: False

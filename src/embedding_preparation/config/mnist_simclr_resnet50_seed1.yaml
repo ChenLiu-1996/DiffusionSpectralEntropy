@@ -14,4 +14,3 @@ num_workers: 4
 dataset: 'mnist'
 contrastive: 'simclr'
 random_seed: 1
-zero_init: False

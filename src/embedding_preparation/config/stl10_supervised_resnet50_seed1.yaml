@@ -12,4 +12,3 @@ num_workers: 4
 dataset: 'stl10'
 contrastive: 'NA'
 random_seed: 1
-zero_init: False
