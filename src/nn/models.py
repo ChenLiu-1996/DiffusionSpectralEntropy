@@ -104,18 +104,6 @@ class ResNet50(torch.nn.Module):
                 if m.bias is not None:
                     torch.nn.init.constant_(m.bias, 0)
 
-    def zero_init(self):
-        for m in self.modules():
-            if isinstance(m, torch.nn.Conv2d) or isinstance(
-                    m, torch.nn.ConvTranspose2d) or isinstance(
-                        m, torch.nn.Linear):
-                torch.nn.init.constant_(m.weight, 0)
-                if m.bias is not None:
-                    torch.nn.init.constant_(m.bias, 0)
-            elif isinstance(m, torch.nn.BatchNorm2d):
-                torch.nn.init.constant_(m.weight, 1)
-                torch.nn.init.constant_(m.bias, 0)
-
 
 class WideResNet50_2(torch.nn.Module):
 
@@ -198,18 +186,6 @@ class WideResNet50_2(torch.nn.Module):
                 if m.bias is not None:
                     torch.nn.init.constant_(m.bias, 0)
 
-    def zero_init(self):
-        for m in self.modules():
-            if isinstance(m, torch.nn.Conv2d) or isinstance(
-                    m, torch.nn.ConvTranspose2d) or isinstance(
-                        m, torch.nn.Linear):
-                torch.nn.init.constant_(m.weight, 0)
-                if m.bias is not None:
-                    torch.nn.init.constant_(m.bias, 0)
-            elif isinstance(m, torch.nn.BatchNorm2d):
-                torch.nn.init.constant_(m.weight, 1)
-                torch.nn.init.constant_(m.bias, 0)
-
 
 class ResNeXT50_32x4d(torch.nn.Module):
 
@@ -291,15 +267,3 @@ class ResNeXT50_32x4d(torch.nn.Module):
                 torch.nn.init.normal_(m.weight, std=1e-3)
                 if m.bias is not None:
                     torch.nn.init.constant_(m.bias, 0)
-
-    def zero_init(self):
-        for m in self.modules():
-            if isinstance(m, torch.nn.Conv2d) or isinstance(
-                    m, torch.nn.ConvTranspose2d) or isinstance(
-                        m, torch.nn.Linear):
-                torch.nn.init.constant_(m.weight, 0)
-                if m.bias is not None:
-                    torch.nn.init.constant_(m.bias, 0)
-            elif isinstance(m, torch.nn.BatchNorm2d):
-                torch.nn.init.constant_(m.weight, 1)
-                torch.nn.init.constant_(m.bias, 0)

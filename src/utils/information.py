@@ -271,19 +271,21 @@ def mutual_information_wrt_Input_sample(embeddings: np.array,
         # H(Z | X)
         inds = (input_clusters == cluster_idx).reshape(-1)
         Z_curr_class = embeddings[inds, :]
-        # Diffusion Matrix
-        diffusion_matrix_curr_class = compute_diffusion_matrix(Z_curr_class,
-                                                               sigma=sigma)
-        # Eigenvalues
-        if chebyshev_approx:
-            eigenvalues_curr_class = approx_eigvals(
-                diffusion_matrix_curr_class)
-        else:
-            eigenvalues_curr_class = exact_eigvals(diffusion_matrix_curr_class)
+
         # Entropy
         if use_shannon_entropy:
-            H_ZgivenX_curr_class = shannon_entropy(eigenvalues_curr_class)
+            H_ZgivenX_curr_class = shannon_entropy(Z_curr_class)
         else:
+            # Diffusion Matrix
+            diffusion_matrix_curr_class = compute_diffusion_matrix(
+                Z_curr_class, sigma=sigma)
+            # Eigenvalues
+            if chebyshev_approx:
+                eigenvalues_curr_class = approx_eigvals(
+                    diffusion_matrix_curr_class)
+            else:
+                eigenvalues_curr_class = exact_eigvals(
+                    diffusion_matrix_curr_class)
             H_ZgivenX_curr_class = von_neumann_entropy(eigenvalues_curr_class,
                                                        t=vne_t)
 
@@ -295,20 +297,21 @@ def mutual_information_wrt_Input_sample(embeddings: np.array,
                 random.sample(range(input_clusters.shape[0]),
                               k=np.sum(input_clusters == cluster_idx)))
             Z_random = embeddings[rand_inds, :]
-            # Diffusion Matrix
-            diffusion_matrix_random_set = compute_diffusion_matrix(Z_random,
-                                                                   sigma=sigma)
-            # Eigenvalues
-            if chebyshev_approx:
-                eigenvalues_random_set = approx_eigvals(
-                    diffusion_matrix_random_set)
-            else:
-                eigenvalues_random_set = exact_eigvals(
-                    diffusion_matrix_random_set)
+
             # Entropy
             if use_shannon_entropy:
-                H_Z_rep = shannon_entropy(eigenvalues_random_set)
+                H_Z_rep = shannon_entropy(Z_random)
             else:
+                # Diffusion Matrix
+                diffusion_matrix_random_set = compute_diffusion_matrix(
+                    Z_random, sigma=sigma)
+                # Eigenvalues
+                if chebyshev_approx:
+                    eigenvalues_random_set = approx_eigvals(
+                        diffusion_matrix_random_set)
+                else:
+                    eigenvalues_random_set = exact_eigvals(
+                        diffusion_matrix_random_set)
                 H_Z_rep = von_neumann_entropy(eigenvalues_random_set, t=vne_t)
             H_Z_list.append(H_Z_rep)
 
@@ -430,20 +433,21 @@ def mutual_information_per_class_random_sample(
         else:
             inds = (labels == class_idx).reshape(-1)
             Z_curr_class = embeddings[inds, :]
-            # Diffusion Matrix
-            diffusion_matrix_curr_class = compute_diffusion_matrix(
-                Z_curr_class, sigma=sigma)
-            # Eigenvalues
-            if chebyshev_approx:
-                eigenvalues_curr_class = approx_eigvals(
-                    diffusion_matrix_curr_class)
-            else:
-                eigenvalues_curr_class = exact_eigvals(
-                    diffusion_matrix_curr_class)
-            # Von Neumann Entropy
+
+            # Entropy
             if use_shannon_entropy:
-                H_ZgivenY_curr_class = shannon_entropy(eigenvalues_curr_class)
+                H_ZgivenY_curr_class = shannon_entropy(Z_curr_class)
             else:
+                # Diffusion Matrix
+                diffusion_matrix_curr_class = compute_diffusion_matrix(
+                    Z_curr_class, sigma=sigma)
+                # Eigenvalues
+                if chebyshev_approx:
+                    eigenvalues_curr_class = approx_eigvals(
+                        diffusion_matrix_curr_class)
+                else:
+                    eigenvalues_curr_class = exact_eigvals(
+                        diffusion_matrix_curr_class)
                 H_ZgivenY_curr_class = von_neumann_entropy(
                     eigenvalues_curr_class, t=vne_t)
             H_ZgivenY_map[str(class_idx)] = H_ZgivenY_curr_class
@@ -456,20 +460,21 @@ def mutual_information_per_class_random_sample(
                 random.sample(range(labels.shape[0]),
                               k=np.sum(labels == class_idx)))
             Z_random = embeddings[rand_inds, :]
-            # Diffusion Matrix
-            diffusion_matrix_random_set = compute_diffusion_matrix(Z_random,
-                                                                   sigma=sigma)
-            # Eigenvalues
-            if chebyshev_approx:
-                eigenvalues_random_set = approx_eigvals(
-                    diffusion_matrix_random_set)
-            else:
-                eigenvalues_random_set = exact_eigvals(
-                    diffusion_matrix_random_set)
-            # Von Neumann Entropy
+
+            # Entropy
             if use_shannon_entropy:
-                H_Z_rep = shannon_entropy(eigenvalues_random_set)
+                H_Z_rep = shannon_entropy(Z_random)
             else:
+                # Diffusion Matrix
+                diffusion_matrix_random_set = compute_diffusion_matrix(
+                    Z_random, sigma=sigma)
+                # Eigenvalues
+                if chebyshev_approx:
+                    eigenvalues_random_set = approx_eigvals(
+                        diffusion_matrix_random_set)
+                else:
+                    eigenvalues_random_set = exact_eigvals(
+                        diffusion_matrix_random_set)
                 H_Z_rep = von_neumann_entropy(eigenvalues_random_set, t=vne_t)
             H_Z_list.append(H_Z_rep)
 

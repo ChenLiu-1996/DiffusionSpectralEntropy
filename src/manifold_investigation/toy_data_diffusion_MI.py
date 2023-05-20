@@ -256,8 +256,6 @@ if __name__ == '__main__':
                 alpha=0.2)
         ax.tick_params(axis='both', which='major', labelsize=20)
         ax.set_xlabel('Label Corruption Ratio', fontsize=25)
-        # NOTE: This line is here just to remedy a weird ytick granuality of 1e-18 in the second figure.
-        ax.set_yticks([-0.05, 0, 0.05])
         if num_branch_idx == 0:
             ax.set_ylabel('CSMI', fontsize=20)
 
