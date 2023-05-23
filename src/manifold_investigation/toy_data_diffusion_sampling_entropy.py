@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from matplotlib import cm
 from tqdm import tqdm
 from matplotlib.gridspec import GridSpec
+from phate.tree import gen_dla
 import random
 
 os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
@@ -24,7 +25,7 @@ from diffusion import compute_diffusion_matrix
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--random-seed', type=int, default=1)
+    # parser.add_argument('--random-seed', type=int, default=1)
     parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
@@ -37,35 +38,38 @@ if __name__ == '__main__':
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['legend.fontsize'] = 15
 
-    num_branches = 5
-    num_repetition = 5
+    num_branches = 3
+    branch_length = 2000
+    num_repetition = 3
 
-    D_list = np.linspace(10, 100, 10, dtype=int)
+    D_list = np.linspace(2, 30, 10, dtype=int)
 
     t_list = [1, 2, 3, 5]
     ratio_list = [1, 0.5, 0.3, 0.1]
     ses_tree = [[[[] for _ in range(num_repetition)]
                  for _ in range(len(ratio_list))] for _ in range(len(t_list))]
 
-    num_points = 500 * num_branches
-    random.seed(0)
+    num_points = num_branches * branch_length
 
     for i in range(num_repetition):
         for dim in tqdm(D_list):
-            tree_data, _ = generate_tree(dim=dim,
-                                         num_branches=num_branches,
-                                         num_points=num_points,
-                                         random_seed=args.random_seed)
-            for j, ratio in enumerate(ratio_list):
-                for k, t in enumerate(t_list):
-                    rand_inds = np.array(
-                        random.sample(range(num_points),
-                                      k=int(num_points * ratio)))
-                    samples = tree_data[rand_inds, :]
+            tree_data, _ = gen_dla(n_dim=dim,
+                                   n_branch=num_branches,
+                                   branch_length=branch_length,
+                                   sigma=0,
+                                   seed=i)
 
-                    diffusion_matrix = compute_diffusion_matrix(
-                        samples, args.gaussian_kernel_sigma)
-                    eigenvalues_P = exact_eigvals(diffusion_matrix)
+            for j, ratio in enumerate(ratio_list):
+                rand_inds = np.array(
+                    random.sample(range(num_points),
+                                  k=int(num_points * ratio)))
+                samples = tree_data[rand_inds, :]
+
+                diffusion_matrix = compute_diffusion_matrix(
+                    samples, args.gaussian_kernel_sigma)
+                eigenvalues_P = exact_eigvals(diffusion_matrix)
+
+                for k, t in enumerate(t_list):
                     se = von_neumann_entropy(eigenvalues_P, t=t)
                     ses_tree[k][j][i].append(se)
 
@@ -85,7 +89,7 @@ if __name__ == '__main__':
         r'$t$ = %d, subsample %d%%' % (t, r * 100) for t in t_list
         for r in ratio_list
     ],
-              loc='upper left',
+              loc='lower right',
               ncol=2)
     for k in range(len(t_list)):
         for j in range(len(ratio_list)):
