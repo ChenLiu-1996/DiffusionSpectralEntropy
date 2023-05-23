@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm
 import random
 from diffusion import compute_diffusion_matrix
-# from DiffusionEMD.diffusion_emd import estimate_dos
+from DiffusionEMD.diffusion_emd import estimate_dos
 from log_utils import log
 
 
