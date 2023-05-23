@@ -47,9 +47,10 @@ python -m pip install magic-impute
 ## Usage.
 
 ### Dataset
+#### Most datasets
 Most datasets (MNIST, CIFAR10, CIFAR100, STL10) can be directly downloaded via the torchvision API as you run the training code. However, for the following datasets, additional effort is required.
 
-### ImageNet data
+#### ImageNet data
 NOTE: In order to download the images using wget, you need to first request access from http://image-net.org/download-images.
 ```
 cd data/
@@ -69,7 +70,7 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 
 ```
 
-### Preparing pretrained weights of external models.
+#### Preparing pretrained weights of external models.
 NOTE: **This is no longer very relevant. We prepared these but we later shifted our research focus.**
 
 
