@@ -71,8 +71,7 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 ```
 
 #### Preparing pretrained weights of external models.
-NOTE: **This is no longer very relevant. We prepared these but we later shifted our research focus.**
-
+<details> NOTE: : **This is no longer very relevant. We prepared these but we later shifted our research focus.** <summary>Supervised</summary>
 
 <details> <summary>Supervised</summary>
 
@@ -152,6 +151,8 @@ python test_run_model.py --model simsiam
 python test_run_model.py --model swav
 python test_run_model.py --model vicreg
 ```
+</details>
+
 </details>
 
 
