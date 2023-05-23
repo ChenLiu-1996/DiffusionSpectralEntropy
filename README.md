@@ -3,9 +3,8 @@
 ## The repository is structured in the following manner.
 ```
 ManifoldTopology
-    ├── external_src
-    |   └── `${MODEL_NAME}/...`: git repos for external models
-    ├── setup: Instructions for proper setup of environments?
+    ├── assets: figures, demos, etc.
+    ├── data
     └── src
         ├── embedding_preparation: train our own intermediate models and store the embeddings
         |   ├── checkpoints
