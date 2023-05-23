@@ -71,7 +71,7 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 ```
 
 #### Preparing pretrained weights of external models.
-<details> NOTE: : **This is no longer very relevant. We prepared these but we later shifted our research focus.** <summary>Supervised</summary>
+<details> <summary>NOTE: This is no longer very relevant. We prepared these but we later shifted our research focus.</summary>
 
 <details> <summary>Supervised</summary>
 
