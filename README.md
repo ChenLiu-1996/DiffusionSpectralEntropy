@@ -46,6 +46,48 @@ python -m pip install magic-impute
 
 ## Usage.
 
+### Train our Supervised vs Contrastive encoders.
+Using (MNIST + Supervised) as an example.
+```
+cd src/embedding_preparation
+python train_embeddings.py --mode train --config ./config/mnist_supervised.yaml
+```
+
+### Analysis
+Using (MNIST + Supervised + ResNet50) as an example.
+
+#### 1. Visualize the PHATE embeddings along the training process.
+```
+cd src/manifold_investigation
+python visualize_embedding.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml
+```
+
+#### 2. Compute DSE and DSMI (on real data) along the training process.
+```
+cd src/manifold_investigation
+# For MNIST, t = 1. For CIFAR10, t = 2.
+python diffusion_entropy.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml --t 1
+
+# After running `diffusion_entropy.py` for all experiments, we can run the following.
+python main_figure.py
+```
+
+#### 3. Compute DSE and DSMI on our toy datasets.
+```
+cd src/manifold_investigation
+python toy_data_diffusion_entropy.py
+python toy_data_diffusion_MI.py
+```
+
+#### 4. DSE sampling robustness.
+```
+cd src/manifold_investigation
+python toy_data_diffusion_sampling_entropy.py
+```
+
+
+## Preparation.
+
 ### Dataset
 #### Most datasets
 Most datasets (MNIST, CIFAR10, CIFAR100, STL10) can be directly downloaded via the torchvision API as you run the training code. However, for the following datasets, additional effort is required.
@@ -155,42 +197,3 @@ python test_run_model.py --model vicreg
 
 </details>
 
-
-### Train our Supervised vs Contrastive encoders.
-Using (MNIST + Supervised) as an example.
-```
-cd src/embedding_preparation
-python train_embeddings.py --mode train --config ./config/mnist_supervised.yaml
-```
-
-### Analysis
-Using (MNIST + Supervised + ResNet50) as an example.
-
-#### 1. Visualize the PHATE embeddings along the training process.
-```
-cd src/manifold_investigation
-python visualize_embedding.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml
-```
-
-#### 2. Compute DSE and DSMI (on real data) along the training process.
-```
-cd src/manifold_investigation
-# For MNIST, t = 1. For CIFAR10, t = 2.
-python diffusion_entropy.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml --t 1
-
-# After running `diffusion_entropy.py` for all experiments, we can run the following.
-python main_figure.py
-```
-
-#### 3. Compute DSE and DSMI on our toy datasets.
-```
-cd src/manifold_investigation
-python toy_data_diffusion_entropy.py
-python toy_data_diffusion_MI.py
-```
-
-#### 4. DSE sampling robustness.
-```
-cd src/manifold_investigation
-python toy_data_diffusion_sampling_entropy.py
-```
