@@ -1,6 +1,6 @@
 # Manifold Topology
 
-### The repository is structured in the following manner.
+## The repository is structured in the following manner.
 ```
 ManifoldTopology
     ├── external_src
@@ -25,7 +25,7 @@ ManifoldTopology
         └── manifold_investigation: Our core investigations can be found here
 ```
 
-### Environment
+## Environment
 We developed the codebase in a miniconda environment.
 Tested on Python 3.9.13 + PyTorch 1.12.1.
 How we created the conda environment:
@@ -44,7 +44,7 @@ python -m pip install DiffusionEMD
 python -m pip install magic-impute
 ```
 
-### Usage.
+## Usage.
 
 ### Dataset
 Most datasets (MNIST, CIFAR10, CIFAR100, STL10) can be directly downloaded via the torchvision API as you run the training code. However, for the following datasets, additional effort is required.
@@ -70,7 +70,7 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 ```
 
 ### Preparing pretrained weights of external models.
-NOTE: This is no longer very relevant. We prepared these but we later shifted our research focus.
+NOTE: **This is no longer very relevant. We prepared these but we later shifted our research focus.**
 
 
 <details> <summary>Supervised</summary>
@@ -163,12 +163,32 @@ python train_embeddings.py --mode train --config ./config/mnist_supervised.yaml
 
 ### Analysis
 Using (MNIST + Supervised + ResNet50) as an example.
+
+#### 1. Visualize the PHATE embeddings along the training process.
 ```
 cd src/manifold_investigation
+python visualize_embedding.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml
+```
 
-python diffusion_entropy.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml
+#### 2. Compute DSE and DSMI (on real data) along the training process.
+```
+cd src/manifold_investigation
+# For MNIST, t = 1. For CIFAR10, t = 2.
+python diffusion_entropy.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml --t 1
 
-python diffusion_entropy_PublicModels.py --dataset mnist
+# After running `diffusion_entropy.py` for all experiments, we can run the following.
+python main_figure.py
+```
 
-python extrema_distance.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml
+#### 3. Compute DSE and DSMI on our toy datasets.
+```
+cd src/manifold_investigation
+python toy_data_diffusion_entropy.py
+python toy_data_diffusion_MI.py
+```
+
+#### 4. DSE sampling robustness.
+```
+cd src/manifold_investigation
+python toy_data_diffusion_sampling_entropy.py
 ```
