@@ -24,6 +24,8 @@ ManifoldTopology
         |
         └── manifold_investigation: Our core investigations can be found here
 ```
+## Citation
+To be added
 
 ## Environment
 We developed the codebase in a miniconda environment.
@@ -44,7 +46,7 @@ python -m pip install DiffusionEMD
 python -m pip install magic-impute
 ```
 
-## Usage.
+## Usage
 
 ### Train our Supervised vs Contrastive encoders.
 Using (MNIST + Supervised) as an example.
@@ -86,7 +88,7 @@ python toy_data_diffusion_sampling_entropy.py
 ```
 
 
-## Preparation.
+## Preparation
 
 ### Dataset
 #### Most datasets
