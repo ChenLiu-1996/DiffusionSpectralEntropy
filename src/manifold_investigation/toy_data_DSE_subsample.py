@@ -31,7 +31,7 @@ if __name__ == '__main__':
     save_root = './results_toy_data/'
     os.makedirs(save_root, exist_ok=True)
 
-    save_path_fig = '%s/toy-data-sampling-entropy.png' % (save_root)
+    save_path_fig = '%s/toy-data-DSE-subsample.png' % (save_root)
 
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['legend.fontsize'] = 15
