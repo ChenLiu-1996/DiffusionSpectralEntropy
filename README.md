@@ -1,4 +1,4 @@
-# Manifold Topology
+# Diffusion Spectral Entropy
 
 ## The repository is structured in the following manner.
 ```
