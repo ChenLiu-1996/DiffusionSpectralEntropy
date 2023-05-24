@@ -19,13 +19,11 @@ import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 sys.path.insert(0, import_dir + '/embedding_preparation')
 from attribute_hashmap import AttributeHashmap
-from toy_data_diffusion_MI import generate_tree
 from information import von_neumann_entropy, exact_eigvals
 from diffusion import compute_diffusion_matrix
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    # parser.add_argument('--random-seed', type=int, default=1)
     parser.add_argument('--gaussian-kernel-sigma', type=float, default=10.0)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)

@@ -84,12 +84,19 @@ if __name__ == '__main__':
     save_root = './main_figures/'
     os.makedirs(save_root, exist_ok=True)
 
-    save_path_fig_se = save_root + 'main_figure_SE.png'
-    save_path_fig_vne = save_root + 'main_figure_VNE.png'
-    save_path_fig_mi = save_root + 'main_figure_MI.png'
-    save_path_fig_mi_input = save_root + 'main_figure_MI_input.png'
-    save_path_fig_mi_shannon = save_root + 'main_figure_MI_Shannon.png'
-    save_path_fig_mi_input_shannon = save_root + 'main_figure_MI_input_Shannon.png'
+    # NOTE: Classic Shannon Entropy
+    save_path_fig_CSE = save_root + 'main_figure_CSE.png'
+    # NOTE: Diffusion Spectral Entropy
+    save_path_fig_DSE = save_root + 'main_figure_DSE.png'
+    # NOTE: Diffusion Spectral Mutual Information w.r.t. output
+    save_path_fig_DSMI_Y = save_root + 'main_figure_DSMI_Y.png'
+    # NOTE: Diffusion Spectral Mutual Information w.r.t. input
+    save_path_fig_DSMI_X = save_root + 'main_figure_DSMI_X.png'
+    # NOTE: Classic Shannon Mutual Information w.r.t. output
+    save_path_fig_CSMI_Y = save_root + 'main_figure_CSMI_Y.png'
+    # NOTE: Classic Shannon Mutual Information w.r.t. input
+    save_path_fig_CSMI_X = save_root + 'main_figure_CSMI_X.png'
+
     save_path_fig_H_ZgivenY = save_root + 'main_figure_H_ZgivenY.png'
 
     for method in ['supervised', 'simclr', 'wronglabel']:
@@ -110,13 +117,13 @@ if __name__ == '__main__':
                     }
 
     # Plot of Diffusion Entropy vs. epoch.
-    fig_se = plt.figure(figsize=(30, 12))
-    gs = GridSpec(3, 4, figure=fig_se)
+    fig_CSE = plt.figure(figsize=(30, 12))
+    gs = GridSpec(3, 4, figure=fig_CSE)
 
     color_map = ['mediumblue', 'darkred', 'darkgreen']
     for method, gs_x in zip(['supervised', 'simclr', 'wronglabel'], [0, 1, 2]):
         for dataset, gs_y in zip(['mnist', 'cifar10'], [0, 1]):
-            ax = fig_se.add_subplot(gs[gs_x, gs_y * 2])
+            ax = fig_CSE.add_subplot(gs[gs_x, gs_y * 2])
             ax.spines[['right', 'top']].set_visible(False)
             ax.plot(data_hashmap['%s-%s-resnet50-seed1' %
                                  (dataset, method)]['epoch'],
@@ -154,7 +161,7 @@ if __name__ == '__main__':
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-            ax = fig_se.add_subplot(gs[gs_x, gs_y * 2 + 1])
+            ax = fig_CSE.add_subplot(gs[gs_x, gs_y * 2 + 1])
             ax.spines[['right', 'top']].set_visible(False)
 
             ax.scatter(data_hashmap['%s-%s-resnet50-seed1' %
@@ -184,18 +191,18 @@ if __name__ == '__main__':
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-    fig_se.tight_layout()
-    fig_se.savefig(save_path_fig_se)
-    plt.close(fig=fig_se)
+    fig_CSE.tight_layout()
+    fig_CSE.savefig(save_path_fig_CSE)
+    plt.close(fig=fig_CSE)
 
     # Plot of Diffusion Entropy vs. epoch.
-    fig_vne = plt.figure(figsize=(30, 12))
-    gs = GridSpec(3, 4, figure=fig_vne)
+    fig_DSE = plt.figure(figsize=(30, 12))
+    gs = GridSpec(3, 4, figure=fig_DSE)
 
     color_map = ['mediumblue', 'darkred', 'darkgreen']
     for method, gs_x in zip(['supervised', 'simclr', 'wronglabel'], [0, 1, 2]):
         for dataset, gs_y in zip(['mnist', 'cifar10'], [0, 1]):
-            ax = fig_vne.add_subplot(gs[gs_x, gs_y * 2])
+            ax = fig_DSE.add_subplot(gs[gs_x, gs_y * 2])
             ax.spines[['right', 'top']].set_visible(False)
             ax.plot(data_hashmap['%s-%s-resnet50-seed1' %
                                  (dataset, method)]['epoch'],
@@ -237,7 +244,7 @@ if __name__ == '__main__':
             # else:
             #     ax.set_ylim([0, 15])
 
-            ax = fig_vne.add_subplot(gs[gs_x, gs_y * 2 + 1])
+            ax = fig_DSE.add_subplot(gs[gs_x, gs_y * 2 + 1])
             ax.spines[['right', 'top']].set_visible(False)
 
             ax.scatter(data_hashmap['%s-%s-resnet50-seed1' %
@@ -271,18 +278,18 @@ if __name__ == '__main__':
             # else:
             #     ax.set_ylim([0, 15])
 
-    fig_vne.tight_layout()
-    fig_vne.savefig(save_path_fig_vne)
-    plt.close(fig=fig_vne)
+    fig_DSE.tight_layout()
+    fig_DSE.savefig(save_path_fig_DSE)
+    plt.close(fig=fig_DSE)
 
     # Plot of I(Z; Y)
-    fig_mi = plt.figure(figsize=(30, 12))
-    gs = GridSpec(3, 4, figure=fig_mi)
+    fig_DSMI_Y = plt.figure(figsize=(30, 12))
+    gs = GridSpec(3, 4, figure=fig_DSMI_Y)
 
     color_map = ['mediumblue', 'darkred', 'darkgreen']
     for method, gs_x in zip(['supervised', 'simclr', 'wronglabel'], [0, 1, 2]):
         for dataset, gs_y in zip(['mnist', 'cifar10'], [0, 1]):
-            ax = fig_mi.add_subplot(gs[gs_x, gs_y * 2])
+            ax = fig_DSMI_Y.add_subplot(gs[gs_x, gs_y * 2])
             ax.spines[['right', 'top']].set_visible(False)
             ax.plot(data_hashmap['%s-%s-resnet50-seed1' %
                                  (dataset, method)]['epoch'],
@@ -322,7 +329,7 @@ if __name__ == '__main__':
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-            ax = fig_mi.add_subplot(gs[gs_x, gs_y * 2 + 1])
+            ax = fig_DSMI_Y.add_subplot(gs[gs_x, gs_y * 2 + 1])
             ax.spines[['right', 'top']].set_visible(False)
 
             ax.scatter(data_hashmap['%s-%s-resnet50-seed1' %
@@ -352,18 +359,18 @@ if __name__ == '__main__':
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
-    fig_mi.tight_layout()
-    fig_mi.savefig(save_path_fig_mi)
-    plt.close(fig=fig_mi)
+    fig_DSMI_Y.tight_layout()
+    fig_DSMI_Y.savefig(save_path_fig_DSMI_Y)
+    plt.close(fig=fig_DSMI_Y)
 
     # Plot of I(Z; Y), Shannon
-    fig_mi_shannon = plt.figure(figsize=(30, 12))
-    gs = GridSpec(3, 4, figure=fig_mi_shannon)
+    fig_CSMI_Y = plt.figure(figsize=(30, 12))
+    gs = GridSpec(3, 4, figure=fig_CSMI_Y)
 
     color_map = ['mediumblue', 'darkred', 'darkgreen']
     for method, gs_x in zip(['supervised', 'simclr', 'wronglabel'], [0, 1, 2]):
         for dataset, gs_y in zip(['mnist', 'cifar10'], [0, 1]):
-            ax = fig_mi_shannon.add_subplot(gs[gs_x, gs_y * 2])
+            ax = fig_CSMI_Y.add_subplot(gs[gs_x, gs_y * 2])
             ax.spines[['right', 'top']].set_visible(False)
             ax.plot(data_hashmap['%s-%s-resnet50-seed1' %
                                  (dataset, method)]['epoch'],
@@ -403,7 +410,7 @@ if __name__ == '__main__':
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-            ax = fig_mi_shannon.add_subplot(gs[gs_x, gs_y * 2 + 1])
+            ax = fig_CSMI_Y.add_subplot(gs[gs_x, gs_y * 2 + 1])
             ax.spines[['right', 'top']].set_visible(False)
 
             ax.scatter(data_hashmap['%s-%s-resnet50-seed1' %
@@ -433,18 +440,18 @@ if __name__ == '__main__':
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
-    fig_mi_shannon.tight_layout()
-    fig_mi_shannon.savefig(save_path_fig_mi_shannon)
-    plt.close(fig=fig_mi_shannon)
+    fig_CSMI_Y.tight_layout()
+    fig_CSMI_Y.savefig(save_path_fig_CSMI_Y)
+    plt.close(fig=fig_CSMI_Y)
 
     # Plot of I(Z; X)
-    fig_mi_X = plt.figure(figsize=(30, 12))
-    gs = GridSpec(3, 4, figure=fig_mi_X)
+    fig_DSMI_X = plt.figure(figsize=(30, 12))
+    gs = GridSpec(3, 4, figure=fig_DSMI_X)
 
     color_map = ['mediumblue', 'darkred', 'darkgreen']
     for method, gs_x in zip(['supervised', 'simclr', 'wronglabel'], [0, 1, 2]):
         for dataset, gs_y in zip(['mnist', 'cifar10'], [0, 1]):
-            ax = fig_mi_X.add_subplot(gs[gs_x, gs_y * 2])
+            ax = fig_DSMI_X.add_subplot(gs[gs_x, gs_y * 2])
             ax.spines[['right', 'top']].set_visible(False)
             ax.plot(data_hashmap['%s-%s-resnet50-seed1' %
                                  (dataset, method)]['epoch'],
@@ -484,7 +491,7 @@ if __name__ == '__main__':
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-            ax = fig_mi_X.add_subplot(gs[gs_x, gs_y * 2 + 1])
+            ax = fig_DSMI_X.add_subplot(gs[gs_x, gs_y * 2 + 1])
             ax.spines[['right', 'top']].set_visible(False)
 
             ax.scatter(data_hashmap['%s-%s-resnet50-seed1' %
@@ -514,18 +521,18 @@ if __name__ == '__main__':
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
-    fig_mi_X.tight_layout()
-    fig_mi_X.savefig(save_path_fig_mi_input)
-    plt.close(fig=fig_mi_X)
+    fig_DSMI_X.tight_layout()
+    fig_DSMI_X.savefig(save_path_fig_DSMI_X)
+    plt.close(fig=fig_DSMI_X)
 
     # Plot of I(Z; X), Shannon
-    fig_mi_X_shannon = plt.figure(figsize=(30, 12))
-    gs = GridSpec(3, 4, figure=fig_mi_X_shannon)
+    fig_CSMI_X = plt.figure(figsize=(30, 12))
+    gs = GridSpec(3, 4, figure=fig_CSMI_X)
 
     color_map = ['mediumblue', 'darkred', 'darkgreen']
     for method, gs_x in zip(['supervised', 'simclr', 'wronglabel'], [0, 1, 2]):
         for dataset, gs_y in zip(['mnist', 'cifar10'], [0, 1]):
-            ax = fig_mi_X_shannon.add_subplot(gs[gs_x, gs_y * 2])
+            ax = fig_CSMI_X.add_subplot(gs[gs_x, gs_y * 2])
             ax.spines[['right', 'top']].set_visible(False)
             ax.plot(data_hashmap['%s-%s-resnet50-seed1' %
                                  (dataset, method)]['epoch'],
@@ -565,7 +572,7 @@ if __name__ == '__main__':
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-            ax = fig_mi_X_shannon.add_subplot(gs[gs_x, gs_y * 2 + 1])
+            ax = fig_CSMI_X.add_subplot(gs[gs_x, gs_y * 2 + 1])
             ax.spines[['right', 'top']].set_visible(False)
 
             ax.scatter(data_hashmap['%s-%s-resnet50-seed1' %
@@ -595,9 +602,9 @@ if __name__ == '__main__':
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
-    fig_mi_X_shannon.tight_layout()
-    fig_mi_X_shannon.savefig(save_path_fig_mi_input_shannon)
-    plt.close(fig=fig_mi_X_shannon)
+    fig_CSMI_X.tight_layout()
+    fig_CSMI_X.savefig(save_path_fig_CSMI_X)
+    plt.close(fig=fig_CSMI_X)
 
     # Plot H(Z|Y)
     fig_H_ZgivenY = plt.figure(figsize=(30, 12))
