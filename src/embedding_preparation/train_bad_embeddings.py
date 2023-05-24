@@ -197,9 +197,9 @@ def train(config: AttributeHashmap) -> None:
 
     os.makedirs(config.checkpoint_dir, exist_ok=True)
     os.makedirs(config.log_dir, exist_ok=True)
-    log_path = '%s/%s-%s-%s-seed%s%s.log' % (
-        config.log_dir, config.dataset, config.bad_method, config.model,
-        config.random_seed, '-zeroinit' if config.zero_init else '')
+    log_path = '%s/%s-%s-%s-seed%s.log' % (config.log_dir, config.dataset,
+                                           config.bad_method, config.model,
+                                           config.random_seed)
 
     # Log the config.
     config_str = 'Config: \n'
@@ -300,19 +300,17 @@ def train(config: AttributeHashmap) -> None:
             filepath=log_path,
             to_console=False)
 
-        model_save_path = '%s/%s-%s-%s-seed%s%s-epoch%s-valAcc%.3f-divergence%.3f%s' % (
+        model_save_path = '%s/%s-%s-%s-seed%s-epoch%s-valAcc%.3f-divergence%.3f%s' % (
             config.checkpoint_dir, config.dataset, config.bad_method,
-            config.model, config.random_seed,
-            '-zeroinit' if config.zero_init else '', str(epoch_idx).zfill(4),
+            config.model, config.random_seed, str(epoch_idx).zfill(4),
             state_dict['val_acc'], state_dict['divergence'], '.pth')
         torch.save(model.state_dict(), model_save_path)
         if state_dict['divergence'] > biggest_acc_divergence:
             biggest_acc_divergence = state_dict['divergence']
             best_model = model.state_dict()
-            model_save_path = '%s/%s-%s-%s-seed%s%s-%s' % (
+            model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
                 config.checkpoint_dir, config.dataset, config.bad_method,
-                config.model, config.random_seed, '-zeroinit'
-                if config.zero_init else '', 'acc_divergence_biggest.pth')
+                config.model, config.random_seed, 'acc_divergence_biggest.pth')
             torch.save(best_model, model_save_path)
             log('Most train/val divergent model (so far) successfully saved.',
                 filepath=log_path,
@@ -321,10 +319,9 @@ def train(config: AttributeHashmap) -> None:
             for acc_divergence_percentage in acc_divergence_pct_list:
                 if state_dict['divergence'] > acc_divergence_percentage and \
                         not is_model_saved['acc_divergence_%s%%' % acc_divergence_percentage]:
-                    model_save_path = '%s/%s-%s-%s-seed%s%s-%s' % (
+                    model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
                         config.checkpoint_dir, config.dataset,
-                        config.bad_method, config.model, config.random_see,
-                        '-zeroinit' if config.zero_init else '',
+                        config.bad_method, config.model, config.random_seed,
                         'acc_divergence_%s%%.pth' % acc_divergence_percentage)
                     torch.save(best_model, model_save_path)
                     is_model_saved['acc_divergence_%s%%' %

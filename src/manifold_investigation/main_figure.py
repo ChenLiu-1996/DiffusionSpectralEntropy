@@ -5,7 +5,6 @@ from glob import glob
 
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy.stats import pearsonr, spearmanr
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import FormatStrFormatter
 
@@ -146,6 +145,10 @@ if __name__ == '__main__':
                     color=color_map[2],
                     linewidth=3,
                     alpha=0.5)
+
+            ymin, ymax = ax.get_ylim()
+            ax.set_ylim([ymin - 0.1, ymax + 0.1])
+
             if gs_x == 0 and gs_y == 0:
                 ax.set_ylabel('Supervised\nCSE', fontsize=25)
             if gs_x == 1 and gs_y == 0:
@@ -182,6 +185,9 @@ if __name__ == '__main__':
                                     (dataset, method)]['se'],
                        color=color_map[2],
                        alpha=0.2)
+
+            ymin, ymax = ax.get_ylim()
+            ax.set_ylim([ymin - 0.1, ymax + 0.1])
 
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
@@ -239,10 +245,6 @@ if __name__ == '__main__':
             ax.tick_params(axis='both', which='major', labelsize=20)
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-            # if dataset == 'mnist':
-            #     ax.set_ylim([6, 14])
-            # else:
-            #     ax.set_ylim([0, 15])
 
             ax = fig_DSE.add_subplot(gs[gs_x, gs_y * 2 + 1])
             ax.spines[['right', 'top']].set_visible(False)
@@ -273,10 +275,6 @@ if __name__ == '__main__':
             ax.tick_params(axis='both', which='major', labelsize=20)
 
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-            # if dataset == 'mnist':
-            #     ax.set_ylim([6, 14])
-            # else:
-            #     ax.set_ylim([0, 15])
 
     fig_DSE.tight_layout()
     fig_DSE.savefig(save_path_fig_DSE)
@@ -393,15 +391,16 @@ if __name__ == '__main__':
                     color=color_map[2],
                     linewidth=3,
                     alpha=0.5)
+
+            ymin, ymax = ax.get_ylim()
+            ax.set_ylim([ymin - 0.1, ymax + 0.1])
+
             if gs_x == 0 and gs_y == 0:
-                ax.set_ylabel('Supervised\nCSMI ' + r'$I(Z; Y)$',
-                              fontsize=25)
+                ax.set_ylabel('Supervised\nCSMI ' + r'$I(Z; Y)$', fontsize=25)
             if gs_x == 1 and gs_y == 0:
-                ax.set_ylabel('Contrastive\nCSMI ' + r'$I(Z; Y)$',
-                              fontsize=25)
+                ax.set_ylabel('Contrastive\nCSMI ' + r'$I(Z; Y)$', fontsize=25)
             if gs_x == 2 and gs_y == 0:
-                ax.set_ylabel('Overfitting\nCSMI ' + r'$I(Z; Y)$',
-                              fontsize=25)
+                ax.set_ylabel('Overfitting\nCSMI ' + r'$I(Z; Y)$', fontsize=25)
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
             if gs_x == 2:
@@ -431,6 +430,9 @@ if __name__ == '__main__':
                                     (dataset, method)]['mi_Y_shannon'],
                        color=color_map[2],
                        alpha=0.2)
+
+            ymin, ymax = ax.get_ylim()
+            ax.set_ylim([ymin - 0.1, ymax + 0.1])
 
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
@@ -474,6 +476,7 @@ if __name__ == '__main__':
                     color=color_map[2],
                     linewidth=3,
                     alpha=0.5)
+
             if gs_x == 0 and gs_y == 0:
                 ax.set_ylabel('Supervised\nDSMI ' + r'$I_D(Z; X)$',
                               fontsize=25)
@@ -555,15 +558,16 @@ if __name__ == '__main__':
                     color=color_map[2],
                     linewidth=3,
                     alpha=0.5)
+
+            ymin, ymax = ax.get_ylim()
+            ax.set_ylim([ymin - 0.1, ymax + 0.1])
+
             if gs_x == 0 and gs_y == 0:
-                ax.set_ylabel('Supervised\nCSMI ' + r'$I(Z; X)$',
-                              fontsize=25)
+                ax.set_ylabel('Supervised\nCSMI ' + r'$I(Z; X)$', fontsize=25)
             if gs_x == 1 and gs_y == 0:
-                ax.set_ylabel('Contrastive\nCSMI ' + r'$I(Z; X)$',
-                              fontsize=25)
+                ax.set_ylabel('Contrastive\nCSMI ' + r'$I(Z; X)$', fontsize=25)
             if gs_x == 2 and gs_y == 0:
-                ax.set_ylabel('Overfitting\nCSMI ' + r'$I(Z; X)$',
-                              fontsize=25)
+                ax.set_ylabel('Overfitting\nCSMI ' + r'$I(Z; X)$', fontsize=25)
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
             if gs_x == 2:
@@ -593,6 +597,9 @@ if __name__ == '__main__':
                                     (dataset, method)]['mi_X_shannon'],
                        color=color_map[2],
                        alpha=0.2)
+
+            ymin, ymax = ax.get_ylim()
+            ax.set_ylim([ymin - 0.1, ymax + 0.1])
 
             if gs_x == 0:
                 ax.set_title(dataset.upper(), fontsize=25)
