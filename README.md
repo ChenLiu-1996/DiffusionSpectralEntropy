@@ -2,7 +2,7 @@
 
 ## The repository is structured in the following manner.
 ```
-ManifoldTopology
+DiffusionSpectralEntropy
     ├── assets: figures, demos, etc.
     ├── data
     └── src
