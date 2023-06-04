@@ -1,6 +1,45 @@
 # Diffusion Spectral Entropy
+### Krishnaswamy Lab, Yale University
+[![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
+[![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/DiffusionSpectralEntropy.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/DiffusionSpectralEntropy/)
 
-## The repository is structured in the following manner.
+
+## Overview
+We proposed an information-theory based framework to measure the entropy and mutual information of neural network representations.
+
+Compared to the classic Shannon formulation using the binned embedding vectors (as in e.g. "Deep Learning and the Information Bottleneck Principle" by Tishby and Zaslavsky), our proposed method is more robust and expressive. See the "Limitations of the Classic Shannon Entropy and Mutual Information" section in our paper for details.
+
+## One-Minute Explanation of the Methods
+Conceptually, we build a data graph from the neural network representations of all data points in a dataset, and compute the diffusion matrix of the data graph. This matrix is a condensed representation of the diffusion geometry of the neural representation manifold. Our proposed **Diffusion Spectral Entropy** and **Diffusion Spectral Mutual Information** can be computed from this diffusion matrix.
+
+<img src="assets/procedure.png" width="800">
+
+## Quick Flavor of Results
+
+<table border="0">
+ <tr>
+    <td><b>Diffusion Spectral Entropy</b> (top panel) <br>outperforms <br>Classic Shannon Entropy (bottom panel) <br>on toy data</td>
+    <td><b>Diffusion Spectral Mutual Information</b> (top panel) <br>outperforms <br>Classic Shannon Mutual Information (bottom panel) <br>on toy data</td>
+ </tr>
+ <tr>
+    <td><img src="assets/toy_data_E.png" width="450"></td>
+    <td><img src="assets/toy_data_MI.png" width="450"></td>
+ </tr>
+</table>
+
+
+<table border="0">
+ <tr>
+    <td><b>Diffusion Spectral Entropy</b> (top figure) <br>outperforms <br>Classic Shannon Entropy (bottom figure) <br>on real data</td>
+    <td><b>Diffusion Spectral Mutual Information</b> (top figure) <br>outperforms <br>Classic Shannon Mutual Information (bottom figure) <br>on real data</td>
+ </tr>
+ <tr>
+    <td><img src="assets/main_figure_DSE(Z).png" width="450"><br><img src="assets/main_figure_CSE(Z).png" width="450"></td>
+    <td><img src="assets/main_figure_DSMI(Z;Y).png" width="450"><br><img src="assets/main_figure_CSMI(Z;Y).png" width="450"></td>
+ </tr>
+</table>
+
+## Repository Hierarchy
 ```
 DiffusionSpectralEntropy
     ├── assets: figures, demos, etc.
@@ -23,6 +62,8 @@ DiffusionSpectralEntropy
         |
         └── manifold_investigation: Our core investigations can be found here
 ```
+
+
 ## Citation
 To be added
 
@@ -113,7 +154,7 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 
 ```
 
-#### Preparing pretrained weights of external models.
+### Pretrained weights of external models.
 <details> <summary>NOTE: This is no longer very relevant. We prepared these but we later shifted our research focus.</summary>
 
 <details> <summary>Supervised</summary>
