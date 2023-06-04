@@ -45,21 +45,9 @@ DiffusionSpectralEntropy
     ├── assets: figures, demos, etc.
     ├── data
     └── src
-        ├── embedding_preparation: train our own intermediate models and store the embeddings
-        |   ├── checkpoints
-        |   ├── config
-        |   ├── logs
-        |   ├── results
-        |   └── `train_embeddings.py`
+        ├── embedding_preparation: train our own intermediate models and store the embedding vectors
         ├── nn
         ├── utils
-        |
-        ├── external_model_loader: a folder full of wrapper code to interface with external models
-        |   ├── `base.py`: a base template that gets inherited by individual wrappers.
-        |   └── `${MODEL_NAME}_model.py`
-        ├── unit_test
-        |   └── `test_run_${MODEL_NAME}.py`: scripts to check validity of `${MODEL_NAME}_model.py`.
-        |
         └── manifold_investigation: Our core investigations can be found here
 ```
 
