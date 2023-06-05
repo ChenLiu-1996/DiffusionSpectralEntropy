@@ -60,6 +60,50 @@ To be added
 ```
 api > dse.py > diffusion_spectral_entropy
 ```
+<detail> <summary>`diffusion_spectral_entropy`</summary>
+```
+DSE over a set of N vectors, each of D dimensions.
+
+DSE = - sum_i [eig_i^t log eig_i^t]
+
+where each `eig_i` is an eigenvalue of `P`,
+where `P` is the diffusion matrix computed on the data graph of the [N, D] vectors.
+
+args:
+    embedding_vectors: np.array of shape [N, D]
+        N: number of data points / samples
+        D: number of feature dimensions of the neural representation
+
+    t: int
+        Power of diffusion matrix (equivalent to power of diffusion eigenvalues)
+        <-> Iteration of diffusion process
+        Usually small, e.g., 1 or 2.
+        Can be adjusted per dataset.
+        Rule of thumb: after powering eigenvalues to `t`, there should be approximately
+                        1 percent of eigenvalues that remain larger than 0.01
+
+    gaussian_kernel_sigma: int
+        The bandwidth of Gaussian kernel (for computation of the diffusion matrix)
+        Can be adjusted per the dataset.
+        Increase if the data points are very far away from each other.
+
+    chebyshev_approx: bool
+        Whether or not to use Chebyshev moments for faster approximation of eigenvalues.
+        Currently we DO NOT RECOMMEND USING THIS. Eigenvalues may be changed quite a bit.
+
+    eigval_save_path: str
+        If provided,
+            (1) If running for the first time, will save the computed eigenvalues in this location.
+            (2) Otherwise, if the file already exists, skip eigenvalue computation and load from this file.
+
+    eigval_save_precision: np.dtype
+        We use `np.float16` by default to reduce storage space required.
+        For best precision, use `np.float64` instead.
+
+    verbose: bool
+        Whether or not to print progress to console.
+```
+</details>
 
 ## Reproducing Results in the Paper
 
