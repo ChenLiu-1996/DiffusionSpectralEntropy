@@ -9,6 +9,7 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
                                t: int = 1,
                                chebyshev_approx: bool = False,
                                eigval_save_path: str = None,
+                               eigval_save_precision: np.dtype = np.float16,
                                verbose: bool = True):
     '''
     DSE over a set of N vectors, each of D dimensions.
@@ -45,11 +46,18 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
                 (1) If running for the first time, will save the computed eigenvalues in this location.
                 (2) Otherwise, if the file already exists, skip eigenvalue computation and load from this file.
 
+        eigval_save_precision: np.dtype
+            We use `np.float16` by default to reduce storage space required.
+            For best precision, use `np.float64` instead.
+
         verbose: bool
             Whether or not to print progress to console.
     '''
 
     if eigval_save_path is not None and os.path.exists(eigval_save_path):
+        if verbose:
+            print('Loading pre-computed eigenvalues from %s' %
+                  eigval_save_path)
         eigvals = np.load(eigval_save_path)['eigvals']
         eigvals = eigvals.astype(np.float64)  # mitigate rounding error.
         if verbose: print('Pre-computed eigenvalues loaded.')
@@ -70,8 +78,10 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
         if verbose: print('Eigenvalues computed.')
 
         if eigval_save_path is not None:
+            os.makedirs(os.path.dirname(eigval_save_path), exist_ok=True)
             # Save eigenvalues.
-            eigvals = eigvals.astype(np.float16)  # save disk space.
+            eigvals = eigvals.astype(
+                eigval_save_precision)  # reduce storage space.
             with open(eigval_save_path, 'wb+') as f:
                 np.savez(f, eigvals=eigvals)
             if verbose: print('Eigenvalues saved to %s' % eigval_save_path)
@@ -120,3 +130,41 @@ def classic_shannon_entropy(embedding_vectors: np.array,
     CSE = -np.sum(prob * np.log2(prob))
 
     return CSE
+
+
+if __name__ == '__main__':
+    print('Testing Diffusion Spectral Entropy.')
+    print('\n1st run, random vecs, without saving eigvals.')
+    embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+    DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors)
+    print('DSE =', DSE)
+
+    print('\n2nd run, random vecs, saving eigvals (np.float16).')
+    tmp_path = './test_dse_eigval.npz'
+    embedding_vectors = np.random.uniform(0, 2, (1000, 256))
+    DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+                                     eigval_save_path=tmp_path)
+    print('DSE =', DSE)
+
+    print(
+        '\n3rd run, loading eigvals from 2nd run. May be slightly off due to float16 saving.'
+    )
+    embedding_vectors = None  # does not matter, will be ignored anyways
+    DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+                                     eigval_save_path=tmp_path)
+    print('DSE =', DSE)
+    os.remove(tmp_path)
+
+    print('\n4th run, random vecs, saving eigvals (np.float64).')
+    embedding_vectors = np.random.uniform(0, 3, (1000, 256))
+    DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+                                     eigval_save_path=tmp_path,
+                                     eigval_save_precision=np.float64)
+    print('DSE =', DSE)
+
+    print('\n5th run, loading eigvals from 4th run. Shall be identical.')
+    embedding_vectors = None  # does not matter, will be ignored anyways
+    DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+                                     eigval_save_path=tmp_path)
+    print('DSE =', DSE)
+    os.remove(tmp_path)
