@@ -56,9 +56,9 @@ DiffusionSpectralEntropy
 To be added
 
 ## API
-### Diffusion Spectral Entropy
+### [Diffusion Spectral Entropy](./api/dse.py/#L7)
 ```
-api > dse.py > [diffusion_spectral_entropy](./api/dse.py/#L7)
+api > dse.py > diffusion_spectral_entropy
 ```
 
 
