@@ -4,6 +4,10 @@
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/DiffusionSpectralEntropy.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/DiffusionSpectralEntropy/)
 
+**This repository contains the official PyTorch implementation of the following paper:**
+
+> **Assessing Neural Network Representations During Training Using Data Diffusion Spectra**<br>
+>
 
 ## Overview
 We proposed an information-theory based framework to measure the entropy and mutual information of neural network representations.
