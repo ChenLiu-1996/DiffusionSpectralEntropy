@@ -14,7 +14,7 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
     '''
     DSE over a set of N vectors, each of D dimensions.
 
-    H(G) = - sum_i [eig_i^t log eig_i^t]
+    DSE = - sum_i [eig_i^t log eig_i^t]
 
     where each `eig_i` is an eigenvalue of `P`,
     where `P` is the diffusion matrix computed on the data graph of the [N, D] vectors.
@@ -109,7 +109,7 @@ def classic_shannon_entropy(embedding_vectors: np.array,
     '''
     Classic Shannon Entropy over a set of N vectors, each of D dimensions.
 
-    H(X) = - sum_i [p(x) log p(x)]
+    CSE = - sum_i [p(x) log p(x)]
 
     where each p(x) is the probability density of a histogram bin, after some sort of binning.
     '''
