@@ -55,26 +55,13 @@ DiffusionSpectralEntropy
 ## Citation
 To be added
 
-## Environment
-We developed the codebase in a miniconda environment.
-Tested on Python 3.9.13 + PyTorch 1.12.1.
-How we created the conda environment:
+## API
+### Diffusion Spectral Entropy
 ```
-conda create --name $OUR_CONDA_ENV pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
-conda activate $OUR_CONDA_ENV
-conda install -c anaconda scikit-image pillow matplotlib seaborn tqdm
-python -m pip install -U giotto-tda
-python -m pip install POT torch-optimizer
-python -m pip install tinyimagenet
-python -m pip install natsort
-cd diffusion_curvature
-python -m pip install .
-python -m pip install phate
-python -m pip install DiffusionEMD
-python -m pip install magic-impute
+api > dse.py > diffusion_spectral_entropy
 ```
 
-## Usage
+## Reproducing Results in the Paper
 
 ### Train our Supervised vs Contrastive encoders.
 Using (MNIST + Supervised) as an example.
@@ -117,6 +104,27 @@ python toy_data_diffusion_sampling_entropy.py
 
 
 ## Preparation
+
+### Environment
+We developed the codebase in a miniconda environment.
+Tested on Python 3.9.13 + PyTorch 1.12.1.
+How we created the conda environment:
+**Some packages may no longer be required.**
+```
+conda create --name $OUR_CONDA_ENV pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
+conda activate $OUR_CONDA_ENV
+conda install -c anaconda scikit-image pillow matplotlib seaborn tqdm
+python -m pip install -U giotto-tda
+python -m pip install POT torch-optimizer
+python -m pip install tinyimagenet
+python -m pip install natsort
+cd diffusion_curvature
+python -m pip install .
+python -m pip install phate
+python -m pip install DiffusionEMD
+python -m pip install magic-impute
+```
+
 
 ### Dataset
 #### Most datasets
