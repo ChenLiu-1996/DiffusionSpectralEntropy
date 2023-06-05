@@ -60,7 +60,7 @@ To be added
 ```
 api > dse.py > diffusion_spectral_entropy
 ```
-[Link to function](./api/dse.py/#L7)
+[Go to function](./api/dse.py/#L7)
 
 
 ## Reproducing Results in the Paper
