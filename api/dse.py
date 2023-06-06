@@ -10,14 +10,24 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
                                chebyshev_approx: bool = False,
                                eigval_save_path: str = None,
                                eigval_save_precision: np.dtype = np.float16,
+                               classic_shannon_entropy: bool = False,
+                               num_bins_per_dim: int = 2,
                                verbose: bool = True):
     '''
-    DSE over a set of N vectors, each of D dimensions.
+    >>> If `classic_shannon_entropy` is False (default)
+
+    Diffusion Spectral Entropy over a set of N vectors, each of D dimensions.
 
     DSE = - sum_i [eig_i^t log eig_i^t]
+        where each `eig_i` is an eigenvalue of `P`,
+        where `P` is the diffusion matrix computed on the data graph of the [N, D] vectors.
 
-    where each `eig_i` is an eigenvalue of `P`,
-    where `P` is the diffusion matrix computed on the data graph of the [N, D] vectors.
+    >>> If `classic_shannon_entropy` is True
+
+    Classic Shannon Entropy over a set of N vectors, each of D dimensions.
+
+    CSE = - sum_i [p(x) log p(x)]
+        where each p(x) is the probability density of a histogram bin, after some sort of binning.
 
     args:
         embedding_vectors: np.array of shape [N, D]
@@ -50,86 +60,87 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
             We use `np.float16` by default to reduce storage space required.
             For best precision, use `np.float64` instead.
 
+        classic_shannon_entropy: bool
+            Toggle between DSE and CSE. False (default) == DSE.
+
+        num_bins_per_dim: int
+            Number of bins per feature dim.
+            Only relevant to CSE (i.e., `classic_shannon_entropy` is True).
+
         verbose: bool
             Whether or not to print progress to console.
     '''
 
-    if eigval_save_path is not None and os.path.exists(eigval_save_path):
-        if verbose:
-            print('Loading pre-computed eigenvalues from %s' %
-                  eigval_save_path)
-        eigvals = np.load(eigval_save_path)['eigvals']
-        eigvals = eigvals.astype(np.float64)  # mitigate rounding error.
-        if verbose: print('Pre-computed eigenvalues loaded.')
+    if not classic_shannon_entropy:
+        # Computing Diffusion Spectral Entropy.
+        if verbose: print('Computing Diffusion Spectral Entropy...')
+
+        if eigval_save_path is not None and os.path.exists(eigval_save_path):
+            if verbose:
+                print('Loading pre-computed eigenvalues from %s' %
+                      eigval_save_path)
+            eigvals = np.load(eigval_save_path)['eigvals']
+            eigvals = eigvals.astype(np.float64)  # mitigate rounding error.
+            if verbose: print('Pre-computed eigenvalues loaded.')
+
+        else:
+            if verbose: print('Computing diffusion matrix.')
+            # Note that `K` is a symmetric matrix with the same eigenvalues as the diffusion matrix `P`.
+            K = compute_diffusion_matrix(embedding_vectors,
+                                         sigma=gaussian_kernel_sigma)
+            if verbose: print('Diffusion matrix computed.')
+
+            if verbose: print('Computing eigenvalues.')
+            if chebyshev_approx:
+                if verbose: print('Using Chebyshev approximation.')
+                eigvals = approx_eigvals(K)
+            else:
+                eigvals = exact_eigvals(K)
+            if verbose: print('Eigenvalues computed.')
+
+            if eigval_save_path is not None:
+                os.makedirs(os.path.dirname(eigval_save_path), exist_ok=True)
+                # Save eigenvalues.
+                eigvals = eigvals.astype(
+                    eigval_save_precision)  # reduce storage space.
+                with open(eigval_save_path, 'wb+') as f:
+                    np.savez(f, eigvals=eigvals)
+                if verbose: print('Eigenvalues saved to %s' % eigval_save_path)
+
+        # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
+        eigvals = np.array(sorted(eigvals)[::-1])
+        eigvals = eigvals[1:]
+
+        # Eigenvalues may be negative. Only care about the magnitude, not the sign.
+        eigvals = np.abs(eigvals)
+
+        # Power eigenvalues to `t` to mitigate effect of noise.
+        eigvals = eigvals**t
+
+        prob = eigvals / eigvals.sum()
 
     else:
-        if verbose: print('Computing diffusion matrix.')
-        # Note that `K` is a symmetric matrix with the same eigenvalues as the diffusion matrix `P`.
-        K = compute_diffusion_matrix(embedding_vectors,
-                                     sigma=gaussian_kernel_sigma)
-        if verbose: print('Diffusion matrix computed.')
+        # Computing Classic Shannon Entropy.
+        if verbose: print('Computing Classic Shannon Entropy...')
 
-        if verbose: print('Computing eigenvalues.')
-        if chebyshev_approx:
-            if verbose: print('Using Chebyshev approximation.')
-            eigvals = approx_eigvals(K)
-        else:
-            eigvals = exact_eigvals(K)
-        if verbose: print('Eigenvalues computed.')
+        vecs = embedding_vectors.copy()
 
-        if eigval_save_path is not None:
-            os.makedirs(os.path.dirname(eigval_save_path), exist_ok=True)
-            # Save eigenvalues.
-            eigvals = eigvals.astype(
-                eigval_save_precision)  # reduce storage space.
-            with open(eigval_save_path, 'wb+') as f:
-                np.savez(f, eigvals=eigvals)
-            if verbose: print('Eigenvalues saved to %s' % eigval_save_path)
+        # Min-Max scale each dimension.
+        vecs = (vecs - np.min(vecs, axis=0)) / (np.max(vecs, axis=0) -
+                                                np.min(vecs, axis=0))
 
-    # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
-    eigvals = np.array(sorted(eigvals)[::-1])
-    eigvals = eigvals[1:]
+        # Bin along each dimension.
+        bins = np.linspace(0, 1, num_bins_per_dim + 1)[:-1]
+        vecs = np.digitize(vecs, bins=bins)
 
-    # Eigenvalues may be negative. Only care about the magnitude, not the sign.
-    eigvals = np.abs(eigvals)
+        # Count probability.
+        counts = np.unique(vecs, axis=0, return_counts=True)[1]
+        prob = counts / np.sum(counts)
 
-    # Power eigenvalues to `t` to mitigate effect of noise.
-    eigvals = eigvals**t
-
-    prob = eigvals / eigvals.sum()
     prob = prob + np.finfo(float).eps
+    entropy = -np.sum(prob * np.log2(prob))
 
-    DSE = -np.sum(prob * np.log2(prob))
-
-    return DSE
-
-
-def classic_shannon_entropy(embedding_vectors: np.array,
-                            num_bins_per_dim: int = 2):
-    '''
-    Classic Shannon Entropy over a set of N vectors, each of D dimensions.
-
-    CSE = - sum_i [p(x) log p(x)]
-
-    where each p(x) is the probability density of a histogram bin, after some sort of binning.
-    '''
-    vecs = embedding_vectors.copy()
-
-    # Min-Max scale each dimension.
-    vecs = (vecs - np.min(vecs, axis=0)) / (np.max(vecs, axis=0) -
-                                            np.min(vecs, axis=0))
-
-    # Bin along each dimension.
-    bins = np.linspace(0, 1, num_bins_per_dim + 1)[:-1]
-    vecs = np.digitize(vecs, bins=bins)
-
-    # Count probability.
-    counts = np.unique(vecs, axis=0, return_counts=True)[1]
-    prob = counts / np.sum(counts)
-    prob = prob + np.finfo(float).eps
-    CSE = -np.sum(prob * np.log2(prob))
-
-    return CSE
+    return entropy
 
 
 if __name__ == '__main__':
@@ -168,3 +179,9 @@ if __name__ == '__main__':
                                      eigval_save_path=tmp_path)
     print('DSE =', DSE)
     os.remove(tmp_path)
+
+    print('\n6th run, Classic Shannon Entropy.')
+    embedding_vectors = np.random.uniform(0, 3, (1000, 256))
+    DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+                                     classic_shannon_entropy=True)
+    print('DSE =', DSE)
