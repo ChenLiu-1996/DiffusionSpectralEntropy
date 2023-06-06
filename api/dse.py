@@ -12,7 +12,7 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
                                eigval_save_precision: np.dtype = np.float16,
                                classic_shannon_entropy: bool = False,
                                num_bins_per_dim: int = 2,
-                               verbose: bool = True):
+                               verbose: bool = False):
     '''
     >>> If `classic_shannon_entropy` is False (default)
 
@@ -182,6 +182,6 @@ if __name__ == '__main__':
 
     print('\n6th run, Classic Shannon Entropy.')
     embedding_vectors = np.random.uniform(0, 3, (1000, 256))
-    DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+    CSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
                                      classic_shannon_entropy=True)
-    print('DSE =', DSE)
+    print('CSE =', CSE)
