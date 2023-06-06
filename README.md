@@ -62,16 +62,16 @@ To be added
 
 ## API
 ### Diffusion Spectral Entropy
+[Go to function](./api/dse.py/#L7)
 ```
 api > dse.py > diffusion_spectral_entropy
 ```
-[Go to function](./api/dse.py/#L7)
 
 ### Diffusion Spectral Mutual Information
+[Go to function](./api/dsmi.py/#L7)
 ```
 api > dsmi.py > diffusion_spectral_mutual_information
 ```
-[Go to function](./api/dsmi.py/#L7)
 
 
 ## Reproducing Results in the Paper
