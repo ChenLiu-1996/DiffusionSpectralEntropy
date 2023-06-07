@@ -8,7 +8,7 @@ def diffusion_spectral_mutual_information(
         embedding_vectors: np.array,
         reference_vectors: np.array,
         reference_discrete: bool = None,
-        gaussian_kernel_sigma: int = 10,
+        gaussian_kernel_sigma: float = 10,
         t: int = 1,
         chebyshev_approx: bool = False,
         num_repetitions: int = 5,
@@ -27,7 +27,7 @@ def diffusion_spectral_mutual_information(
             - class labels (D' == 1) of shape [N, 1]
             - flattened input signals/images of shape [N, D']
 
-    DSE(A; B) = DSE(A) - DSE(A | B)
+    DSMI(A; B) = DSE(A) - DSE(A | B)
         where DSE is the diffusion spectral entropy.
 
     DSE(A | B) = sum_i [p(B = b_i) DSE(A | B = b_i)]
@@ -41,7 +41,7 @@ def diffusion_spectral_mutual_information(
 
     The final computation is:
 
-    DSE(A; B) = DSE(A) - DSE(A | B) = sum_i [p(B = b_i) (DSE(A*) - DSE(A | B = b_i))]
+    DSMI(A; B) = DSE(A) - DSE(A | B) = sum_i [p(B = b_i) (DSE(A*) - DSE(A | B = b_i))]
         where A* is a subsampled version of A, with len(A*) == len(B = b_i).
 
     args:
@@ -59,6 +59,11 @@ def diffusion_spectral_mutual_information(
             NOTE: If True, we assume D' == 1. Common case: `reference_vectors` is the discrete class labels.
             If not provided, will be inferred from `reference_vectors`.
 
+        gaussian_kernel_sigma: float
+            The bandwidth of Gaussian kernel (for computation of the diffusion matrix)
+            Can be adjusted per the dataset.
+            Increase if the data points are very far away from each other.
+
         t: int
             Power of diffusion matrix (equivalent to power of diffusion eigenvalues)
             <-> Iteration of diffusion process
@@ -66,11 +71,6 @@ def diffusion_spectral_mutual_information(
             Can be adjusted per dataset.
             Rule of thumb: after powering eigenvalues to `t`, there should be approximately
                            1 percent of eigenvalues that remain larger than 0.01
-
-        gaussian_kernel_sigma: int
-            The bandwidth of Gaussian kernel (for computation of the diffusion matrix)
-            Can be adjusted per the dataset.
-            Increase if the data points are very far away from each other.
 
         chebyshev_approx: bool
             Whether or not to use Chebyshev moments for faster approximation of eigenvalues.
