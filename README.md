@@ -48,6 +48,7 @@ Conceptually, we build a data graph from the neural network representations of a
 ```
 DiffusionSpectralEntropy
     ├── api: probably the only things you would ever use from this project
+    |   |
     |   ├── dse.py: Diffusion Spectral Entropy
     |   └── dsmi.py: Diffusion Spectral Mutual Information
     |
