@@ -19,7 +19,7 @@ Conceptually, we build a data graph from the neural network representations of a
 
 <img src="assets/procedure.png" width="800">
 
-## Quick Flavor of Results
+## Quick Flavor of the Results
 
 <table border="0">
  <tr>
