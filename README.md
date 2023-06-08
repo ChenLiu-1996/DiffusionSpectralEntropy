@@ -14,12 +14,12 @@ We proposed an information-theory based framework to measure the entropy and mut
 
 Compared to the classic Shannon formulation using the binned embedding vectors (as in e.g. "Deep Learning and the Information Bottleneck Principle" by Tishby and Zaslavsky), our proposed method is more robust and expressive. See the "Limitations of the Classic Shannon Entropy and Mutual Information" section in our paper for details.
 
-## One-Minute Explanation of the Methods
+## A One-Minute Explanation of the Methods
 Conceptually, we build a data graph from the neural network representations of all data points in a dataset, and compute the diffusion matrix of the data graph. This matrix is a condensed representation of the diffusion geometry of the neural representation manifold. Our proposed **Diffusion Spectral Entropy** and **Diffusion Spectral Mutual Information** can be computed from this diffusion matrix.
 
 <img src="assets/procedure.png" width="800">
 
-## Quick Flavor of the Results
+## Quick Flavors of the Results
 
 <table border="0">
  <tr>
