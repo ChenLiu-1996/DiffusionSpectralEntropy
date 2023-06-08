@@ -60,7 +60,7 @@ DiffusionSpectralEntropy
 ## Citation
 To be added
 
-## API
+## API [Probably the Only Things You Would Ever Use from This Project]
 ### Diffusion Spectral Entropy
 [Go to function](./api/dse.py/#L7)
 ```
