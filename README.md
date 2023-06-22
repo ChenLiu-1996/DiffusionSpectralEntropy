@@ -4,10 +4,10 @@
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/DiffusionSpectralEntropy.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/DiffusionSpectralEntropy/)
 
-**This repository contains the official PyTorch implementation of the following paper:**
+This is the **official** PyTorch implementation of **Assessing Neural Network Representations During Training Using Data Diffusion Spectra**.
 
-> **Assessing Neural Network Representations During Training Using Data Diffusion Spectra**<br>
->
+## News
+[June 2023] A non-archival version is accepted to the [TAG-ML Workshop @ ICML 2023](https://openreview.net/pdf?id=DQW3ilre3Q).
 
 ## Overview
 We proposed an information-theory based framework to measure the entropy and mutual information of neural network representations.
@@ -63,7 +63,14 @@ DiffusionSpectralEntropy
 
 
 ## Citation
-To be added
+```
+@inproceedings{DiffusionSpectralEntropy,
+  title={Assessing Neural Network Representations During Training Using Data Diffusion Spectra},
+  author={Liao, Danqi and Liu, Chen and Tong, Alexander and Huguet, Guillaume and Wolf, Guy and Nickel, Maximilian and Adelstein, Ian and Krishnaswamy, Smita},
+  booktitle={ICML Workshop on Topology, Algebra, and Geometry in Machine Learning (TAG-ML)},
+  year={2023},
+}
+```
 
 ## API [Probably the Only Things You Would Ever Use from This Project]
 ### Diffusion Spectral Entropy
