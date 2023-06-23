@@ -10,7 +10,7 @@ This is the **official** PyTorch implementation of
 **Assessing Neural Network Representations During Training Using Data Diffusion Spectra**.
 
 ## News
-[June 2023] A non-archival version is **accepted** to the [TAG-ML Workshop @ **ICML 2023**](https://openreview.net/pdf?id=DQW3ilre3Q).
+[June 2023] A non-archival version is **accepted** to the [TAG-ML Workshop](https://icml.cc/virtual/2023/workshop/21480) @ **ICML 2023**. [[PDF]](https://openreview.net/pdf?id=DQW3ilre3Q)
 
 ## Overview
 We proposed an information-theory based framework to measure the entropy and mutual information of neural network representations.
