@@ -75,7 +75,9 @@ DiffusionSpectralEntropy
 }
 ```
 
-## API [Probably the Only Things You Would Ever Use from This Project]
+## API: Your One-Stop Shop
+Here we present the refactored and reorganized go-to APIs for this project.
+
 ### Diffusion Spectral Entropy
 [Go to function](./api/dse.py/#L7)
 ```
@@ -88,7 +90,7 @@ api > dse.py > diffusion_spectral_entropy
 api > dsmi.py > diffusion_spectral_mutual_information
 ```
 
-### Unit Test for DSE and DSMI
+### Unit Tests for DSE and DSMI
 You can directly run the following lines for built-in unit tests.
 ```
 python dse.py
