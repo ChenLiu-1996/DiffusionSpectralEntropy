@@ -5,7 +5,7 @@
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/DiffusionSpectralEntropy.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/DiffusionSpectralEntropy/)
 
 
-This is the **official** PyTorch implementation of
+This is the **official** implementation of
 
 **Assessing Neural Network Representations During Training Using Data Diffusion Spectra**.
 
