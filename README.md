@@ -9,7 +9,7 @@ This is the **official** PyTorch implementation of
 
 **Assessing Neural Network Representations During Training Using Data Diffusion Spectra**.
 
-<img src="assets/logos/Yale_logo.png" height="72"/> &emsp; <img src="assets/logos/Mila_logo.png" height="72"/> &emsp; <img src="assets/logos/MetaAI_logo.png" height="72"/>
+<img src="assets/logos/Yale_logo.png" height="96"/> &emsp; <img src="assets/logos/Mila_logo.png" height="96"/> &emsp; <img src="assets/logos/MetaAI_logo.png" height="96"/>
 
 
 ## News
