@@ -88,6 +88,12 @@ api > dse.py > diffusion_spectral_entropy
 api > dsmi.py > diffusion_spectral_mutual_information
 ```
 
+### Unit Test for DSE and DSMI
+You can directly run the following lines for built-in unit tests.
+```
+python dse.py
+python dsmi.py
+```
 
 ## Reproducing Results in the Paper
 
