@@ -6,7 +6,8 @@
 
 
 This is the **official** PyTorch implementation of
-    **Assessing Neural Network Representations During Training Using Data Diffusion Spectra**.
+
+**Assessing Neural Network Representations During Training Using Data Diffusion Spectra**.
 
 ## News
 [June 2023] A non-archival version is accepted to the [TAG-ML Workshop @ ICML 2023](https://openreview.net/pdf?id=DQW3ilre3Q).
