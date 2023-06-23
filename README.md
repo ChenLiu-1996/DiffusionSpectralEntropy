@@ -2,7 +2,7 @@
 **Krishnaswamy Lab, Yale University**
 
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
-
+[![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/DiffusionSpectralEntropy.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/DiffusionSpectralEntropy/)
 
 This is the **official** PyTorch implementation of **Assessing Neural Network Representations During Training Using Data Diffusion Spectra**.
 
