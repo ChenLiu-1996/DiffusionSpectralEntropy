@@ -21,7 +21,7 @@ We proposed an information-theory based framework to measure the **entropy** and
 Compared to the classic Shannon formulation using the binning method, e.g. as in the famous paper _Deep Learning and the Information Bottleneck Principle_ [[PDF]](https://arxiv.org/abs/1503.02406) [[Github1]](https://github.com/stevenliuyi/information-bottleneck) [[Github2]](https://github.com/artemyk/ibsgd), our proposed method is more robust and expressive.
 
 ## Main Advantage
-No binning and hence **no curse of dimensionality**. Therefore it **works for** toy models (layer width at most 10 or 20) but also **modern deep neural networks** (e.g., ResNet50 layers). See the "Limitations of the Classic Shannon Entropy and Mutual Information" section in our paper for details.
+No binning and hence **no curse of dimensionality**. Therefore, **it works on modern deep neural networks** (e.g., ResNet50 layers), not just on toy models (layer width at most 10 or 20). See the "Limitations of the Classic Shannon Entropy and Mutual Information" section in our paper for details.
 
 ## A One-Minute Explanation of the Methods
 Conceptually, we build a data graph from the neural network representations of all data points in a dataset, and compute the diffusion matrix of the data graph. This matrix is a condensed representation of the diffusion geometry of the neural representation manifold. Our proposed **Diffusion Spectral Entropy** and **Diffusion Spectral Mutual Information** can be computed from this diffusion matrix.
