@@ -16,9 +16,9 @@ This is the **official** implementation of
 [June 2023] A non-archival version is **accepted** to the [TAG-ML Workshop](https://icml.cc/virtual/2023/workshop/21480) @ **ICML 2023**. [[PDF]](https://openreview.net/pdf?id=DQW3ilre3Q)
 
 ## Overview
-We proposed an information-theory based framework to measure the **entropy** and **mutual information** of neural network representations. We can measure, with respect to a given set of data samples, the entropy of a specific layer or the mutual information between a random variable (input or output) and a specific layer.
+We proposed an information-theory based framework to measure the **entropy** and **mutual information** of neural network representations. We can measure, with respect to a given set of data samples, (1) the entropy of the neural representation at a specific layer and (2) the mutual information between a random variable (e.g., model input or output) and the neural representation at a specific layer.
 
-Compared to the classic Shannon formulation using the binned embedding vectors (as in e.g. [Deep Learning and the Information Bottleneck Principle](https://arxiv.org/abs/1503.02406)), our proposed method is more robust and expressive.
+Compared to the classic Shannon formulation using the binned embedding vectors, e.g. as in the famous Deep Learning and the Information Bottleneck Principle [[PDF]](https://arxiv.org/abs/1503.02406) [[Github1]](https://github.com/stevenliuyi/information-bottleneck) [[Github2]](https://github.com/artemyk/ibsgd), our proposed method is more robust and expressive.
 
 ✔️ Main advantage: No binning and hence **no curse of dimensionality**. Therefore **it can work on modern deep neural networks** (e.g., ResNet50 layers) instead of only on toy models (layer width at most 10 or 20). See the "Limitations of the Classic Shannon Entropy and Mutual Information" section in our paper for details.
 
