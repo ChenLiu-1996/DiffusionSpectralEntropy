@@ -16,7 +16,9 @@ This is the **official** implementation of
 [June 2023] A non-archival version is **accepted** to the [TAG-ML Workshop](https://icml.cc/virtual/2023/workshop/21480) @ **ICML 2023**. [[PDF]](https://openreview.net/pdf?id=DQW3ilre3Q)
 
 ## Overview
-We proposed an information-theory based framework to measure the **entropy** and **mutual information** of neural network representations. We can measure, with respect to a given set of data samples, (1) the entropy of the neural representation at a specific layer and (2) the mutual information between a random variable (e.g., model input or output) and the neural representation at a specific layer.
+> We proposed an information-theory based framework to measure the **entropy** and **mutual information** of neural network representations.
+
+We can measure, with respect to a given set of data samples, (1) the entropy of the neural representation at a specific layer and (2) the mutual information between a random variable (e.g., model input or output) and the neural representation at a specific layer.
 
 Compared to the classic Shannon formulation using the binning method, e.g. as in the famous paper _Deep Learning and the Information Bottleneck Principle_ [[PDF]](https://arxiv.org/abs/1503.02406) [[Github1]](https://github.com/stevenliuyi/information-bottleneck) [[Github2]](https://github.com/artemyk/ibsgd), our proposed method is more robust and expressive.
 
