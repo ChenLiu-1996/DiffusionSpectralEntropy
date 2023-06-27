@@ -36,12 +36,12 @@ if __name__ == '__main__':
     plt.rcParams['legend.fontsize'] = 15
 
     N = 500
-    D = 1024
+    D = 2048
     num_dim = 20
     num_repetition = 5
-    matrix_mix_sizes = [400, 420, 440, 460, 480, 500]
+    matrix_mix_sizes = [64, 128, 256, 512, 1024, 2048]
     t_list = [1, 2, 3, 5]
-    noise_level_list = [1e-2, 1e-1, 3e-1]
+    noise_level_list = [1e-2, 1e-1, 5e-1]
 
     alpha_list = np.linspace(0, 1, num_dim)
     dim_list = np.linspace(D // num_dim, D, num_dim, dtype=np.int16)

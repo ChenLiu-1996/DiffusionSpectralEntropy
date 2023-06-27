@@ -624,10 +624,9 @@ def von_neumann_entropy(eigs: np.array, t: int = 1):
     eigenvalues = eigs.copy()
     eigenvalues = eigenvalues.astype(np.float64)  # mitigates rounding error.
 
-    eigenvalues = np.array(sorted(eigenvalues)[::-1])
-
-    # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
-    eigenvalues = eigenvalues[1:]
+    # # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
+    # eigenvalues = np.array(sorted(eigenvalues)[::-1])
+    # eigenvalues = eigenvalues[1:]
 
     # Eigenvalues may be negative. Only care about the magnitude, not the sign.
     eigenvalues = np.abs(eigenvalues)

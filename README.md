@@ -136,14 +136,14 @@ python main_figure.py
 #### 3. Compute DSE and DSMI on our toy datasets.
 ```
 cd src/manifold_investigation
-python toy_data_diffusion_entropy.py
-python toy_data_diffusion_MI.py
+python toy_data_entropy.py
+python toy_data_MI.py
 ```
 
 #### 4. DSE sampling robustness.
 ```
 cd src/manifold_investigation
-python toy_data_diffusion_sampling_entropy.py
+python toy_data_DSE_subsample.py
 ```
 
 
