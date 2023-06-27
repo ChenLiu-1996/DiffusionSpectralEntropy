@@ -107,10 +107,6 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
                     np.savez(f, eigvals=eigvals)
                 if verbose: print('Eigenvalues saved to %s' % eigval_save_path)
 
-        # Drop the trivial eigenvalue corresponding to the indicator eigenvector.
-        eigvals = np.array(sorted(eigvals)[::-1])
-        eigvals = eigvals[1:]
-
         # Eigenvalues may be negative. Only care about the magnitude, not the sign.
         eigvals = np.abs(eigvals)
 
@@ -152,7 +148,7 @@ if __name__ == '__main__':
 
     print('\n2nd run, random vecs, saving eigvals (np.float16).')
     tmp_path = './test_dse_eigval.npz'
-    embedding_vectors = np.random.uniform(0, 2, (1000, 256))
+    embedding_vectors = np.random.uniform(0, 1, (1000, 256))
     DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
                                      eigval_save_path=tmp_path)
     print('DSE =', DSE)
@@ -167,7 +163,7 @@ if __name__ == '__main__':
     os.remove(tmp_path)
 
     print('\n4th run, random vecs, saving eigvals (np.float64).')
-    embedding_vectors = np.random.uniform(0, 3, (1000, 256))
+    embedding_vectors = np.random.uniform(0, 1, (1000, 256))
     DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
                                      eigval_save_path=tmp_path,
                                      eigval_save_precision=np.float64)
@@ -181,7 +177,7 @@ if __name__ == '__main__':
     os.remove(tmp_path)
 
     print('\n6th run, Classic Shannon Entropy.')
-    embedding_vectors = np.random.uniform(0, 3, (1000, 256))
+    embedding_vectors = np.random.uniform(0, 1, (1000, 256))
     CSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
                                      classic_shannon_entropy=True)
     print('CSE =', CSE)
