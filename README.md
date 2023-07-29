@@ -78,7 +78,7 @@ DiffusionSpectralEntropy
 @inproceedings{DiffusionSpectralEntropy,
   title={Assessing Neural Network Representations During Training Using Data Diffusion Spectra},
   author={Liao, Danqi and Liu, Chen and Tong, Alexander and Huguet, Guillaume and Wolf, Guy and Nickel, Maximilian and Adelstein, Ian and Krishnaswamy, Smita},
-  booktitle={ICML Workshop on Topology, Algebra, and Geometry in Machine Learning (TAG-ML)},
+  booktitle={International Conference on Machine Learning (ICML) Workshop on Topology, Algebra and Geometry in Machine Learning (TAG-ML)},
   year={2023},
 }
 ```
