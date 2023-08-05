@@ -10,12 +10,13 @@ import yaml
 from tinyimagenet import TinyImageNet
 from tqdm import tqdm
 
-from api.dse import diffusion_spectral_entropy
-from api.dsmi import diffusion_spectral_mutual_information
+import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-4])
+sys.path.insert(0, import_dir + '/api/')
+from dse import diffusion_spectral_entropy
+from dsmi import diffusion_spectral_mutual_information
 
-import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-3])
-sys.path.insert(0, import_dir + '/nn/')
-sys.path.insert(0, import_dir + '/utils/')
+sys.path.insert(0, import_dir + '/src/nn/')
+sys.path.insert(0, import_dir + '/src/utils/')
 from attribute_hashmap import AttributeHashmap
 from log_utils import log
 from path_utils import update_config_dirs
@@ -232,24 +233,41 @@ def train(config: AttributeHashmap) -> None:
     loss_fn_classification = torch.nn.CrossEntropyLoss()
     loss_fn_simclr = NTXentLoss()
 
+    # `val_metric` is val acc for good training,
+    # whereas train/val acc divergence for wrong label training.
+    if config.method == 'wronglabel':
+        val_metric = 'acc_diverg'
+    else:
+        val_metric = 'val_acc'
+
     # Compute the results before training.
-    val_loss, val_acc = validate_epoch(
+    val_loss, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, precomputed_clusters_X = validate_epoch(
         config=config,
         val_loader=val_loader,
         model=model,
         device=device,
-        loss_fn_classification=loss_fn_classification)
+        loss_fn_classification=loss_fn_classification,
+        precomputed_clusters_X=None)
+
+    results_dict = {
+        'epoch': [0],
+        'dse_Z': [dse_Z],
+        'cse_Z': [cse_Z],
+        'dsmi_Z_X': [dsmi_Z_X],
+        'csmi_Z_X': [csmi_Z_X],
+        'dsmi_Z_Y': [dsmi_Z_Y],
+        'csmi_Z_Y': [csmi_Z_Y],
+        'val_metric': [0],
+    }
 
     if config.method in ['supervised', 'wronglabel']:
         opt = torch.optim.AdamW(list(model.encoder.parameters()) +
                                 list(model.linear.parameters()),
-                                lr=float(config.learning_rate),
-                                weight_decay=float(config.weight_decay))
+                                lr=float(config.learning_rate))
     elif config.method == 'simclr':
         opt = torch.optim.AdamW(list(model.encoder.parameters()) +
                                 list(model.projection_head.parameters()),
-                                lr=float(config.learning_rate),
-                                weight_decay=float(config.weight_decay))
+                                lr=float(config.learning_rate))
 
     lr_scheduler = LinearWarmupCosineAnnealingLR(optimizer=opt,
                                                  warmup_epochs=min(
@@ -257,12 +275,6 @@ def train(config: AttributeHashmap) -> None:
                                                      config.max_epoch // 5),
                                                  max_epochs=config.max_epoch)
 
-    # `val_metric` is val acc for good training,
-    # whereas train/val acc divergence for wrong label training.
-    if config.method == 'wronglabel':
-        val_metric = 'acc_diverg'
-    else:
-        val_metric = 'val_acc'
     best_val_metric = 0
     best_model = None
 
@@ -271,7 +283,7 @@ def train(config: AttributeHashmap) -> None:
     for val_metric_pct in val_metric_pct_list:
         is_model_saved['%s_%s%%' % (val_metric, val_metric_pct)] = False
 
-    for epoch_idx in tqdm(range(config.max_epoch)):
+    for epoch_idx in tqdm(1, range(config.max_epoch)):
         state_dict = {
             'train_loss': 0,
             'train_acc': 0,
@@ -352,23 +364,25 @@ def train(config: AttributeHashmap) -> None:
         '''
         if config.method == 'simclr':
             # This function call includes validation.
-            probing_acc, val_acc_final = linear_probing(
+            probing_acc, val_acc_final, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, _ = linear_probing(
                 config=config,
                 train_loader=train_loader,
                 val_loader=val_loader,
                 model=model,
                 device=device,
-                loss_fn_classification=loss_fn_classification)
+                loss_fn_classification=loss_fn_classification,
+                precomputed_clusters_X=precomputed_clusters_X)
             state_dict['train_acc'] = probing_acc
             state_dict['val_loss'] = np.nan
             state_dict['val_acc'] = val_acc_final
         else:
-            val_loss, val_acc = validate_epoch(
+            val_loss, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, _ = validate_epoch(
                 config=config,
                 val_loader=val_loader,
                 model=model,
                 device=device,
-                loss_fn_classification=loss_fn_classification)
+                loss_fn_classification=loss_fn_classification,
+                precomputed_clusters_X=precomputed_clusters_X)
             state_dict['val_loss'] = val_loss
             state_dict['val_acc'] = val_acc
 
@@ -378,6 +392,15 @@ def train(config: AttributeHashmap) -> None:
         log('Epoch: %d. %s' % (epoch_idx, print_state_dict(state_dict)),
             filepath=log_path,
             to_console=False)
+
+        results_dict['epoch'].append(epoch_idx)
+        results_dict['dse_Z'].append(dse_Z)
+        results_dict['cse_Z'].append(cse_Z)
+        results_dict['dsmi_Z_X'].append(dsmi_Z_X)
+        results_dict['csmi_Z_X'].append(csmi_Z_X)
+        results_dict['dsmi_Z_Y'].append(dsmi_Z_Y)
+        results_dict['csmi_Z_Y'].append(csmi_Z_Y)
+        results_dict['val_metric'].append(state_dict[val_metric])
 
         # Save best model
         if state_dict[val_metric] > best_val_metric:
@@ -405,20 +428,44 @@ def train(config: AttributeHashmap) -> None:
                         filepath=log_path,
                         to_console=False)
 
+    # Save the results after training.
+    save_path_numpy = '%s/%s-%s-%s-seed%s-%s/' % (
+        config.output_save_path, config.dataset, config.method, config.model,
+        config.random_seed, 'results.npz')
+    os.makedirs(save_path_numpy, exist_ok=True)
+
+    with open(save_path_numpy, 'wb+') as f:
+        np.savez(
+            f,
+            epoch=np.array(results_dict['epoch']),
+            val_metric=np.array(results_dict['val_metric']),
+            dse_Z=np.array(results_dict['dse_Z']),
+            cse_Z=np.array(results_dict['cse_Z']),
+            dsmi_Z_X=np.array(results_dict['dsmi_Z_X']),
+            csmi_Z_X=np.array(results_dict['csmi_Z_X']),
+            dsmi_Z_Y=np.array(results_dict['dsmi_Z_Y']),
+            csmi_Z_Y=np.array(results_dict['csmi_Z_Y']),
+        )
+
     return
 
 
 def validate_epoch(config: AttributeHashmap,
                    val_loader: torch.utils.data.DataLoader,
                    model: torch.nn.Module, device: torch.device,
-                   loss_fn_classification: torch.nn.Module):
+                   loss_fn_classification: torch.nn.Module,
+                   precomputed_clusters_X: np.array):
 
     correct, total_count_loss, total_count_acc = 0, 0, 0
     val_loss, val_acc = 0, 0
 
+    tensor_X = None  # input
+    tensor_Y = None  # label
+    tensor_Z = None  # latent
+
     model.eval()
     with torch.no_grad():
-        for x, y_true in val_loader:
+        for x, y_true in tqdm(val_loader):
             B = x.shape[0]
             assert config.in_channels in [1, 3]
             if config.in_channels == 1:
@@ -434,28 +481,65 @@ def validate_epoch(config: AttributeHashmap,
             if config.method != 'simclr':
                 total_count_loss += B
 
+            # Record data for DSE and DSMI computation.
+            if tensor_X is not None and tensor_X.shape[0] >= 1e4:
+                # Only take up to ~10k samples.
+                continue
+
+            # Downsample the input image to reduce memory usage.
+            curr_X = torch.nn.functional.interpolate(
+                x, size=(64, 64)).cpu().numpy().reshape(x.shape[0], -1)
+            curr_Y = y_true.cpu().numpy()
+            curr_Z = model.encode(x).cpu().numpy()
+            if tensor_X is None:
+                tensor_X, tensor_Y, tensor_Z = curr_X, curr_Y, curr_Z
+            else:
+                tensor_X = np.vstack((tensor_X, curr_X))
+                tensor_Y = np.hstack((tensor_Y, curr_Y))
+                tensor_Z = np.vstack((tensor_Z, curr_Z))
+
+    dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z)
+    cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z,
+                                       classic_shannon_entropy=True)
+    dsmi_Z_X, precomputed_clusters_X = diffusion_spectral_mutual_information(
+        embedding_vectors=tensor_Z,
+        reference_vectors=tensor_X,
+        precomputed_clusters=precomputed_clusters_X)
+    csmi_Z_X, precomputed_clusters_X = diffusion_spectral_mutual_information(
+        embedding_vectors=tensor_Z,
+        reference_vectors=tensor_X,
+        precomputed_clusters=precomputed_clusters_X,
+        classic_shannon_entropy=True)
+
+    dsmi_Z_Y, _ = diffusion_spectral_mutual_information(
+        embedding_vectors=tensor_Z, reference_vectors=tensor_Y)
+    csmi_Z_Y, _ = diffusion_spectral_mutual_information(
+        embedding_vectors=tensor_Z,
+        reference_vectors=tensor_Y,
+        classic_shannon_entropy=True)
+
     if config.method == 'simclr':
         val_loss = torch.nan
     else:
         val_loss /= total_count_loss
     val_acc = correct / total_count_acc * 100
 
-    return val_loss, val_acc
+    return val_loss, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, precomputed_clusters_X
 
 
 def linear_probing(config: AttributeHashmap,
                    train_loader: torch.utils.data.DataLoader,
                    val_loader: torch.utils.data.DataLoader,
                    model: torch.nn.Module, device: torch.device,
-                   loss_fn_classification: torch.nn.Module):
+                   loss_fn_classification: torch.nn.Module,
+                   precomputed_clusters_X: np.array):
 
     # Separately train linear classifier.
     model.init_linear()
     # Note: Need to create another optimizer because the model will keep updating
     # even after freezing with `requires_grad = False` when `opt` has `momentum`.
     opt_probing = torch.optim.AdamW(list(model.linear.parameters()),
-                                    lr=float(config.learning_rate_probing),
-                                    weight_decay=float(config.weight_decay))
+                                    lr=float(config.learning_rate_probing))
 
     lr_scheduler_probing = LinearWarmupCosineAnnealingLR(
         optimizer=opt_probing,
@@ -472,13 +556,15 @@ def linear_probing(config: AttributeHashmap,
             loss_fn_classification=loss_fn_classification)
         lr_scheduler_probing.step()
 
-    _, val_acc = validate_epoch(config=config,
-                                val_loader=val_loader,
-                                model=model,
-                                device=device,
-                                loss_fn_classification=loss_fn_classification)
+    _, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, _ = validate_epoch(
+        config=config,
+        val_loader=val_loader,
+        model=model,
+        device=device,
+        loss_fn_classification=loss_fn_classification,
+        precomputed_clusters_X=precomputed_clusters_X)
 
-    return probing_acc, val_acc
+    return probing_acc, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y
 
 
 def linear_probing_epoch(config: AttributeHashmap,
