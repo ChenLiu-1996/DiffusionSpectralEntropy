@@ -55,6 +55,8 @@ class SingleInstanceTwoView:
 
     def __init__(self, imsize: int, mean: Tuple[float], std: Tuple[float]):
         self.augmentation = transforms.Compose([
+            transforms.Resize(
+                imsize, interpolation=transforms.InterpolationMode.BICUBIC),
             transforms.RandomResizedCrop(
                 imsize,
                 scale=(0.6, 1.6),

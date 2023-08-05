@@ -2,10 +2,10 @@ checkpoint_dir: '$ROOT_DIR/src/main_studies/training_dynamic/checkpoints/'
 log_dir: '$ROOT_DIR/src/main_studies/training_dynamic/logs/'
 output_save_path: '$ROOT_DIR/src/main_studies/training_dynamic/results/'
 dataset_dir: '$ROOT_DIR/data/cifar10/'
-max_epoch: 300
-batch_size: 16
+max_epoch: 200
+batch_size: 256
 learning_rate: 1e-3
-num_workers: 4
+num_workers: 8
 dataset: 'cifar10'
 method: 'supervised'
 random_seed: 1

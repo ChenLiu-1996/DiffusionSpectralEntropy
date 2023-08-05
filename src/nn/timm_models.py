@@ -9,14 +9,21 @@ def build_timm_model(model_name: str,
         'resnet': 'timm/resnet50.a1_in1k',
         'resnext': 'timm/resnext50_32x4d.a1h_in1k',
         'mobilenet': 'timm/mobilenetv3_small_100.lamb_in1k',
-        'vit': 'timm/vit_base_patch16_224.augreg_in1k',
+        'vit': 'timm/vit_small_patch16_224.augreg_in21k_ft_in1k',
         'swin': 'timm/swin_tiny_patch4_window7_224.ms_in1k',
         'mobilevit': 'timm/mobilevitv2_050.cvnets_in1k',
     }
-    try:
-        timm_model_name = timm_model_name_map[model_name]
-    except:
-        timm_model_name = model_name
+    last_layer_name_map = {
+        'resnet': 'fc',
+        'resnext': 'fc',
+        'mobilenet': 'classifier',
+        'vit': 'head',
+        'swin': 'head.fc',
+        'mobilevit': 'head.fc',
+    }
+
+    timm_model_name = timm_model_name_map[model_name]
+    last_layer_name = last_layer_name_map[model_name]
 
     try:
         timm_model = timm.create_model(timm_model_name, pretrained=pretrained)
@@ -25,6 +32,7 @@ def build_timm_model(model_name: str,
                          model_name)
 
     model = SimCLRModel(timm_model=timm_model,
+                        last_layer_name=last_layer_name,
                         num_classes=num_classes)
 
     return model
@@ -34,6 +42,7 @@ class SimCLRModel(torch.nn.Module):
 
     def __init__(self,
                  timm_model: torch.nn.Module,
+                 last_layer_name: str,
                  num_classes: int = 10,
                  hidden_dim: int = 2048,
                  z_dim: int = 128) -> None:
@@ -44,18 +53,24 @@ class SimCLRModel(torch.nn.Module):
         self.encoder = timm_model
 
         # Get the correct dimensions of the last linear layer and remove the linear layer.
-        modified = False
-        last_layer_possible_names = ['fc', 'head', 'classifier']
-        for last_layer_name in last_layer_possible_names:
-            if any(name == last_layer_name
-                   for (name, module) in self.encoder.named_children()):
-                last_layer = getattr(self.encoder, last_layer_name)
-                self.linear_in_features = last_layer.in_features
-                self.linear_out_features = last_layer.out_features
-                setattr(self.encoder, last_layer_name, torch.nn.Identity())
-                modified = True
-                break
-        assert modified, '`SimCLRModel`: modification of last layer failed.'
+        # NOTE: Currently not supporting many options...
+        name_list = last_layer_name.split('.')
+        assert any(n == name_list[0] for (n, _) in self.encoder.named_children())
+        assert len(name_list) in [1, 2]
+        if len(name_list) == 2:
+            assert last_layer_name == 'head.fc'
+            last_layer = self.encoder.head.fc
+        else:
+            last_layer = getattr(self.encoder, last_layer_name)
+
+        self.linear_in_features = last_layer.in_features
+        self.linear_out_features = last_layer.out_features
+
+        if len(name_list) == 2:
+            assert last_layer_name == 'head.fc'
+            self.encoder.head.fc = torch.nn.Identity()
+        else:
+            setattr(self.encoder, last_layer_name, torch.nn.Identity())
 
         # This is the linear classifier for fine-tuning and inference.
         self.linear = torch.nn.Linear(in_features=self.linear_in_features,

@@ -1,7 +1,9 @@
 import argparse
 import os
 import sys
-from typing import Tuple
+from typing import Tuple, Dict, Iterable
+from matplotlib import pyplot as plt
+from scipy.stats import pearsonr, spearmanr
 
 import numpy as np
 import torch
@@ -30,9 +32,15 @@ def print_state_dict(state_dict: dict) -> str:
     state_str = ''
     for key in state_dict.keys():
         if '_loss' in key:
-            state_str += '%s: %.6f. ' % (key, state_dict[key])
+            try:
+                state_str += '%s: %.6f. ' % (key, state_dict[key])
+            except:
+                state_str += '%s: %s. ' % (key, state_dict[key])
         else:
-            state_str += '%s: %.3f. ' % (key, state_dict[key])
+            try:
+                state_str += '%s: %.3f. ' % (key, state_dict[key])
+            except:
+                state_str += '%s: %s. ' % (key, state_dict[key])
     return state_str
 
 
@@ -110,6 +118,10 @@ def get_dataloaders(
     if config.method == 'supervised':
         if config.in_channels == 3:
             transform_train = torchvision.transforms.Compose([
+                torchvision.transforms.Resize(
+                    imsize,
+                    interpolation=torchvision.transforms.InterpolationMode.
+                    BICUBIC),
                 torchvision.transforms.RandomResizedCrop(
                     imsize,
                     scale=(0.6, 1.6),
@@ -128,6 +140,10 @@ def get_dataloaders(
             ])
         else:
             transform_train = torchvision.transforms.Compose([
+                torchvision.transforms.Resize(
+                    imsize,
+                    interpolation=torchvision.transforms.InterpolationMode.
+                    BICUBIC),
                 torchvision.transforms.RandomResizedCrop(
                     imsize,
                     scale=(0.6, 1.6),
@@ -146,6 +162,9 @@ def get_dataloaders(
 
     elif config.method == 'wronglabel':
         transform_train = torchvision.transforms.Compose([
+            torchvision.transforms.Resize(imsize,
+                                          interpolation=torchvision.transforms.
+                                          InterpolationMode.BICUBIC),
             torchvision.transforms.CenterCrop(imsize),
             torchvision.transforms.RandomHorizontalFlip(p=0.5),
             torchvision.transforms.ToTensor(),
@@ -154,6 +173,9 @@ def get_dataloaders(
         ])
 
     transform_val = torchvision.transforms.Compose([
+        torchvision.transforms.Resize(
+            imsize,
+            interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
         torchvision.transforms.CenterCrop(imsize),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=dataset_mean, std=dataset_std)
@@ -203,6 +225,155 @@ def get_dataloaders(
     return (train_loader, val_loader), config
 
 
+def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
+
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams['legend.fontsize'] = 20
+
+    # Plot of Entropy vs. epoch.
+    fig = plt.figure(figsize=(40, 30))
+    ax = fig.add_subplot(2, 2, 1)
+    ax_secondary = ax.twinx()
+    ax.spines[['right', 'top']].set_visible(False)
+    ax_secondary.spines[['left', 'top']].set_visible(False)
+    ln1 = ax.plot(data_arrays['epoch'],
+                  data_arrays['cse_Z'],
+                  c='grey',
+                  linestyle='-.')
+    ln2 = ax_secondary.plot(data_arrays['epoch'],
+                            data_arrays['dse_Z'],
+                            c='black')
+    lns = ln1 + ln2
+    ax.legend(lns, ['CSE(Z)', 'DSE(Z)'])
+    ax.set_ylabel('Entropy', fontsize=40)
+    ax.set_xlabel('Epochs Trained', fontsize=40)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+    ax_secondary.tick_params(axis='both', which='major', labelsize=30)
+
+    # Plot of Entropy vs. Val. Acc.
+    ax = fig.add_subplot(2, 2, 2)
+    ax_secondary = ax.twinx()
+    ax.spines[['right', 'top']].set_visible(False)
+    ax_secondary.spines[['left', 'top']].set_visible(False)
+    ln1 = ax.scatter(data_arrays['val_acc'],
+                     data_arrays['cse_Z'],
+                     c='grey',
+                     alpha=0.5,
+                     s=300)
+    ln2 = ax_secondary.scatter(data_arrays['val_acc'],
+                               data_arrays['dse_Z'],
+                               c='black',
+                               alpha=0.5,
+                               s=300)
+    lns = [ln1] + [ln2]
+    ax.legend(lns, ['CSE(Z)', 'DSE(Z)'])
+    ax.set_ylabel('Entropy', fontsize=40)
+    ax.set_xlabel('Val. Classification Accuracy', fontsize=40)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+    ax_secondary.tick_params(axis='both', which='major', labelsize=30)
+
+    # Display correlation.
+    if len(data_arrays['val_acc']) > 1:
+        ax.set_title(
+            'VNE Pearson R: %.3f (p = %.4f)\nSpearman R: %.3f (p = %.4f)' %
+            (pearsonr(data_arrays['val_acc'], data_arrays['dse_Z'])[0],
+             pearsonr(data_arrays['val_acc'], data_arrays['dse_Z'])[1],
+             spearmanr(data_arrays['val_acc'], data_arrays['dse_Z'])[0],
+             spearmanr(data_arrays['val_acc'], data_arrays['dse_Z'])[1]),
+            fontsize=30)
+
+    # Plot of Mutual Information vs. epoch.
+    ax = fig.add_subplot(2, 2, 3)
+    ax.spines[['right', 'top']].set_visible(False)
+    # MI wrt Output
+    ax.plot(data_arrays['epoch'],
+            data_arrays['csmi_Z_Y'],
+            c='grey',
+            linestyle='-.')
+    ax.plot(data_arrays['epoch'], data_arrays['dsmi_Z_Y'], c='black')
+    # MI wrt Input
+    ax.plot(data_arrays['epoch'],
+            data_arrays['csmi_Z_X'],
+            c='green',
+            linestyle='-.')
+    ax.plot(data_arrays['epoch'], data_arrays['dsmi_Z_X'], c='darkgreen')
+    ax.legend([
+        'CSMI(Z; Y)',
+        'DSMI(Z; Y)',
+        'CSMI(Z; X)',
+        'DSMI(Z; X)',
+    ],
+              loc='upper left')
+    ax.set_ylabel('Mutual Information', fontsize=40)
+    ax.set_xlabel('Epochs Trained', fontsize=40)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+
+    # Plot of Mutual Information vs. Val. Acc.
+    ax = fig.add_subplot(2, 2, 4)
+    ax.spines[['right', 'top']].set_visible(False)
+    ax.scatter(data_arrays['val_acc'],
+               data_arrays['csmi_Z_Y'],
+               c='grey',
+               alpha=0.5,
+               s=300)
+    ax.scatter(data_arrays['val_acc'],
+               data_arrays['dsmi_Z_Y'],
+               c='black',
+               alpha=0.5,
+               s=300)
+    ax.scatter(data_arrays['val_acc'],
+               data_arrays['csmi_Z_X'],
+               c='green',
+               alpha=0.5,
+               s=300)
+    ax.scatter(data_arrays['val_acc'],
+               data_arrays['dsmi_Z_X'],
+               c='darkgreen',
+               alpha=0.5,
+               s=300)
+    ax.legend([
+        'CSMI(Z; Y)',
+        'DSMI(Z; Y)',
+        'CSMI(Z; X)',
+        'DSMI(Z; X)',
+    ],
+              loc='upper left')
+    ax.set_ylabel('Mutual Information', fontsize=40)
+    ax.set_xlabel('Downstream Classification Accuracy', fontsize=40)
+    ax.tick_params(axis='both', which='major', labelsize=30)
+
+    # # Display correlation.
+    if len(data_arrays['val_acc']) > 1:
+        ax.set_title(
+            'CSMI(Z; Y), P.R: %.3f (p = %.4f), S.R: %.3f (p = %.4f);\n' %
+            (pearsonr(data_arrays['val_acc'], data_arrays['csmi_Z_Y'])[0],
+             pearsonr(data_arrays['val_acc'], data_arrays['csmi_Z_Y'])[1],
+             spearmanr(data_arrays['val_acc'], data_arrays['csmi_Z_Y'])[0],
+             spearmanr(data_arrays['val_acc'], data_arrays['csmi_Z_Y'])[1]) +
+            'DSMI(Z; Y), P.R: %.3f (p = %.4f), S.R: %.3f (p = %.4f);\n' %
+            (pearsonr(data_arrays['val_acc'], data_arrays['dsmi_Z_Y'])[0],
+             pearsonr(data_arrays['val_acc'], data_arrays['dsmi_Z_Y'])[1],
+             spearmanr(data_arrays['val_acc'], data_arrays['dsmi_Z_Y'])[0],
+             spearmanr(data_arrays['val_acc'], data_arrays['dsmi_Z_Y'])[1]) +
+            'CSMI(Z; X), P.R: %.3f (p = %.4f), S.R: %.3f (p = %.4f);\n' %
+            (pearsonr(data_arrays['val_acc'], data_arrays['csmi_Z_X'])[0],
+             pearsonr(data_arrays['val_acc'], data_arrays['csmi_Z_X'])[1],
+             spearmanr(data_arrays['val_acc'], data_arrays['csmi_Z_X'])[0],
+             spearmanr(data_arrays['val_acc'], data_arrays['csmi_Z_X'])[1]) +
+            'DSMI(Z; X), P.R: %.3f (p = %.4f), S.R: %.3f (p = %.4f);\n' %
+            (pearsonr(data_arrays['val_acc'], data_arrays['dsmi_Z_X'])[0],
+             pearsonr(data_arrays['val_acc'], data_arrays['dsmi_Z_X'])[1],
+             spearmanr(data_arrays['val_acc'], data_arrays['dsmi_Z_X'])[0],
+             spearmanr(data_arrays['val_acc'], data_arrays['dsmi_Z_X'])[1]),
+            fontsize=30)
+    fig.tight_layout()
+    fig.subplots_adjust(top=0.8)
+    fig.savefig(save_path_fig)
+    plt.close(fig=fig)
+
+    return
+
+
 def train(config: AttributeHashmap) -> None:
     '''
     Train our simple model and record the checkpoints along the training process.
@@ -218,6 +389,9 @@ def train(config: AttributeHashmap) -> None:
     log_path = '%s/%s-%s-%s-seed%s.log' % (config.log_dir, config.dataset,
                                            config.method, config.model,
                                            config.random_seed)
+    save_path_fig = '%s/%s-%s-%s-seed%s' % (config.log_dir, config.dataset,
+                                            config.method, config.model,
+                                            config.random_seed)
 
     # Log the config.
     config_str = 'Config: \n'
@@ -249,6 +423,17 @@ def train(config: AttributeHashmap) -> None:
         loss_fn_classification=loss_fn_classification,
         precomputed_clusters_X=None)
 
+    state_dict = {
+        'train_loss': 'Not started',
+        'train_acc': 'Not started',
+        'val_loss': val_loss,
+        'val_acc': val_acc,
+        'acc_diverg': 'Not started',
+    }
+    log('Epoch: %d. %s' % (0, print_state_dict(state_dict)),
+        filepath=log_path,
+        to_console=False)
+
     results_dict = {
         'epoch': [0],
         'dse_Z': [dse_Z],
@@ -257,7 +442,7 @@ def train(config: AttributeHashmap) -> None:
         'csmi_Z_X': [csmi_Z_X],
         'dsmi_Z_Y': [dsmi_Z_Y],
         'csmi_Z_Y': [csmi_Z_Y],
-        'val_metric': [0],
+        'val_acc': [0],
     }
 
     if config.method in ['supervised', 'wronglabel']:
@@ -301,7 +486,7 @@ def train(config: AttributeHashmap) -> None:
         '''
         model.train()
         correct, total_count_loss, total_count_acc = 0, 0, 0
-        for _, (x, y_true) in enumerate(train_loader):
+        for _, (x, y_true) in enumerate(tqdm(train_loader)):
             if config.method in ['supervised', 'wronglabel']:
                 # Not using contrastive learning.
 
@@ -400,7 +585,9 @@ def train(config: AttributeHashmap) -> None:
         results_dict['csmi_Z_X'].append(csmi_Z_X)
         results_dict['dsmi_Z_Y'].append(dsmi_Z_Y)
         results_dict['csmi_Z_Y'].append(csmi_Z_Y)
-        results_dict['val_metric'].append(state_dict[val_metric])
+        results_dict['val_acc'].append(state_dict['val_acc'])
+
+        plot_figures(data_arrays=results_dict, save_path_fig=save_path_fig)
 
         # Save best model
         if state_dict[val_metric] > best_val_metric:
@@ -438,7 +625,7 @@ def train(config: AttributeHashmap) -> None:
         np.savez(
             f,
             epoch=np.array(results_dict['epoch']),
-            val_metric=np.array(results_dict['val_metric']),
+            val_acc=np.array(results_dict['val_acc']),
             dse_Z=np.array(results_dict['dse_Z']),
             cse_Z=np.array(results_dict['cse_Z']),
             dsmi_Z_X=np.array(results_dict['dsmi_Z_X']),
@@ -465,7 +652,7 @@ def validate_epoch(config: AttributeHashmap,
 
     model.eval()
     with torch.no_grad():
-        for x, y_true in val_loader:
+        for x, y_true in tqdm(val_loader):
             B = x.shape[0]
             assert config.in_channels in [1, 3]
             if config.in_channels == 1:
@@ -482,8 +669,8 @@ def validate_epoch(config: AttributeHashmap,
                 total_count_loss += B
 
             # Record data for DSE and DSMI computation.
-            if tensor_X is not None and tensor_X.shape[0] >= 1e4:
-                # Only take up to ~10k samples.
+            if tensor_X is not None and tensor_X.shape[0] >= 5e3:
+                # Only take up to ~5k samples.
                 continue
 
             # Downsample the input image to reduce memory usage.
