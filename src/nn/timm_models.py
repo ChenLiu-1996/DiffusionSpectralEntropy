@@ -9,7 +9,7 @@ def build_timm_model(model_name: str,
         'resnet': 'timm/resnet50.a1_in1k',
         'resnext': 'timm/resnext50_32x4d.a1h_in1k',
         'mobilenet': 'timm/mobilenetv3_small_100.lamb_in1k',
-        'vit': 'timm/vit_small_patch16_224.augreg_in21k_ft_in1k',
+        'vit': 'timm/vit_tiny_patch16_224.augreg_in21k',
         'swin': 'timm/swin_tiny_patch4_window7_224.ms_in1k',
         'mobilevit': 'timm/mobilevitv2_050.cvnets_in1k',
     }
@@ -44,7 +44,7 @@ class SimCLRModel(torch.nn.Module):
                  timm_model: torch.nn.Module,
                  last_layer_name: str,
                  num_classes: int = 10,
-                 hidden_dim: int = 2048,
+                 hidden_dim: int = 512,
                  z_dim: int = 128) -> None:
         super(SimCLRModel, self).__init__()
         self.num_classes = num_classes
@@ -79,10 +79,10 @@ class SimCLRModel(torch.nn.Module):
         # This is the projection head g(.) for SimCLR training.
         self.projection_head = torch.nn.Sequential(
             torch.nn.Linear(in_features=self.linear_in_features,
-                            out_features=self.linear_in_features,
-                            bias=False), torch.nn.BatchNorm1d(hidden_dim),
+                            out_features=hidden_dim,
+                            bias=False),
             torch.nn.ReLU(inplace=True),
-            torch.nn.Linear(in_features=self.linear_in_features,
+            torch.nn.Linear(in_features=hidden_dim,
                             out_features=z_dim,
                             bias=True))
 

@@ -232,7 +232,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
 
     # Plot of Entropy vs. epoch.
     fig = plt.figure(figsize=(40, 30))
-    ax = fig.add_subplot(2, 2, 1)
+    ax = fig.add_subplot(3, 2, 1)
     ax_secondary = ax.twinx()
     ax.spines[['right', 'top']].set_visible(False)
     ax_secondary.spines[['left', 'top']].set_visible(False)
@@ -251,7 +251,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     ax_secondary.tick_params(axis='both', which='major', labelsize=30)
 
     # Plot of Entropy vs. Val. Acc.
-    ax = fig.add_subplot(2, 2, 2)
+    ax = fig.add_subplot(3, 2, 2)
     ax_secondary = ax.twinx()
     ax.spines[['right', 'top']].set_visible(False)
     ax_secondary.spines[['left', 'top']].set_visible(False)
@@ -275,7 +275,12 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     # Display correlation.
     if len(data_arrays['val_acc']) > 1:
         ax.set_title(
-            'VNE Pearson R: %.3f (p = %.4f)\nSpearman R: %.3f (p = %.4f)' %
+            'CSE(Z), P.R: %.3f (p = %.4f), S.R: %.3f (p = %.4f)' %
+            (pearsonr(data_arrays['val_acc'], data_arrays['cse_Z'])[0],
+             pearsonr(data_arrays['val_acc'], data_arrays['cse_Z'])[1],
+             spearmanr(data_arrays['val_acc'], data_arrays['cse_Z'])[0],
+             spearmanr(data_arrays['val_acc'], data_arrays['cse_Z'])[1]) +
+            'DSE(Z), P.R: %.3f (p = %.4f), S.R: %.3f (p = %.4f);\n' %
             (pearsonr(data_arrays['val_acc'], data_arrays['dse_Z'])[0],
              pearsonr(data_arrays['val_acc'], data_arrays['dse_Z'])[1],
              spearmanr(data_arrays['val_acc'], data_arrays['dse_Z'])[0],
@@ -283,7 +288,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
             fontsize=30)
 
     # Plot of Mutual Information vs. epoch.
-    ax = fig.add_subplot(2, 2, 3)
+    ax = fig.add_subplot(3, 2, 5)
     ax.spines[['right', 'top']].set_visible(False)
     # MI wrt Output
     ax.plot(data_arrays['epoch'],
@@ -294,7 +299,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     # MI wrt Input
     ax.plot(data_arrays['epoch'],
             data_arrays['csmi_Z_X'],
-            c='green',
+            c='springgreen',
             linestyle='-.')
     ax.plot(data_arrays['epoch'], data_arrays['dsmi_Z_X'], c='darkgreen')
     ax.legend([
@@ -309,7 +314,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     ax.tick_params(axis='both', which='major', labelsize=30)
 
     # Plot of Mutual Information vs. Val. Acc.
-    ax = fig.add_subplot(2, 2, 4)
+    ax = fig.add_subplot(3, 2, 6)
     ax.spines[['right', 'top']].set_visible(False)
     ax.scatter(data_arrays['val_acc'],
                data_arrays['csmi_Z_Y'],
@@ -323,7 +328,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
                s=300)
     ax.scatter(data_arrays['val_acc'],
                data_arrays['csmi_Z_X'],
-               c='green',
+               c='springgreen',
                alpha=0.5,
                s=300)
     ax.scatter(data_arrays['val_acc'],
@@ -367,7 +372,6 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
              spearmanr(data_arrays['val_acc'], data_arrays['dsmi_Z_X'])[1]),
             fontsize=30)
     fig.tight_layout()
-    fig.subplots_adjust(top=0.8)
     fig.savefig(save_path_fig)
     plt.close(fig=fig)
 
@@ -466,7 +470,7 @@ def train(config: AttributeHashmap) -> None:
     val_metric_pct_list = [20, 30, 40, 50, 60, 70, 80, 90]
     is_model_saved = {}
     for val_metric_pct in val_metric_pct_list:
-        is_model_saved['%s_%s%%' % (val_metric, val_metric_pct)] = False
+        is_model_saved[str(val_metric_pct)] = False
 
     for epoch_idx in tqdm(range(1, config.max_epoch)):
         state_dict = {
@@ -604,14 +608,15 @@ def train(config: AttributeHashmap) -> None:
             # Save model at each percentile.
             for val_metric_pct in val_metric_pct_list:
                 if state_dict[val_metric] > val_metric_pct and \
-                   not is_model_saved['%s_%s%%' % (val_metric, val_metric_pct)]:
+                   not is_model_saved[str(val_metric_pct)]:
                     model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
                         config.checkpoint_dir, config.dataset, config.method,
                         config.model, config.random_seed, '%s_%s%%.pth' %
                         (val_metric, val_metric_pct))
                     torch.save(best_model, model_save_path)
-                    is_model_saved['val_acc_%s%%' % val_metric] = True
-                    log('%s%% accuracy model successfully saved.' % val_metric,
+                    is_model_saved[str(val_metric_pct)] = True
+                    log('%s:%s%% model successfully saved.' %
+                        (val_metric, val_metric_pct),
                         filepath=log_path,
                         to_console=False)
 

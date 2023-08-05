@@ -4,7 +4,7 @@ output_save_path: '$ROOT_DIR/src/main_studies/training_dynamic/results/'
 dataset_dir: '$ROOT_DIR/data/mnist/'
 max_epoch: 200
 batch_size: 256
-learning_rate: 1e-3
+learning_rate: 1e-5
 num_workers: 8
 dataset: 'mnist'
 method: 'wronglabel'
