@@ -739,6 +739,7 @@ def linear_probing(config: AttributeHashmap,
         max_epochs=config.probing_epoch)
 
     for _ in tqdm(range(config.probing_epoch)):
+        # Because of linear warmup, first step has zero LR. Hence step once before training.
         lr_scheduler_probing.step()
         probing_acc = linear_probing_epoch(
             config=config,
