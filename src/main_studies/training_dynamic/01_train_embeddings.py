@@ -283,7 +283,7 @@ def train(config: AttributeHashmap) -> None:
     for val_metric_pct in val_metric_pct_list:
         is_model_saved['%s_%s%%' % (val_metric, val_metric_pct)] = False
 
-    for epoch_idx in tqdm(1, range(config.max_epoch)):
+    for epoch_idx in tqdm(range(1, config.max_epoch)):
         state_dict = {
             'train_loss': 0,
             'train_acc': 0,
@@ -465,7 +465,7 @@ def validate_epoch(config: AttributeHashmap,
 
     model.eval()
     with torch.no_grad():
-        for x, y_true in tqdm(val_loader):
+        for x, y_true in val_loader:
             B = x.shape[0]
             assert config.in_channels in [1, 3]
             if config.in_channels == 1:
