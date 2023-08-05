@@ -757,7 +757,7 @@ def linear_probing(config: AttributeHashmap,
         loss_fn_classification=loss_fn_classification,
         precomputed_clusters_X=precomputed_clusters_X)
 
-    return probing_acc, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y
+    return probing_acc, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, precomputed_clusters_X
 
 
 def linear_probing_epoch(config: AttributeHashmap,
