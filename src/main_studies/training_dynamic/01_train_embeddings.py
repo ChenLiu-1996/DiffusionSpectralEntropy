@@ -275,7 +275,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     # Display correlation.
     if len(data_arrays['val_acc']) > 1:
         ax.set_title(
-            'CSE(Z), P.R: %.3f (p = %.4f), S.R: %.3f (p = %.4f)' %
+            'CSE(Z), P.R: %.3f (p = %.4f), S.R: %.3f (p = %.4f);\n' %
             (pearsonr(data_arrays['val_acc'], data_arrays['cse_Z'])[0],
              pearsonr(data_arrays['val_acc'], data_arrays['cse_Z'])[1],
              spearmanr(data_arrays['val_acc'], data_arrays['cse_Z'])[0],
@@ -489,6 +489,8 @@ def train(config: AttributeHashmap) -> None:
         Training
         '''
         model.train()
+        # Because of linear warmup, first step has zero LR. Hence step once before training.
+        lr_scheduler.step()
         correct, total_count_loss, total_count_acc = 0, 0, 0
         for _, (x, y_true) in enumerate(tqdm(train_loader)):
             if config.method in ['supervised', 'wronglabel']:
@@ -544,8 +546,6 @@ def train(config: AttributeHashmap) -> None:
         else:
             state_dict['train_acc'] = correct / total_count_acc * 100
         state_dict['train_loss'] /= total_count_loss
-
-        lr_scheduler.step()
 
         #
         '''
@@ -738,7 +738,8 @@ def linear_probing(config: AttributeHashmap,
         warmup_epochs=min(10, config.probing_epoch // 5),
         max_epochs=config.probing_epoch)
 
-    for _ in range(config.probing_epoch):
+    for _ in tqdm(range(config.probing_epoch)):
+        lr_scheduler_probing.step()
         probing_acc = linear_probing_epoch(
             config=config,
             train_loader=train_loader,
@@ -746,7 +747,6 @@ def linear_probing(config: AttributeHashmap,
             device=device,
             opt_probing=opt_probing,
             loss_fn_classification=loss_fn_classification)
-        lr_scheduler_probing.step()
 
     _, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, _ = validate_epoch(
         config=config,
