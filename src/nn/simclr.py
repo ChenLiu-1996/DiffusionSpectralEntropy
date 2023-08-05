@@ -9,7 +9,7 @@ from sklearn.metrics import accuracy_score
 
 class NTXentLoss(torch.nn.Module):
 
-    def __init__(self, temperature: float = 0.5):
+    def __init__(self, temperature: float = 1.0):
         super(NTXentLoss, self).__init__()
         self.temperature = temperature
         self.epsilon = 1e-7
@@ -57,17 +57,16 @@ class SingleInstanceTwoView:
         self.augmentation = transforms.Compose([
             transforms.RandomResizedCrop(
                 imsize,
-                scale=(0.8, 1.2),
+                scale=(0.6, 1.6),
                 interpolation=transforms.InterpolationMode.BICUBIC),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomRotation(30),
             transforms.RandomApply([
                 transforms.ColorJitter(
-                    brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)
+                    brightness=0.8, contrast=0.8, saturation=0.8, hue=0.2)
             ],
-                                   p=0.8),
+                                   p=0.4),
             transforms.RandomGrayscale(p=0.2),
-            transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+            transforms.RandomApply([GaussianBlur([0.1, 2.0])], p=0.5),
             transforms.ToTensor(),
             transforms.Normalize(mean=mean, std=std)
         ])
@@ -80,7 +79,7 @@ class SingleInstanceTwoView:
 
 class GaussianBlur(object):
 
-    def __init__(self, sigma=[.1, 2.]):
+    def __init__(self, sigma=[0.1, 2.0]):
         self.sigma = sigma
 
     def __call__(self, x):

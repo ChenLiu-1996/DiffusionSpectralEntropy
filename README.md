@@ -167,6 +167,7 @@ python -m pip install natsort
 python -m pip install phate
 python -m pip install DiffusionEMD
 python -m pip install magic-impute
+python -m pip install timm
 ```
 
 
