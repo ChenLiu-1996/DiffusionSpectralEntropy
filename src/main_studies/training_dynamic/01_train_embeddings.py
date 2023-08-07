@@ -674,8 +674,8 @@ def validate_epoch(config: AttributeHashmap,
                 total_count_loss += B
 
             # Record data for DSE and DSMI computation.
-            if tensor_X is not None and tensor_X.shape[0] >= 5e3:
-                # Only take up to ~5k samples.
+            if tensor_X is not None and tensor_X.shape[0] >= 1e4:
+                # Only take up to ~10k samples.
                 continue
 
             # Downsample the input image to reduce memory usage.
