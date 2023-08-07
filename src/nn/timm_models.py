@@ -26,7 +26,7 @@ def build_timm_model(model_name: str,
     last_layer_name = last_layer_name_map[model_name]
 
     try:
-        timm_model = timm.create_model(timm_model_name, pretrained=pretrained)
+        timm_model = timm.create_model(timm_model_name, num_classes=num_classes, pretrained=pretrained)
     except:
         raise ValueError('`build_timm_model`: model_name (%s) not supported.' %
                          model_name)
