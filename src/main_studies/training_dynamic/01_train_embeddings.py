@@ -621,10 +621,10 @@ def train(config: AttributeHashmap) -> None:
                         to_console=False)
 
     # Save the results after training.
-    save_path_numpy = '%s/%s-%s-%s-seed%s-%s/' % (
+    save_path_numpy = '%s/%s-%s-%s-seed%s/%s' % (
         config.output_save_path, config.dataset, config.method, config.model,
         config.random_seed, 'results.npz')
-    os.makedirs(save_path_numpy, exist_ok=True)
+    os.makedirs(os.path.dirname(save_path_numpy), exist_ok=True)
 
     with open(save_path_numpy, 'wb+') as f:
         np.savez(
