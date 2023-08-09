@@ -584,6 +584,8 @@ def train(config: AttributeHashmap) -> None:
         if not (config.method == 'simclr' and skip_epoch_simlr):
             state_dict['acc_diverg'] = \
                 state_dict['train_acc'] - state_dict['val_acc']
+        else:
+            state_dict['acc_diverg'] = 'Val skipped for efficiency'
 
         log('Epoch: %d. %s' % (epoch_idx, print_state_dict(state_dict)),
             filepath=log_path,
