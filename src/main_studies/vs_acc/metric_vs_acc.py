@@ -99,14 +99,11 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     plt.rcParams['legend.fontsize'] = 20
 
     # Plot of DSE vs val top 1 acc.
-    fig = plt.figure(figsize=(25, 40))
+    fig = plt.figure(figsize=(40, 20))
     img_idx = 1
-    for x_str in ['dse_Z', 'dsmi_Z_X', 'dsmi_Z_Y', 'cse_Z', 'csmi_Z_X', 'csmi_Z_Y']:
-        for y_str in ['imagenet_val_acc_top1',
-                      'imagenet_val_acc_top5',
-                      'imagenet_test_acc_top1',
-                      'imagenet_test_acc_top5']:
-            ax = fig.add_subplot(6, 4, img_idx)
+    for y_str in ['imagenet_val_acc_top1', 'imagenet_val_acc_top5', 'imagenet_test_acc_top1', 'imagenet_test_acc_top5']:
+        for x_str in ['dse_Z', 'dsmi_Z_X', 'dsmi_Z_Y', 'cse_Z', 'csmi_Z_X', 'csmi_Z_Y']:
+            ax = fig.add_subplot(4, 6, img_idx)
             img_idx += 1
             plot_subplot(ax, data_arrays, x_str, y_str)
     fig.tight_layout()
@@ -129,8 +126,8 @@ def plot_subplot(ax: plt.Axes, data_arrays: Dict[str, Iterable], x_str: str, y_s
     }
     ax.spines[['right', 'top']].set_visible(False)
     ax.scatter(data_arrays[x_str], data_arrays[y_str], c='blue', alpha=0.2, s=100)
-    ax.set_ylabel(arr_title_map[x_str], fontsize=20)
-    ax.set_xlabel(arr_title_map[y_str], fontsize=20)
+    ax.set_xlabel(arr_title_map[x_str], fontsize=20)
+    ax.set_ylabel(arr_title_map[y_str], fontsize=20)
     if len(data_arrays[x_str]) > 1:
         ax.set_title('P.R: %.3f (p = %.4f), S.R: %.3f (p = %.4f)' % \
                     (pearsonr(data_arrays[x_str], data_arrays[y_str])[0],
@@ -346,7 +343,7 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
         x, y_true = x.to(device), y_true.to(device)
 
         # Record data for DSE and DSMI computation.
-        if tensor_X is not None and tensor_X.shape[0] >= 1e2:
+        if tensor_X is not None and tensor_X.shape[0] >= 1e4:
             # Only take up to ~10k samples.
             break
 
