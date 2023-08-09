@@ -83,10 +83,13 @@ def get_val_loader(
                                           split='val',
                                           transform=transform_val)
 
+    # shuffle=True because we want to only sample ~10k data points
+    # for efficient DSE/DSMI computation, but meanwhile want to
+    # maintain diversity of labels.
     val_loader = torch.utils.data.DataLoader(val_dataset,
                                              batch_size=args.batch_size,
                                              num_workers=args.num_workers,
-                                             shuffle=False,
+                                             shuffle=True,
                                              pin_memory=True)
     return val_loader
 
@@ -291,7 +294,6 @@ def main(args: AttributeHashmap) -> None:
     del df_val, df_test
 
     # Iterate over the model candidates with pretrained weights.
-    precomputed_clusters_X = None
     for _, model_candidate in tqdm(df_combined.iterrows(),
                                    total=len(df_combined)):
         args.imsize = model_candidate['img_size']
@@ -318,12 +320,11 @@ def main(args: AttributeHashmap) -> None:
         results_dict['imagenet_test_acc_top5'].append(
             model_candidate['test_acc_top5'])
 
-        dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, precomputed_clusters_X = evaluate_dse_dsmi(
+        dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y = evaluate_dse_dsmi(
             args=args,
             val_loader=val_loader,
             model=model,
-            device=device,
-            precomputed_clusters_X=precomputed_clusters_X)
+            device=device)
 
         results_dict['dse_Z'].append(dse_Z)
         results_dict['cse_Z'].append(cse_Z)
@@ -360,8 +361,7 @@ def main(args: AttributeHashmap) -> None:
 @torch.no_grad()
 def evaluate_dse_dsmi(args: AttributeHashmap,
                       val_loader: torch.utils.data.DataLoader,
-                      model: torch.nn.Module, device: torch.device,
-                      precomputed_clusters_X: np.array):
+                      model: torch.nn.Module, device: torch.device):
 
     tensor_X = None  # input
     tensor_Y = None  # label
@@ -389,17 +389,19 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
             tensor_Y = np.hstack((tensor_Y, curr_Y))
             tensor_Z = np.vstack((tensor_Z, curr_Z))
 
+        if tensor_X.shape[0] > 1e4:
+            # Only sample up to ~10k data points.
+            break
+
     dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z)
     cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z,
                                        classic_shannon_entropy=True)
-    dsmi_Z_X, precomputed_clusters_X = diffusion_spectral_mutual_information(
+    dsmi_Z_X, _ = diffusion_spectral_mutual_information(
+        embedding_vectors=tensor_Z,
+        reference_vectors=tensor_X)
+    csmi_Z_X, _ = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_X,
-        precomputed_clusters=precomputed_clusters_X)
-    csmi_Z_X, precomputed_clusters_X = diffusion_spectral_mutual_information(
-        embedding_vectors=tensor_Z,
-        reference_vectors=tensor_X,
-        precomputed_clusters=precomputed_clusters_X,
         classic_shannon_entropy=True)
 
     dsmi_Z_Y, _ = diffusion_spectral_mutual_information(embedding_vectors=tensor_Z, reference_vectors=tensor_Y)
@@ -408,7 +410,7 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
         reference_vectors=tensor_Y,
         classic_shannon_entropy=True)
 
-    return dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, precomputed_clusters_X
+    return dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y
 
 
 if __name__ == '__main__':

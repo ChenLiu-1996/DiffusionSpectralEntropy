@@ -69,9 +69,7 @@ class CorruptLabelDataLoader(torch.utils.data.DataLoader):
 
 def get_dataloaders(
     config: AttributeHashmap
-) -> Tuple[Tuple[
-        torch.utils.data.DataLoader,
-], AttributeHashmap]:
+) -> Tuple[Tuple[torch.utils.data.DataLoader, ], AttributeHashmap]:
     if config.dataset == 'mnist':
         config.in_channels = 1
         config.num_classes = 10
@@ -583,8 +581,9 @@ def train(config: AttributeHashmap) -> None:
             state_dict['val_loss'] = val_loss
             state_dict['val_acc'] = val_acc
 
-        state_dict['acc_diverg'] = \
-            state_dict['train_acc'] - state_dict['val_acc']
+        if not (config.method == 'simclr' and skip_epoch_simlr):
+            state_dict['acc_diverg'] = \
+                state_dict['train_acc'] - state_dict['val_acc']
 
         log('Epoch: %d. %s' % (epoch_idx, print_state_dict(state_dict)),
             filepath=log_path,
@@ -603,31 +602,32 @@ def train(config: AttributeHashmap) -> None:
         plot_figures(data_arrays=results_dict, save_path_fig=save_path_fig)
 
         # Save best model
-        if state_dict[val_metric] > best_val_metric:
-            best_val_metric = state_dict[val_metric]
-            best_model = model.state_dict()
-            model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
-                config.checkpoint_dir, config.dataset, config.method,
-                config.model, config.random_seed, '%s_best.pth' % val_metric)
-            torch.save(best_model, model_save_path)
-            log('Best model (so far) successfully saved.',
-                filepath=log_path,
-                to_console=False)
+        if not (config.method == 'simclr' and skip_epoch_simlr):
+            if state_dict[val_metric] > best_val_metric:
+                best_val_metric = state_dict[val_metric]
+                best_model = model.state_dict()
+                model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
+                    config.checkpoint_dir, config.dataset, config.method,
+                    config.model, config.random_seed, '%s_best.pth' % val_metric)
+                torch.save(best_model, model_save_path)
+                log('Best model (so far) successfully saved.',
+                    filepath=log_path,
+                    to_console=False)
 
-            # Save model at each percentile.
-            for val_metric_pct in val_metric_pct_list:
-                if state_dict[val_metric] > val_metric_pct and \
-                   not is_model_saved[str(val_metric_pct)]:
-                    model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
-                        config.checkpoint_dir, config.dataset, config.method,
-                        config.model, config.random_seed, '%s_%s%%.pth' %
-                        (val_metric, val_metric_pct))
-                    torch.save(best_model, model_save_path)
-                    is_model_saved[str(val_metric_pct)] = True
-                    log('%s:%s%% model successfully saved.' %
-                        (val_metric, val_metric_pct),
-                        filepath=log_path,
-                        to_console=False)
+                # Save model at each percentile.
+                for val_metric_pct in val_metric_pct_list:
+                    if state_dict[val_metric] > val_metric_pct and \
+                    not is_model_saved[str(val_metric_pct)]:
+                        model_save_path = '%s/%s-%s-%s-seed%s-%s' % (
+                            config.checkpoint_dir, config.dataset, config.method,
+                            config.model, config.random_seed, '%s_%s%%.pth' %
+                            (val_metric, val_metric_pct))
+                        torch.save(best_model, model_save_path)
+                        is_model_saved[str(val_metric_pct)] = True
+                        log('%s:%s%% model successfully saved.' %
+                            (val_metric, val_metric_pct),
+                            filepath=log_path,
+                            to_console=False)
 
     # Save the results after training.
     save_path_numpy = '%s/%s-%s-%s-seed%s/%s' % (
