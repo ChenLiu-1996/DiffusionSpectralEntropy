@@ -99,7 +99,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     plt.rcParams['legend.fontsize'] = 20
 
     # Plot of DSE vs val top 1 acc.
-    fig = plt.figure(figsize=(30, 20))
+    fig = plt.figure(figsize=(25, 40))
     img_idx = 1
     for x_str in ['dse_Z', 'dsmi_Z_X', 'dsmi_Z_Y', 'cse_Z', 'csmi_Z_X', 'csmi_Z_Y']:
         for y_str in ['imagenet_val_acc_top1',
