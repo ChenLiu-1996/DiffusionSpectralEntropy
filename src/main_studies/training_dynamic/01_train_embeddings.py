@@ -473,6 +473,9 @@ def train(config: AttributeHashmap) -> None:
         is_model_saved[str(val_metric_pct)] = False
 
     for epoch_idx in tqdm(range(1, config.max_epoch)):
+        # For SimCLR, only perform validation / linear probing every 5 epochs.
+        skip_epoch_simlr = epoch_idx % 5 != 0
+
         state_dict = {
             'train_loss': 0,
             'train_acc': 0,
@@ -552,18 +555,23 @@ def train(config: AttributeHashmap) -> None:
         Validation (or Linear Probing + Validation)
         '''
         if config.method == 'simclr':
-            # This function call includes validation.
-            probing_acc, val_acc_final, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, _ = linear_probing(
-                config=config,
-                train_loader=train_loader,
-                val_loader=val_loader,
-                model=model,
-                device=device,
-                loss_fn_classification=loss_fn_classification,
-                precomputed_clusters_X=precomputed_clusters_X)
-            state_dict['train_acc'] = probing_acc
-            state_dict['val_loss'] = np.nan
-            state_dict['val_acc'] = val_acc_final
+            if not skip_epoch_simlr:
+                # This function call includes validation.
+                probing_acc, val_acc_final, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, _ = linear_probing(
+                    config=config,
+                    train_loader=train_loader,
+                    val_loader=val_loader,
+                    model=model,
+                    device=device,
+                    loss_fn_classification=loss_fn_classification,
+                    precomputed_clusters_X=precomputed_clusters_X)
+                state_dict['train_acc'] = probing_acc
+                state_dict['val_loss'] = np.nan
+                state_dict['val_acc'] = val_acc_final
+            else:
+                state_dict['train_acc'] = 'Val skipped for efficiency'
+                state_dict['val_loss'] = 'Val skipped for efficiency'
+                state_dict['val_acc'] = 'Val skipped for efficiency'
         else:
             val_loss, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, _ = validate_epoch(
                 config=config,
@@ -582,14 +590,15 @@ def train(config: AttributeHashmap) -> None:
             filepath=log_path,
             to_console=False)
 
-        results_dict['epoch'].append(epoch_idx)
-        results_dict['dse_Z'].append(dse_Z)
-        results_dict['cse_Z'].append(cse_Z)
-        results_dict['dsmi_Z_X'].append(dsmi_Z_X)
-        results_dict['csmi_Z_X'].append(csmi_Z_X)
-        results_dict['dsmi_Z_Y'].append(dsmi_Z_Y)
-        results_dict['csmi_Z_Y'].append(csmi_Z_Y)
-        results_dict['val_acc'].append(state_dict['val_acc'])
+        if not (config.method == 'simclr' and skip_epoch_simlr):
+            results_dict['epoch'].append(epoch_idx)
+            results_dict['dse_Z'].append(dse_Z)
+            results_dict['cse_Z'].append(cse_Z)
+            results_dict['dsmi_Z_X'].append(dsmi_Z_X)
+            results_dict['csmi_Z_X'].append(csmi_Z_X)
+            results_dict['dsmi_Z_Y'].append(dsmi_Z_Y)
+            results_dict['csmi_Z_Y'].append(csmi_Z_Y)
+            results_dict['val_acc'].append(state_dict['val_acc'])
 
         plot_figures(data_arrays=results_dict, save_path_fig=save_path_fig)
 
