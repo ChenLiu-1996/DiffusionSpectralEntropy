@@ -673,10 +673,7 @@ def validate_epoch(config: AttributeHashmap,
             if config.method != 'simclr':
                 total_count_loss += B
 
-            # Record data for DSE and DSMI computation.
-            if tensor_X is not None and tensor_X.shape[0] >= 1e4:
-                # Only take up to ~10k samples.
-                continue
+            ## Record data for DSE and DSMI computation.
 
             # Downsample the input image to reduce memory usage.
             curr_X = torch.nn.functional.interpolate(

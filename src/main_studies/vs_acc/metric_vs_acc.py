@@ -90,6 +90,7 @@ def get_val_loader(
                                              pin_memory=True)
     return val_loader
 
+
 class ThisArchitectureIsWeirdError(Exception):
     pass
 
@@ -101,8 +102,14 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     # Plot of DSE vs val top 1 acc.
     fig = plt.figure(figsize=(40, 20))
     img_idx = 1
-    for y_str in ['imagenet_val_acc_top1', 'imagenet_val_acc_top5', 'imagenet_test_acc_top1', 'imagenet_test_acc_top5']:
-        for x_str in ['dse_Z', 'dsmi_Z_X', 'dsmi_Z_Y', 'cse_Z', 'csmi_Z_X', 'csmi_Z_Y']:
+    for y_str in [
+            'imagenet_val_acc_top1', 'imagenet_val_acc_top5',
+            'imagenet_test_acc_top1', 'imagenet_test_acc_top5'
+    ]:
+        for x_str in [
+                'dse_Z', 'dsmi_Z_X', 'dsmi_Z_Y', 'cse_Z', 'csmi_Z_X',
+                'csmi_Z_Y'
+        ]:
             ax = fig.add_subplot(4, 6, img_idx)
             img_idx += 1
             plot_subplot(ax, data_arrays, x_str, y_str)
@@ -111,7 +118,9 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     plt.close(fig=fig)
     return
 
-def plot_subplot(ax: plt.Axes, data_arrays: Dict[str, Iterable], x_str: str, y_str: str) -> plt.Axes:
+
+def plot_subplot(ax: plt.Axes, data_arrays: Dict[str, Iterable], x_str: str,
+                 y_str: str) -> plt.Axes:
     arr_title_map = {
         'imagenet_val_acc_top1': 'ImageNet val top1-acc',
         'imagenet_val_acc_top5': 'ImageNet val top5-acc',
@@ -125,18 +134,23 @@ def plot_subplot(ax: plt.Axes, data_arrays: Dict[str, Iterable], x_str: str, y_s
         'csmi_Z_Y': 'CSMI(Z; Y)',
     }
     ax.spines[['right', 'top']].set_visible(False)
-    ax.scatter(data_arrays[x_str], data_arrays[y_str], c='blue', alpha=0.2, s=100)
+    ax.scatter(data_arrays[x_str],
+               data_arrays[y_str],
+               c='blue',
+               alpha=0.2,
+               s=100)
     ax.set_xlabel(arr_title_map[x_str], fontsize=20)
     ax.set_ylabel(arr_title_map[y_str], fontsize=20)
     if len(data_arrays[x_str]) > 1:
-        ax.set_title('P.R: %.3f (p = %.4f), S.R: %.3f (p = %.4f)' % \
+        ax.set_title('P.R: %.3f (p = %.3f), S.R: %.3f (p = %.3f)' % \
                     (pearsonr(data_arrays[x_str], data_arrays[y_str])[0],
                     pearsonr(data_arrays[x_str], data_arrays[y_str])[1],
                     spearmanr(data_arrays[x_str], data_arrays[y_str])[0],
                     spearmanr(data_arrays[x_str], data_arrays[y_str])[1]),
-                    fontsize=20)
+                    fontsize=16)
     ax.tick_params(axis='both', which='major', labelsize=20)
     return
+
 
 class ModelWithLatentAccess(torch.nn.Module):
 
@@ -177,9 +191,7 @@ class ModelWithLatentAccess(torch.nn.Module):
         else:
             raise ThisArchitectureIsWeirdError
 
-        if not last_layer.out_features == num_classes:
-            import pdb
-            pdb.set_trace()
+        assert last_layer.out_features == num_classes
 
         self.linear = last_layer
 
@@ -253,12 +265,28 @@ def main(args: AttributeHashmap) -> None:
     df_val = pd.read_csv('./results-imagenet.csv')
     df_test = pd.read_csv('./results-imagenet-real.csv')
 
-    df_val.drop(['top1_err', 'top5_err', 'crop_pct', 'interpolation', 'img_size', 'param_count'],
-                axis=1, inplace=True)
-    df_test.drop(['top1_err', 'top5_err', 'crop_pct', 'interpolation', 'top1_diff', 'top5_diff', 'rank_diff'],
-                 axis=1, inplace=True)
-    df_val.rename(columns={'top1': 'val_acc_top1', 'top5': 'val_acc_top5'}, inplace=True)
-    df_test.rename(columns={'top1': 'test_acc_top1', 'top5': 'test_acc_top5'}, inplace=True)
+    df_val.drop([
+        'top1_err', 'top5_err', 'crop_pct', 'interpolation', 'img_size',
+        'param_count'
+    ],
+                axis=1,
+                inplace=True)
+    df_test.drop([
+        'top1_err', 'top5_err', 'crop_pct', 'interpolation', 'top1_diff',
+        'top5_diff', 'rank_diff'
+    ],
+                 axis=1,
+                 inplace=True)
+    df_val.rename(columns={
+        'top1': 'val_acc_top1',
+        'top5': 'val_acc_top5'
+    },
+                  inplace=True)
+    df_test.rename(columns={
+        'top1': 'test_acc_top1',
+        'top5': 'test_acc_top5'
+    },
+                   inplace=True)
     df_combined = df_val.merge(df_test, on='model')
     del df_val, df_test
 
@@ -269,21 +297,26 @@ def main(args: AttributeHashmap) -> None:
         args.imsize = model_candidate['img_size']
 
         model = timm.create_model(model_name=model_candidate['model'],
-                                num_classes=args.num_classes,
-                                pretrained=False).to(device)
+                                  num_classes=args.num_classes,
+                                  pretrained=False).to(device)
         try:
             model = ModelWithLatentAccess(model, num_classes=args.num_classes)
         except ThisArchitectureIsWeirdError as _:
-            print('Cannot process: %s. Skipping it.' % model_candidate['model'])
+            print('Cannot process: %s. Skipping it.' %
+                  model_candidate['model'])
             continue
 
         model.eval()
         val_loader = get_val_loader(args=args)
 
-        results_dict['imagenet_val_acc_top1'].append(model_candidate['val_acc_top1'])
-        results_dict['imagenet_val_acc_top5'].append(model_candidate['val_acc_top5'])
-        results_dict['imagenet_test_acc_top1'].append(model_candidate['test_acc_top1'])
-        results_dict['imagenet_test_acc_top5'].append(model_candidate['test_acc_top5'])
+        results_dict['imagenet_val_acc_top1'].append(
+            model_candidate['val_acc_top1'])
+        results_dict['imagenet_val_acc_top5'].append(
+            model_candidate['val_acc_top5'])
+        results_dict['imagenet_test_acc_top1'].append(
+            model_candidate['test_acc_top1'])
+        results_dict['imagenet_test_acc_top5'].append(
+            model_candidate['test_acc_top5'])
 
         dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, precomputed_clusters_X = evaluate_dse_dsmi(
             args=args,
@@ -299,30 +332,30 @@ def main(args: AttributeHashmap) -> None:
         results_dict['dsmi_Z_Y'].append(dsmi_Z_Y)
         results_dict['csmi_Z_Y'].append(csmi_Z_Y)
 
+        # It takes a long time to evaluate all models.
+        # Plot and save results after each model evaluation.
         plot_figures(results_dict, save_path_fig=save_path_fig)
-
-    # Save the results after training.
-
-    with open(save_path_numpy, 'wb+') as f:
-        np.savez(
-            f,
-            imagenet_val_acc_top1=np.array(
-                results_dict['imagenet_val_acc_top1']),
-            imagenet_val_acc_top5=np.array(
-                results_dict['imagenet_val_acc_top5']),
-            imagenet_test_acc_top1=np.array(
-                results_dict['imagenet_test_acc_top1']),
-            imagenet_test_acc_top5=np.array(
-                results_dict['imagenet_test_acc_top5']),
-            dse_Z=np.array(results_dict['dse_Z']),
-            cse_Z=np.array(results_dict['cse_Z']),
-            dsmi_Z_X=np.array(results_dict['dsmi_Z_X']),
-            csmi_Z_X=np.array(results_dict['csmi_Z_X']),
-            dsmi_Z_Y=np.array(results_dict['dsmi_Z_Y']),
-            csmi_Z_Y=np.array(results_dict['csmi_Z_Y']),
-        )
+        with open(save_path_numpy, 'wb+') as f:
+            np.savez(
+                f,
+                imagenet_val_acc_top1=np.array(
+                    results_dict['imagenet_val_acc_top1']),
+                imagenet_val_acc_top5=np.array(
+                    results_dict['imagenet_val_acc_top5']),
+                imagenet_test_acc_top1=np.array(
+                    results_dict['imagenet_test_acc_top1']),
+                imagenet_test_acc_top5=np.array(
+                    results_dict['imagenet_test_acc_top5']),
+                dse_Z=np.array(results_dict['dse_Z']),
+                cse_Z=np.array(results_dict['cse_Z']),
+                dsmi_Z_X=np.array(results_dict['dsmi_Z_X']),
+                csmi_Z_X=np.array(results_dict['csmi_Z_X']),
+                dsmi_Z_Y=np.array(results_dict['dsmi_Z_Y']),
+                csmi_Z_Y=np.array(results_dict['csmi_Z_Y']),
+            )
 
     return
+
 
 @torch.no_grad()
 def evaluate_dse_dsmi(args: AttributeHashmap,
@@ -342,10 +375,7 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
             x = x.repeat(1, 3, 1, 1)
         x, y_true = x.to(device), y_true.to(device)
 
-        # Record data for DSE and DSMI computation.
-        if tensor_X is not None and tensor_X.shape[0] >= 1e4:
-            # Only take up to ~10k samples.
-            break
+        ## Record data for DSE and DSMI computation.
 
         # Downsample the input image to reduce memory usage.
         curr_X = torch.nn.functional.interpolate(
@@ -372,8 +402,7 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
         precomputed_clusters=precomputed_clusters_X,
         classic_shannon_entropy=True)
 
-    dsmi_Z_Y, _ = diffusion_spectral_mutual_information(
-        embedding_vectors=tensor_Z, reference_vectors=tensor_Y)
+    dsmi_Z_Y, _ = diffusion_spectral_mutual_information(embedding_vectors=tensor_Z, reference_vectors=tensor_Y)
     csmi_Z_Y, _ = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_Y,
@@ -390,7 +419,7 @@ if __name__ == '__main__':
                         default=0)
     parser.add_argument('--random-seed', type=int, default=1)
     parser.add_argument('--dataset', type=str, default='imagenet')
-    parser.add_argument('--batch-size', type=int, default=128)
+    parser.add_argument('--batch-size', type=int, default=64)
     parser.add_argument('--num-workers', type=int, default=8)
     args = vars(parser.parse_args())
 
