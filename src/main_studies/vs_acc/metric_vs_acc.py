@@ -83,7 +83,7 @@ def get_val_loader(
                                           split='val',
                                           transform=transform_val)
 
-    # shuffle=True because we want to only sample ~10k data points
+    # shuffle=True because we want to only sample ~5k data points
     # for efficient DSE/DSMI computation, but meanwhile want to
     # maintain diversity of labels.
     val_loader = torch.utils.data.DataLoader(val_dataset,
@@ -139,9 +139,9 @@ def plot_subplot(ax: plt.Axes, data_arrays: Dict[str, Iterable], x_str: str,
     ax.spines[['right', 'top']].set_visible(False)
     ax.scatter(data_arrays[x_str],
                data_arrays[y_str],
-               c='blue',
+               c='darkblue',
                alpha=0.2,
-               s=100)
+               s=np.array(data_arrays['model_params']) / 4)
     ax.set_xlabel(arr_title_map[x_str], fontsize=20)
     ax.set_ylabel(arr_title_map[y_str], fontsize=20)
     if len(data_arrays[x_str]) > 1:
@@ -220,8 +220,6 @@ def main(args: AttributeHashmap) -> None:
     '''
     Compute DSE and DSMI, and compute correlation with ImageNet acc.
     '''
-    device = torch.device('cuda:%d' %
-                          args.gpu_id if torch.cuda.is_available() else 'cpu')
     save_path_numpy = './results.npz'
     save_path_fig = './results'
 
@@ -249,20 +247,6 @@ def main(args: AttributeHashmap) -> None:
     args.in_channels = in_channels_map[args.dataset]
     args.num_classes = num_classes_map[args.dataset]
     args.dataset_dir = dataset_dir_map[args.dataset]
-
-    # Iterate over all models and evaluate results.
-    results_dict = {
-        'imagenet_val_acc_top1': [],
-        'imagenet_val_acc_top5': [],
-        'imagenet_test_acc_top1': [],
-        'imagenet_test_acc_top5': [],
-        'dse_Z': [],
-        'cse_Z': [],
-        'dsmi_Z_X': [],
-        'csmi_Z_X': [],
-        'dsmi_Z_Y': [],
-        'csmi_Z_Y': [],
-    }
 
     # Load the tables for ImageNet accuracy (val and test set).
     df_val = pd.read_csv('./results-imagenet.csv')
@@ -293,14 +277,66 @@ def main(args: AttributeHashmap) -> None:
     df_combined = df_val.merge(df_test, on='model')
     del df_val, df_test
 
-    # Iterate over the model candidates with pretrained weights.
-    for _, model_candidate in tqdm(df_combined.iterrows(),
-                                   total=len(df_combined)):
-        args.imsize = model_candidate['img_size']
+    # Iterate over all models and evaluate results.
+    if os.path.isfile(save_path_numpy) and not args.restart:
+        npz_file = np.load(save_path_numpy)
+        results_dict = {
+            'df_row_idx': int(npz_file['df_row_idx']),
+            'model_params': list(npz_file['model_params']),
+            'imagenet_val_acc_top1': list(npz_file['imagenet_val_acc_top1']),
+            'imagenet_val_acc_top5': list(npz_file['imagenet_val_acc_top5']),
+            'imagenet_test_acc_top1': list(npz_file['imagenet_test_acc_top1']),
+            'imagenet_test_acc_top5': list(npz_file['imagenet_test_acc_top5']),
+            'dse_Z': list(npz_file['dse_Z']),
+            'cse_Z': list(npz_file['cse_Z']),
+            'dsmi_Z_X': list(npz_file['dsmi_Z_X']),
+            'csmi_Z_X': list(npz_file['csmi_Z_X']),
+            'dsmi_Z_Y': list(npz_file['dsmi_Z_Y']),
+            'csmi_Z_Y': list(npz_file['csmi_Z_Y']),
+        }
 
-        model = timm.create_model(model_name=model_candidate['model'],
-                                  num_classes=args.num_classes,
-                                  pretrained=False).to(device)
+    else:
+        results_dict = {
+            'df_row_idx': 0,
+            'model_params': [],
+            'imagenet_val_acc_top1': [],
+            'imagenet_val_acc_top5': [],
+            'imagenet_test_acc_top1': [],
+            'imagenet_test_acc_top5': [],
+            'dse_Z': [],
+            'cse_Z': [],
+            'dsmi_Z_X': [],
+            'csmi_Z_X': [],
+            'dsmi_Z_Y': [],
+            'csmi_Z_Y': [],
+        }
+
+    # Iterate over the model candidates with pretrained weights.
+    for df_row_idx, model_candidate in tqdm(df_combined.iterrows(),
+                                            total=len(df_combined)):
+
+        # This is for resuming progress.
+        if df_row_idx < results_dict['df_row_idx']:
+            continue
+        results_dict['df_row_idx'] = df_row_idx
+
+        args.imsize = model_candidate['img_size']
+        results_dict['model_params'].append(
+            float(model_candidate['param_count'].replace(',', '')))
+
+        try:
+            device = torch.device(
+                'cuda:%d' %
+                args.gpu_id if torch.cuda.is_available() else 'cpu')
+            model = timm.create_model(model_name=model_candidate['model'],
+                                      num_classes=args.num_classes,
+                                      pretrained=False).to(device)
+        except torch.cuda.OutOfMemoryError:
+            device = torch.device('cpu')
+            model = timm.create_model(model_name=model_candidate['model'],
+                                      num_classes=args.num_classes,
+                                      pretrained=False).to(device)
+
         try:
             model = ModelWithLatentAccess(model, num_classes=args.num_classes)
         except ThisArchitectureIsWeirdError as _:
@@ -320,11 +356,18 @@ def main(args: AttributeHashmap) -> None:
         results_dict['imagenet_test_acc_top5'].append(
             model_candidate['test_acc_top5'])
 
-        dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y = evaluate_dse_dsmi(
-            args=args,
-            val_loader=val_loader,
-            model=model,
-            device=device)
+        try:
+            dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y = evaluate_dse_dsmi(
+                args=args, val_loader=val_loader, model=model, device=device)
+        except torch.cuda.OutOfMemoryError:
+            device = torch.device('cpu')
+            model = ModelWithLatentAccess(timm.create_model(
+                model_name=model_candidate['model'],
+                num_classes=args.num_classes,
+                pretrained=False).to(device),
+                                          num_classes=args.num_classes)
+            dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y = evaluate_dse_dsmi(
+                args=args, val_loader=val_loader, model=model, device=device)
 
         results_dict['dse_Z'].append(dse_Z)
         results_dict['cse_Z'].append(cse_Z)
@@ -339,6 +382,8 @@ def main(args: AttributeHashmap) -> None:
         with open(save_path_numpy, 'wb+') as f:
             np.savez(
                 f,
+                df_row_idx=df_row_idx,
+                model_params=np.array(results_dict['model_params']),
                 imagenet_val_acc_top1=np.array(
                     results_dict['imagenet_val_acc_top1']),
                 imagenet_val_acc_top5=np.array(
@@ -389,8 +434,8 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
             tensor_Y = np.hstack((tensor_Y, curr_Y))
             tensor_Z = np.vstack((tensor_Z, curr_Z))
 
-        if tensor_X.shape[0] > 1e4:
-            # Only sample up to ~10k data points.
+        if tensor_X.shape[0] > 5e3:
+            # Only sample up to ~5k data points.
             break
 
     dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z)
@@ -398,13 +443,16 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
                                        classic_shannon_entropy=True)
     dsmi_Z_X, _ = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
-        reference_vectors=tensor_X)
+        reference_vectors=tensor_X,
+        n_clusters=args.num_classes)
     csmi_Z_X, _ = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_X,
+        n_clusters=args.num_classes,
         classic_shannon_entropy=True)
 
-    dsmi_Z_Y, _ = diffusion_spectral_mutual_information(embedding_vectors=tensor_Z, reference_vectors=tensor_Y)
+    dsmi_Z_Y, _ = diffusion_spectral_mutual_information(
+        embedding_vectors=tensor_Z, reference_vectors=tensor_Y)
     csmi_Z_Y, _ = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_Y,
@@ -421,8 +469,14 @@ if __name__ == '__main__':
                         default=0)
     parser.add_argument('--random-seed', type=int, default=1)
     parser.add_argument('--dataset', type=str, default='imagenet')
-    parser.add_argument('--batch-size', type=int, default=64)
+    parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--num-workers', type=int, default=8)
+    parser.add_argument(
+        '--restart',
+        action='store_true',
+        help=
+        'If turned on, recompute from the first model. Otherwise resume where it left off.'
+    )
     args = vars(parser.parse_args())
 
     args = AttributeHashmap(args)
