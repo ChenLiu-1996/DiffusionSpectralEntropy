@@ -163,8 +163,6 @@ def get_dataloaders(
             torchvision.transforms.Resize(imsize,
                                           interpolation=torchvision.transforms.
                                           InterpolationMode.BICUBIC),
-            torchvision.transforms.CenterCrop(imsize),
-            torchvision.transforms.RandomHorizontalFlip(p=0.5),
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(mean=dataset_mean,
                                              std=dataset_std)
