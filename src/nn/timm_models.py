@@ -13,7 +13,7 @@ def build_timm_model(model_name: str,
         'vit': 'timm/vit_tiny_patch16_224.augreg_in21k',
         'swin': 'timm/swin_tiny_patch4_window7_224.ms_in1k',
         'mobilevit': 'timm/mobilevitv2_050.cvnets_in1k',
-        'maxvit': 'timm/maxvit_tiny_tf_224.in1k',
+        'xcit': 'timm/xcit_nano_12_p16_224.fb_dist_in1k',
     }
     last_layer_name_map = {
         'resnet': 'fc',
@@ -23,7 +23,7 @@ def build_timm_model(model_name: str,
         'vit': 'head',
         'swin': 'head.fc',
         'mobilevit': 'head.fc',
-        'maxvit': 'head.fc',
+        'xcit': 'head',
     }
 
     timm_model_name = timm_model_name_map[model_name]
