@@ -9,17 +9,21 @@ def build_timm_model(model_name: str,
         'resnet': 'timm/resnet50.a1_in1k',
         'resnext': 'timm/resnext50_32x4d.a1h_in1k',
         'mobilenet': 'timm/mobilenetv3_small_100.lamb_in1k',
+        'convnext': 'timm/convnext_tiny.in12k_ft_in1k',
         'vit': 'timm/vit_tiny_patch16_224.augreg_in21k',
         'swin': 'timm/swin_tiny_patch4_window7_224.ms_in1k',
         'mobilevit': 'timm/mobilevitv2_050.cvnets_in1k',
+        'xcit': 'timm/xcit_nano_12_p16_224.fb_dist_in1k',
     }
     last_layer_name_map = {
         'resnet': 'fc',
         'resnext': 'fc',
         'mobilenet': 'classifier',
+        'convnext': 'head.fc',
         'vit': 'head',
         'swin': 'head.fc',
         'mobilevit': 'head.fc',
+        'xcit': 'head',
     }
 
     timm_model_name = timm_model_name_map[model_name]
