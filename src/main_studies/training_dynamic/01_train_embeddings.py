@@ -699,10 +699,10 @@ def train(config: AttributeHashmap) -> None:
 timm_model_blocks_map = {
     'resnet': ['layer1', 'layer2', 'layer3', 'layer4'],
     'resnext': ['layer1', 'layer2', 'layer3', 'layer4'],
-    'mobilenet': ['blocks', 5],
+    'convnext': ['stages', 4],
     'vit': ['blocks', 12],
     'swin': ['layers', 4],
-    'mobilevit': ['stages', 5],
+    'xcit': ['blocks', 12],
 }
 
 def validate_epoch(config: AttributeHashmap,
