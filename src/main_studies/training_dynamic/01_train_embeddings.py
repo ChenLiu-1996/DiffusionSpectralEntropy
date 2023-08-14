@@ -638,7 +638,7 @@ def train(config: AttributeHashmap) -> None:
             results_dict['dsmi_blockZ_X_list'].append(np.array(dsmi_blockZ_Xs))
             results_dict['dsmi_blockZ_Y_list'].append(np.array(dsmi_blockZ_Ys))
 
-        plot_figures(data_arrays=results_dict, save_path_fig=save_path_fig)
+        plot_figures(data_arrays=results_dict, save_path_fig=save_path_fig, block_by_block=config.block_by_block)
 
         # Save best model
         if not (config.method == 'simclr' and skip_epoch_simlr):
