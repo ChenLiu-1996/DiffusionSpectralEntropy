@@ -377,8 +377,8 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     ax.spines[['right', 'top']].set_visible(False)
     dsmi_blockZ_X_list = data_arrays['dsmi_blockZ_X_list']
     dsmi_blockZ_Y_list = data_arrays['dsmi_blockZ_Y_list']
-    colors = plt.cm.jet(np.linespace(0, 1, len(dsmi_blockZ_X_list))
-                        
+    colors = plt.cm.jet(np.linespace(0, 1, len(dsmi_blockZ_X_list)))
+
     for i in range(dsmi_blockZ_X_list):
         ax.scatter(dsmi_blockZ_X_list[i], dsmi_blockZ_Y_list[i], c=colors[i])
         ax.set_xlabel('I(Z; X)', fontsize=40)
@@ -679,7 +679,7 @@ def train(config: AttributeHashmap) -> None:
             dsmi_Z_Y=np.array(results_dict['dsmi_Z_Y']),
             csmi_Z_Y=np.array(results_dict['csmi_Z_Y']),
         )
-    
+
     # Save block by block DSMI results
     save_path_numpy = '%s/%s-%s-%s-seed%s/%s' % (
         config.output_save_path, config.dataset, config.method, config.model,
@@ -724,7 +724,7 @@ def validate_epoch(config: AttributeHashmap,
         def hook(model, input, output):
             activation[name] = output.detach()
         return hook
-    
+
     handlers_list = []
     block_index_list = []
     # register forward hooks on key layers
@@ -737,7 +737,7 @@ def validate_epoch(config: AttributeHashmap,
     else:
         main_blocks_name, block_cnt = timm_model_blocks_map[config.model][0], timm_model_blocks_map[config.model][1]
         block_index_list = list(range(block_cnt))
-        
+
         for i in block_index_list:
             layer = getattr(model.encoder, main_blocks_name)[i]
             handlers_list.append(layer.register_forward_hook(getActivation('blocks_'+str(i))))
@@ -775,7 +775,7 @@ def validate_epoch(config: AttributeHashmap,
                 tensor_X = np.vstack((tensor_X, curr_X))
                 tensor_Y = np.hstack((tensor_Y, curr_Y))
                 tensor_Z = np.vstack((tensor_Z, curr_Z))
-            
+
             # Collect block activations from key layers
             for i in block_index_list:
                 curr_block_features = activation['blocks_'+str(i)].cpu().numpy()
@@ -804,7 +804,7 @@ def validate_epoch(config: AttributeHashmap,
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_Y,
         classic_shannon_entropy=True)
-    
+
     dsmi_blockZ_X_list, dsmi_blockZ_Y_list = [], []
     for i in block_index_list:
         tensor_blockZ = blocks_features[i]
@@ -826,7 +826,7 @@ def validate_epoch(config: AttributeHashmap,
         val_loss /= total_count_loss
     val_acc = correct / total_count_acc * 100
 
-    return (val_loss, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, 
+    return (val_loss, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y,
             dsmi_blockZ_X_list, dsmi_blockZ_Y_list, precomputed_clusters_X)
 
 
