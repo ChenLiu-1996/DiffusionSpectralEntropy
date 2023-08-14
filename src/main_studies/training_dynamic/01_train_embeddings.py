@@ -340,7 +340,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     ],
               loc='upper left')
     ax.set_ylabel('Mutual Information', fontsize=40)
-    ax.set_xlabel('Downstream Classification Accuracy', fontsize=40)
+    ax.set_xlabel('Val. Classification Accuracy', fontsize=40)
     ax.tick_params(axis='both', which='major', labelsize=30)
 
     # # Display correlation.
