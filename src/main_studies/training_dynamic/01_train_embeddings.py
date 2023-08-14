@@ -760,9 +760,9 @@ def validate_epoch(config: AttributeHashmap,
                     layer.register_forward_hook(getActivation('blocks_' + str(i))))
 
     model.eval()
-    with torch.no_grad():
     if config.block_by_block:
         blocks_features = [[] for _ in block_index_list]
+    with torch.no_grad():
         for x, y_true in tqdm(val_loader):
             B = x.shape[0]
             assert config.in_channels in [1, 3]
