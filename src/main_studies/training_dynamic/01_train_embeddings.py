@@ -221,7 +221,7 @@ def get_dataloaders(
     return (train_loader, val_loader), config
 
 
-def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
+def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str, block_by_block: bool) -> None:
 
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['legend.fontsize'] = 20
@@ -371,36 +371,37 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     fig.savefig(save_path_fig)
     plt.close(fig=fig)
 
-    # Plot I(Z; Y) vs. I(Z; X) for each epoch and each block.
-    fig2 = plt.figure(figsize=(20, 20))
-    ax = fig2.add_subplot(1, 1, 1)
-    ax.spines[['right', 'top']].set_visible(False)
-    dsmi_blockZ_X_list = data_arrays['dsmi_blockZ_X_list']
-    dsmi_blockZ_Y_list = data_arrays['dsmi_blockZ_Y_list']
-    colors = plt.cm.jet(np.linespace(0, 1, len(dsmi_blockZ_X_list)))
+    if block_by_block:
+        # Plot I(Z; Y) vs. I(Z; X) for each epoch and each block.
+        fig2 = plt.figure(figsize=(20, 20))
+        ax = fig2.add_subplot(1, 1, 1)
+        ax.spines[['right', 'top']].set_visible(False)
+        dsmi_blockZ_X_list = data_arrays['dsmi_blockZ_X_list']
+        dsmi_blockZ_Y_list = data_arrays['dsmi_blockZ_Y_list']
+        colors = plt.cm.jet(np.linespace(0, 1, len(dsmi_blockZ_X_list)))
 
-    for i in range(dsmi_blockZ_X_list):
-        ax.scatter(dsmi_blockZ_X_list[i], dsmi_blockZ_Y_list[i], c=colors[i])
-        ax.set_xlabel('I(Z; X)', fontsize=40)
-        ax.set_ylabel('I(Z; Y)', fontsize=40)
-        ax.tick_params(axis='both', which='major', labelsize=30)
-        ax.plot(dsmi_blockZ_X_list[i],
-                dsmi_blockZ_Y_list[i],
-                c=colors[i],
-                alpha=0.3)
+        for i in range(dsmi_blockZ_X_list):
+            ax.scatter(dsmi_blockZ_X_list[i], dsmi_blockZ_Y_list[i], c=colors[i])
+            ax.set_xlabel('I(Z; X)', fontsize=40)
+            ax.set_ylabel('I(Z; Y)', fontsize=40)
+            ax.tick_params(axis='both', which='major', labelsize=30)
+            ax.plot(dsmi_blockZ_X_list[i],
+                    dsmi_blockZ_Y_list[i],
+                    c=colors[i],
+                    alpha=0.3)
 
-        # show color map
-        sm = plt.cm.ScalarMappable(cmap=plt.cm.jet,
-                                   norm=plt.Normalize(vmin=0, vmax=1))
-        sm.set_array([])
-        cbar = plt.colorbar(sm, ax=ax)
-        cbar.set_label('Epoch', fontsize=30)
-        cbar.ax.tick_params(labelsize=30)
+            # show color map
+            sm = plt.cm.ScalarMappable(cmap=plt.cm.jet,
+                                    norm=plt.Normalize(vmin=0, vmax=1))
+            sm.set_array([])
+            cbar = plt.colorbar(sm, ax=ax)
+            cbar.set_label('Epoch', fontsize=30)
+            cbar.ax.tick_params(labelsize=30)
 
-    save_path_fig2 = '%s-blocks' % (save_path_fig)
-    fig2.tight_layout()
-    fig2.savefig(save_path_fig2)
-    plt.close(fig=fig2)
+        save_path_fig2 = '%s-blocks' % (save_path_fig)
+        fig2.tight_layout()
+        fig2.savefig(save_path_fig2)
+        plt.close(fig=fig2)
 
     return
 
@@ -446,7 +447,8 @@ def train(config: AttributeHashmap) -> None:
         val_metric = 'val_acc'
 
     # Compute the results before training.
-    val_loss, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, dsmi_blockZ_Xs, dsmi_blockZ_Ys, precomputed_clusters_X = validate_epoch(
+    val_loss, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y, \
+        dsmi_blockZ_Xs, dsmi_blockZ_Ys, precomputed_clusters_X = validate_epoch(
         config=config,
         val_loader=val_loader,
         model=model,
@@ -725,35 +727,37 @@ def validate_epoch(config: AttributeHashmap,
     tensor_X = None  # input
     tensor_Y = None  # label
     tensor_Z = None  # latent
-    '''Get block by block activations'''
-    activation = {}
 
-    def getActivation(name):
+    if config.block_by_block:
+        '''Get block by block activations'''
+        activation = {}
 
-        def hook(model, input, output):
-            activation[name] = output.detach()
+        def getActivation(name):
 
-        return hook
+            def hook(model, input, output):
+                activation[name] = output.detach()
 
-    handlers_list = []
-    block_index_list = []
-    # register forward hooks on key layers
-    if config.model == 'resnet' or config.model == 'resnext':
-        layers_names = timm_model_blocks_map[config.model]
-        block_index_list = list(range(len(layers_names)))
-        for i, layer_name in enumerate(layers_names):
-            layer = getattr(model.encoder, layer_name)
-            handlers_list.append(
-                layer.register_forward_hook(getActivation('blocks_' + str(i))))
-    else:
-        main_blocks_name, block_cnt = timm_model_blocks_map[
-            config.model][0], timm_model_blocks_map[config.model][1]
-        block_index_list = list(range(block_cnt))
+            return hook
 
-        for i in block_index_list:
-            layer = getattr(model.encoder, main_blocks_name)[i]
-            handlers_list.append(
-                layer.register_forward_hook(getActivation('blocks_' + str(i))))
+        handlers_list = []
+        block_index_list = []
+        # register forward hooks on key layers
+        if config.model == 'resnet' or config.model == 'resnext':
+            layers_names = timm_model_blocks_map[config.model]
+            block_index_list = list(range(len(layers_names)))
+            for i, layer_name in enumerate(layers_names):
+                layer = getattr(model.encoder, layer_name)
+                handlers_list.append(
+                    layer.register_forward_hook(getActivation('blocks_' + str(i))))
+        else:
+            main_blocks_name, block_cnt = timm_model_blocks_map[
+                config.model][0], timm_model_blocks_map[config.model][1]
+            block_index_list = list(range(block_cnt))
+
+            for i in block_index_list:
+                layer = getattr(model.encoder, main_blocks_name)[i]
+                handlers_list.append(
+                    layer.register_forward_hook(getActivation('blocks_' + str(i))))
 
     model.eval()
     blocks_features = [[] for _ in block_index_list]
@@ -788,16 +792,19 @@ def validate_epoch(config: AttributeHashmap,
                 tensor_Y = np.hstack((tensor_Y, curr_Y))
                 tensor_Z = np.vstack((tensor_Z, curr_Z))
 
-            # Collect block activations from key layers
-            for i in block_index_list:
-                curr_block_features = activation['blocks_' +
-                                                 str(i)].cpu().numpy()
-                curr_block_features = curr_block_features.reshape(
-                    curr_block_features.shape[0], -1)
-                blocks_features[i].append(curr_block_features)  # (B, D)
-    for i in block_index_list:
-        blocks_features[i] = np.vstack(blocks_features[i])
-        handlers_list[i].remove()
+            if config.block_by_block:
+                # Collect block activations from key layers
+                for i in block_index_list:
+                    curr_block_features = activation['blocks_' +
+                                                    str(i)].cpu().numpy()
+                    curr_block_features = curr_block_features.reshape(
+                        curr_block_features.shape[0], -1)
+                    blocks_features[i].append(curr_block_features)  # (B, D)
+
+    if config.block_by_block:
+        for i in block_index_list:
+            blocks_features[i] = np.vstack(blocks_features[i])
+            handlers_list[i].remove()
 
     dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z)
     cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z,
@@ -820,17 +827,18 @@ def validate_epoch(config: AttributeHashmap,
         classic_shannon_entropy=True)
 
     dsmi_blockZ_X_list, dsmi_blockZ_Y_list = [], []
-    for i in block_index_list:
-        tensor_blockZ = blocks_features[i]
-        dsmi_blockZ_X, _ = diffusion_spectral_mutual_information(
-            embedding_vectors=tensor_blockZ,
-            reference_vectors=tensor_X,
-            precomputed_clusters=precomputed_clusters_X,
-        )
-        dsmi_blockZ_X_list.append(dsmi_blockZ_X)
-        dsmi_blockZ_Y, _ = diffusion_spectral_mutual_information(
-            embedding_vectors=tensor_blockZ, reference_vectors=tensor_Y)
-        dsmi_blockZ_Y_list.append(dsmi_blockZ_Y)
+    if config.block_by_block:
+        for i in block_index_list:
+            tensor_blockZ = blocks_features[i]
+            dsmi_blockZ_X, _ = diffusion_spectral_mutual_information(
+                embedding_vectors=tensor_blockZ,
+                reference_vectors=tensor_X,
+                precomputed_clusters=precomputed_clusters_X,
+            )
+            dsmi_blockZ_X_list.append(dsmi_blockZ_X)
+            dsmi_blockZ_Y, _ = diffusion_spectral_mutual_information(
+                embedding_vectors=tensor_blockZ, reference_vectors=tensor_Y)
+            dsmi_blockZ_Y_list.append(dsmi_blockZ_Y)
 
     if config.method == 'simclr':
         val_loss = torch.nan
@@ -930,9 +938,13 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument(
         '--model',
-        help='model name: [resnet, resnext, mobilenet, vit, swin, mobilevit]',
+        help='model name: [resnet, resnext, convnext, vit, swin, xcit]',
         type=str,
         required=True)
+    parser.add_argument(
+        '--block-by-block',
+        action='store_true',
+        help='If turned on, we compute the block-by-block DSE/DSMI.')
     parser.add_argument('--gpu-id',
                         help='Available GPU index.',
                         type=int,
@@ -949,6 +961,7 @@ if __name__ == '__main__':
     config.config_file_name = args.config
     config.gpu_id = args.gpu_id
     config.model = args.model
+    config.block_by_block = args.block_by_block
     if args.random_seed is not None:
         config.random_seed = args.random_seed
     config = update_config_dirs(AttributeHashmap(config))
