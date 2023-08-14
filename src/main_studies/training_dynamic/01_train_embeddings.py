@@ -376,17 +376,17 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str, block_by_
         fig2 = plt.figure(figsize=(20, 20))
         ax = fig2.add_subplot(1, 1, 1)
         ax.spines[['right', 'top']].set_visible(False)
-        dsmi_blockZ_X_list = data_arrays['dsmi_blockZ_X_list']
-        dsmi_blockZ_Y_list = data_arrays['dsmi_blockZ_Y_list']
-        colors = plt.cm.jet(np.linespace(0, 1, len(dsmi_blockZ_X_list)))
+        dsmi_blockZ_Xs = data_arrays['dsmi_blockZ_Xs']
+        dsmi_blockZ_Ys = data_arrays['dsmi_blockZ_Ys']
+        colors = plt.cm.jet(np.linespace(0, 1, len(dsmi_blockZ_Xs)))
 
-        for i in range(dsmi_blockZ_X_list):
-            ax.scatter(dsmi_blockZ_X_list[i], dsmi_blockZ_Y_list[i], c=colors[i])
+        for i in range(dsmi_blockZ_Xs):
+            ax.scatter(dsmi_blockZ_Xs[i], dsmi_blockZ_Ys[i], c=colors[i])
             ax.set_xlabel('I(Z; X)', fontsize=40)
             ax.set_ylabel('I(Z; Y)', fontsize=40)
             ax.tick_params(axis='both', which='major', labelsize=30)
-            ax.plot(dsmi_blockZ_X_list[i],
-                    dsmi_blockZ_Y_list[i],
+            ax.plot(dsmi_blockZ_Xs[i],
+                    dsmi_blockZ_Ys[i],
                     c=colors[i],
                     alpha=0.3)
 
@@ -635,8 +635,8 @@ def train(config: AttributeHashmap) -> None:
             results_dict['dsmi_Z_Y'].append(dsmi_Z_Y)
             results_dict['csmi_Z_Y'].append(csmi_Z_Y)
             results_dict['val_acc'].append(state_dict['val_acc'])
-            results_dict['dsmi_blockZ_X_list'].append(np.array(dsmi_blockZ_Xs))
-            results_dict['dsmi_blockZ_Y_list'].append(np.array(dsmi_blockZ_Ys))
+            results_dict['dsmi_blockZ_Xs'].append(np.array(dsmi_blockZ_Xs))
+            results_dict['dsmi_blockZ_Ys'].append(np.array(dsmi_blockZ_Ys))
 
         plot_figures(data_arrays=results_dict, save_path_fig=save_path_fig, block_by_block=config.block_by_block)
 
@@ -698,8 +698,8 @@ def train(config: AttributeHashmap) -> None:
         np.savez(
             f,
             epoch=np.array(results_dict['epoch']),
-            dsmi_blockZ_X_list=results_dict['dsmi_blockZ_X_list'],
-            dsmi_blockZ_Y_list=results_dict['dsmi_blockZ_Y_list'],
+            dsmi_blockZ_Xs=results_dict['dsmi_blockZ_Xs'],
+            dsmi_blockZ_Ys=results_dict['dsmi_blockZ_Ys'],
         )
 
     return
@@ -827,7 +827,7 @@ def validate_epoch(config: AttributeHashmap,
         reference_vectors=tensor_Y,
         classic_shannon_entropy=True)
 
-    dsmi_blockZ_X_list, dsmi_blockZ_Y_list = [], []
+    dsmi_blockZ_Xs, dsmi_blockZ_Ys = [], []
     if config.block_by_block:
         for i in block_index_list:
             tensor_blockZ = blocks_features[i]
@@ -836,10 +836,10 @@ def validate_epoch(config: AttributeHashmap,
                 reference_vectors=tensor_X,
                 precomputed_clusters=precomputed_clusters_X,
             )
-            dsmi_blockZ_X_list.append(dsmi_blockZ_X)
+            dsmi_blockZ_Xs.append(dsmi_blockZ_X)
             dsmi_blockZ_Y, _ = diffusion_spectral_mutual_information(
                 embedding_vectors=tensor_blockZ, reference_vectors=tensor_Y)
-            dsmi_blockZ_Y_list.append(dsmi_blockZ_Y)
+            dsmi_blockZ_Ys.append(dsmi_blockZ_Y)
 
     if config.method == 'simclr':
         val_loss = torch.nan
@@ -848,7 +848,7 @@ def validate_epoch(config: AttributeHashmap,
     val_acc = correct / total_count_acc * 100
 
     return (val_loss, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y,
-            csmi_Z_Y, dsmi_blockZ_X_list, dsmi_blockZ_Y_list,
+            csmi_Z_Y, dsmi_blockZ_Xs, dsmi_blockZ_Ys,
             precomputed_clusters_X)
 
 
