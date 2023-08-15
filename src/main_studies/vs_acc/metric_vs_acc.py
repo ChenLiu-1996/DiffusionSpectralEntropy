@@ -191,6 +191,8 @@ class ModelWithLatentAccess(torch.nn.Module):
            isinstance(self.encoder.head.fc.fc2, torch.nn.modules.Linear):
             last_layer = self.encoder.head.fc.fc2
             last_layer_name_opt = 5
+            import pdb
+            pdb.set_trace()
         else:
             raise ThisArchitectureIsWeirdError
 
@@ -211,9 +213,6 @@ class ModelWithLatentAccess(torch.nn.Module):
 
     def encode(self, x):
         return self.encoder(x)
-
-    def forward(self, x):
-        return self.linear(self.encoder(x))
 
 
 def main(args: AttributeHashmap) -> None:
@@ -330,12 +329,12 @@ def main(args: AttributeHashmap) -> None:
                 args.gpu_id if torch.cuda.is_available() else 'cpu')
             model = timm.create_model(model_name=model_candidate['model'],
                                       num_classes=args.num_classes,
-                                      pretrained=False).to(device)
+                                      pretrained=True).to(device)
         except torch.cuda.OutOfMemoryError:
             device = torch.device('cpu')
             model = timm.create_model(model_name=model_candidate['model'],
                                       num_classes=args.num_classes,
-                                      pretrained=False).to(device)
+                                      pretrained=True).to(device)
 
         try:
             model = ModelWithLatentAccess(model, num_classes=args.num_classes)
@@ -361,11 +360,10 @@ def main(args: AttributeHashmap) -> None:
                 args=args, val_loader=val_loader, model=model, device=device)
         except torch.cuda.OutOfMemoryError:
             device = torch.device('cpu')
-            model = ModelWithLatentAccess(timm.create_model(
-                model_name=model_candidate['model'],
-                num_classes=args.num_classes,
-                pretrained=False).to(device),
-                                          num_classes=args.num_classes)
+            model = timm.create_model(model_name=model_candidate['model'],
+                                      num_classes=args.num_classes,
+                                      pretrained=True).to(device)
+            model = ModelWithLatentAccess(model, num_classes=args.num_classes)
             dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y = evaluate_dse_dsmi(
                 args=args, val_loader=val_loader, model=model, device=device)
 
