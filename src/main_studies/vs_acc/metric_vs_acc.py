@@ -191,8 +191,6 @@ class ModelWithLatentAccess(torch.nn.Module):
            isinstance(self.encoder.head.fc.fc2, torch.nn.modules.Linear):
             last_layer = self.encoder.head.fc.fc2
             last_layer_name_opt = 5
-            import pdb
-            pdb.set_trace()
         else:
             raise ThisArchitectureIsWeirdError
 
