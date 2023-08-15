@@ -206,7 +206,7 @@ class ModelWithLatentAccess(torch.nn.Module):
             self.encoder.head = torch.nn.Identity()
         elif last_layer_name_opt == 4:
             self.encoder.head.fc = torch.nn.Identity()
-        elif last_layer_name_opt == 4:
+        elif last_layer_name_opt == 5:
             self.encoder.head.fc.fc2 = torch.nn.Identity()
 
     def encode(self, x):
