@@ -378,7 +378,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str, block_by_
         ax.spines[['right', 'top']].set_visible(False)
         dsmi_blockZ_Xs = data_arrays['dsmi_blockZ_Xs']
         dsmi_blockZ_Ys = data_arrays['dsmi_blockZ_Ys']
-        colors = plt.cm.jet(np.linespace(0, 1, len(dsmi_blockZ_Xs)))
+        colors = plt.cm.jet(np.linspace(0, 1, len(dsmi_blockZ_Xs)))
 
         for i in range(dsmi_blockZ_Xs):
             ax.scatter(dsmi_blockZ_Xs[i], dsmi_blockZ_Ys[i], c=colors[i])
