@@ -380,7 +380,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str, block_by_
         dsmi_blockZ_Ys = data_arrays['dsmi_blockZ_Ys']
         colors = plt.cm.jet(np.linspace(0, 1, len(dsmi_blockZ_Xs)))
 
-        for i in range(dsmi_blockZ_Xs):
+        for i in range(len(dsmi_blockZ_Xs)):
             ax.scatter(dsmi_blockZ_Xs[i], dsmi_blockZ_Ys[i], c=colors[i])
             ax.set_xlabel('I(Z; X)', fontsize=40)
             ax.set_ylabel('I(Z; Y)', fontsize=40)
@@ -390,13 +390,13 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str, block_by_
                     c=colors[i],
                     alpha=0.3)
 
-            # show color map
-            sm = plt.cm.ScalarMappable(cmap=plt.cm.jet,
-                                    norm=plt.Normalize(vmin=0, vmax=1))
-            sm.set_array([])
-            cbar = plt.colorbar(sm, ax=ax)
-            cbar.set_label('Epoch', fontsize=30)
-            cbar.ax.tick_params(labelsize=30)
+        # show color map
+        sm = plt.cm.ScalarMappable(cmap=plt.cm.jet,
+                                norm=plt.Normalize(vmin=0, vmax=1))
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax)
+        cbar.set_label('Epoch', fontsize=30)
+        cbar.ax.tick_params(labelsize=30)
 
         save_path_fig2 = '%s-blocks' % (save_path_fig)
         fig2.tight_layout()
