@@ -2,16 +2,19 @@ import numpy as np
 from information_utils import approx_eigvals, exact_eigvals
 from diffusion import compute_diffusion_matrix
 import os
+import random
 
 
 def diffusion_spectral_entropy(embedding_vectors: np.array,
                                gaussian_kernel_sigma: float = 10,
                                t: int = 1,
+                               max_N: int = 10000,
                                chebyshev_approx: bool = False,
                                eigval_save_path: str = None,
                                eigval_save_precision: np.dtype = np.float16,
                                classic_shannon_entropy: bool = False,
                                num_bins_per_dim: int = 2,
+                               random_seed: int = 0,
                                verbose: bool = False):
     '''
     >>> If `classic_shannon_entropy` is False (default)
@@ -47,6 +50,9 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
             Rule of thumb: after powering eigenvalues to `t`, there should be approximately
                            1 percent of eigenvalues that remain larger than 0.01
 
+        max_N: int
+            Max number of data points / samples used for computation.
+
         chebyshev_approx: bool
             Whether or not to use Chebyshev moments for faster approximation of eigenvalues.
             Currently we DO NOT RECOMMEND USING THIS. Eigenvalues may be changed quite a bit.
@@ -70,6 +76,13 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
         verbose: bool
             Whether or not to print progress to console.
     '''
+
+    # Subsample embedding vectors if number of data sample is too large.
+    if max_N is not None and len(embedding_vectors) > max_N:
+        if random_seed is not None:
+            random.seed(random_seed)
+        rand_inds = np.array(random.sample(len(embedding_vectors), k=max_N))
+        embedding_vectors = embedding_vectors[rand_inds, :]
 
     if not classic_shannon_entropy:
         # Computing Diffusion Spectral Entropy.

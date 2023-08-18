@@ -26,6 +26,7 @@ from seed import seed_everything
 from simclr import NTXentLoss, SingleInstanceTwoView
 from scheduler import LinearWarmupCosineAnnealingLR
 from timm_models import build_timm_model
+from extend import ExtendedDataset
 
 
 def print_state_dict(state_dict: dict) -> str:
@@ -217,6 +218,32 @@ def get_dataloaders(
                                              pin_memory=True)
     if config.method == 'wronglabel':
         train_loader = CorruptLabelDataLoader(train_loader)
+
+    if config.dataset == 'tinyimagenet':
+        # Validate set has too few images per class. Bad for DSE and DSMI estimation.
+        val_dataset = torchvision_dataset(
+            config.dataset_dir,
+            split='val',
+            transform=torchvision.transforms.Compose([
+                torchvision.transforms.Resize(
+                    imsize,
+                    interpolation=torchvision.transforms.InterpolationMode.
+                    BICUBIC),
+                torchvision.transforms.RandomResizedCrop(
+                    imsize,
+                    scale=(0.6, 1.6),
+                    interpolation=torchvision.transforms.InterpolationMode.
+                    BICUBIC),
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.Normalize(mean=dataset_mean,
+                                                 std=dataset_std)
+            ]))
+        val_dataset = ExtendedDataset(val_dataset, desired_len=5*len(val_dataset))
+        val_loader = torch.utils.data.DataLoader(val_dataset,
+                                             batch_size=config.batch_size,
+                                             num_workers=config.num_workers,
+                                             shuffle=False,
+                                             pin_memory=True)
 
     return (train_loader, val_loader), config
 
