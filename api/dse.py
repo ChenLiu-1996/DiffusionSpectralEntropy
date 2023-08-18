@@ -81,7 +81,7 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
     if max_N is not None and len(embedding_vectors) > max_N:
         if random_seed is not None:
             random.seed(random_seed)
-        rand_inds = np.array(random.sample(len(embedding_vectors), k=max_N))
+        rand_inds = np.array(random.sample(range(len(embedding_vectors)), k=max_N))
         embedding_vectors = embedding_vectors[rand_inds, :]
 
     if not classic_shannon_entropy:

@@ -220,7 +220,8 @@ def get_dataloaders(
         train_loader = CorruptLabelDataLoader(train_loader)
 
     if config.dataset == 'tinyimagenet':
-        # Validate set has too few images per class. Bad for DSE and DSMI estimation.
+        # Validation set has too few images per class. Bad for DSE and DSMI estimation.
+        # Therefore we extend it by a bit.
         val_dataset = torchvision_dataset(
             config.dataset_dir,
             split='val',
@@ -238,7 +239,7 @@ def get_dataloaders(
                 torchvision.transforms.Normalize(mean=dataset_mean,
                                                  std=dataset_std)
             ]))
-        val_dataset = ExtendedDataset(val_dataset, desired_len=5*len(val_dataset))
+        val_dataset = ExtendedDataset(val_dataset, desired_len=3*len(val_dataset))
         val_loader = torch.utils.data.DataLoader(val_dataset,
                                              batch_size=config.batch_size,
                                              num_workers=config.num_workers,
