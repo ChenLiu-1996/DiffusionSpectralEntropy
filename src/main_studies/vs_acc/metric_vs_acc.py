@@ -430,10 +430,6 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
             tensor_Y = np.hstack((tensor_Y, curr_Y))
             tensor_Z = np.vstack((tensor_Z, curr_Z))
 
-        if tensor_X.shape[0] > 5e3:
-            # Only sample up to ~5k data points.
-            break
-
     dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z)
     cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z,
                                        classic_shannon_entropy=True)
