@@ -841,10 +841,12 @@ def validate_epoch(config: AttributeHashmap,
     dsmi_Z_X, precomputed_clusters_X = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_X,
+        n_clusters=config.num_classes,
         precomputed_clusters=precomputed_clusters_X)
     csmi_Z_X, precomputed_clusters_X = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_X,
+        n_clusters=config.num_classes,
         precomputed_clusters=precomputed_clusters_X,
         classic_shannon_entropy=True)
 

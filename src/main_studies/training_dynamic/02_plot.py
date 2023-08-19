@@ -119,7 +119,7 @@ def plot_figure(metric: str, fig_save_path: str) -> None:
                         y_axis,
                         color=my_palette[method_idx],
                         marker='+',
-                        markeredgewidth=5,
+                        markeredgewidth=3,
                         markersize=12)
                 ax.grid()
                 ax.tick_params(axis='both', which='major', labelsize=15)
