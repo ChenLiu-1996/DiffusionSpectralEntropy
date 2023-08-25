@@ -140,7 +140,7 @@ def plot_subplot(ax: plt.Axes, data_arrays: Dict[str, Iterable], x_str: str,
     ax.scatter(data_arrays[x_str],
                data_arrays[y_str],
                c='darkblue',
-               alpha=0.2,
+               alpha=0.5,
                s=np.array(data_arrays['model_params']) / 4)
     ax.set_xlabel(arr_title_map[x_str], fontsize=20)
     ax.set_ylabel(arr_title_map[y_str], fontsize=20)
@@ -239,7 +239,8 @@ def main(args: AttributeHashmap) -> None:
         'cifar10': '/media/data1/chliu/cifar10',
         'stl10': '/media/data1/chliu/stl10',
         'tinyimagenet': '/media/data1/chliu/tinyimagenet',
-        'imagenet': '/media/data1/chliu/ImageNet',
+        # 'imagenet': '/media/data1/chliu/ImageNet',
+        'imagenet': '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/DiffusionSpectralEntropy/data/imagenet',
     }
     args.in_channels = in_channels_map[args.dataset]
     args.num_classes = num_classes_map[args.dataset]
@@ -430,8 +431,9 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
             tensor_Y = np.hstack((tensor_Y, curr_Y))
             tensor_Z = np.vstack((tensor_Z, curr_Z))
 
-    dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z)
-    cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z,
+    # For DSE, subsample for faster computation.
+    dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z[:1e4])
+    cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z[:1e4],
                                        classic_shannon_entropy=True)
     dsmi_Z_X, _ = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
@@ -461,7 +463,7 @@ if __name__ == '__main__':
                         default=0)
     parser.add_argument('--random-seed', type=int, default=1)
     parser.add_argument('--dataset', type=str, default='imagenet')
-    parser.add_argument('--batch-size', type=int, default=32)
+    parser.add_argument('--batch-size', type=int, default=64)
     parser.add_argument('--num-workers', type=int, default=8)
     parser.add_argument(
         '--restart',

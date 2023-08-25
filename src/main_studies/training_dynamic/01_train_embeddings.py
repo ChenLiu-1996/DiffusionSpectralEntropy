@@ -70,7 +70,9 @@ class CorruptLabelDataLoader(torch.utils.data.DataLoader):
 
 def get_dataloaders(
     config: AttributeHashmap
-) -> Tuple[Tuple[torch.utils.data.DataLoader, ], AttributeHashmap]:
+) -> Tuple[Tuple[
+        torch.utils.data.DataLoader,
+], AttributeHashmap]:
     if config.dataset == 'mnist':
         config.in_channels = 1
         config.num_classes = 10
@@ -198,6 +200,12 @@ def get_dataloaders(
                                           download=True,
                                           transform=transform_val)
 
+        if config.dataset == 'stl10' and config.method != 'wronglabel':
+            # Training set has too few images (5000 images in total).
+            # Let's augment it into a bigger dataset.
+            train_dataset = ExtendedDataset(train_dataset,
+                                            desired_len=10 * len(train_dataset))
+
     elif config.dataset in ['tinyimagenet', 'imagenet']:
         train_dataset = torchvision_dataset(config.dataset_dir,
                                             split='train',
@@ -219,7 +227,7 @@ def get_dataloaders(
     if config.method == 'wronglabel':
         train_loader = CorruptLabelDataLoader(train_loader)
 
-    if config.dataset == 'tinyimagenet':
+    if config.dataset == 'tinyimagenet' and config.method != 'wronglabel':
         # Validation set has too few images per class. Bad for DSE and DSMI estimation.
         # Therefore we extend it by a bit.
         val_dataset = torchvision_dataset(
@@ -239,17 +247,20 @@ def get_dataloaders(
                 torchvision.transforms.Normalize(mean=dataset_mean,
                                                  std=dataset_std)
             ]))
-        val_dataset = ExtendedDataset(val_dataset, desired_len=3*len(val_dataset))
-        val_loader = torch.utils.data.DataLoader(val_dataset,
-                                             batch_size=config.batch_size,
-                                             num_workers=config.num_workers,
-                                             shuffle=False,
-                                             pin_memory=True)
+        val_dataset = ExtendedDataset(val_dataset,
+                                      desired_len=10 * len(val_dataset))
+        val_loader = torch.utils.data.DataLoader(
+            val_dataset,
+            batch_size=config.batch_size,
+            num_workers=config.num_workers,
+            shuffle=False,
+            pin_memory=True)
 
     return (train_loader, val_loader), config
 
 
-def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str, block_by_block: bool) -> None:
+def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str,
+                 block_by_block: bool) -> None:
 
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['legend.fontsize'] = 20
@@ -420,7 +431,7 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str, block_by_
 
         # show color map
         sm = plt.cm.ScalarMappable(cmap=plt.cm.jet,
-                                norm=plt.Normalize(vmin=0, vmax=1))
+                                   norm=plt.Normalize(vmin=0, vmax=1))
         sm.set_array([])
         cbar = plt.colorbar(sm, ax=ax)
         cbar.set_label('Epoch', fontsize=30)
@@ -666,7 +677,9 @@ def train(config: AttributeHashmap) -> None:
             results_dict['dsmi_blockZ_Xs'].append(np.array(dsmi_blockZ_Xs))
             results_dict['dsmi_blockZ_Ys'].append(np.array(dsmi_blockZ_Ys))
 
-        plot_figures(data_arrays=results_dict, save_path_fig=save_path_fig, block_by_block=config.block_by_block)
+        plot_figures(data_arrays=results_dict,
+                     save_path_fig=save_path_fig,
+                     block_by_block=config.block_by_block)
 
         # Save best model
         if not (config.method == 'simclr' and skip_epoch_simlr):
@@ -776,7 +789,8 @@ def validate_epoch(config: AttributeHashmap,
             for i, layer_name in enumerate(layers_names):
                 layer = getattr(model.encoder, layer_name)
                 handlers_list.append(
-                    layer.register_forward_hook(getActivation('blocks_' + str(i))))
+                    layer.register_forward_hook(
+                        getActivation('blocks_' + str(i))))
         else:
             main_blocks_name, block_cnt = timm_model_blocks_map[
                 config.model][0], timm_model_blocks_map[config.model][1]
@@ -785,7 +799,8 @@ def validate_epoch(config: AttributeHashmap,
             for i in block_index_list:
                 layer = getattr(model.encoder, main_blocks_name)[i]
                 handlers_list.append(
-                    layer.register_forward_hook(getActivation('blocks_' + str(i))))
+                    layer.register_forward_hook(
+                        getActivation('blocks_' + str(i))))
 
     model.eval()
     if config.block_by_block:
@@ -825,7 +840,7 @@ def validate_epoch(config: AttributeHashmap,
                 # Collect block activations from key layers
                 for i in block_index_list:
                     curr_block_features = activation['blocks_' +
-                                                    str(i)].cpu().numpy()
+                                                     str(i)].cpu().numpy()
                     curr_block_features = curr_block_features.reshape(
                         curr_block_features.shape[0], -1)
                     blocks_features[i].append(curr_block_features)  # (B, D)
@@ -878,8 +893,7 @@ def validate_epoch(config: AttributeHashmap,
     val_acc = correct / total_count_acc * 100
 
     return (val_loss, val_acc, dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y,
-            csmi_Z_Y, dsmi_blockZ_Xs, dsmi_blockZ_Ys,
-            precomputed_clusters_X)
+            csmi_Z_Y, dsmi_blockZ_Xs, dsmi_blockZ_Ys, precomputed_clusters_X)
 
 
 def linear_probing(config: AttributeHashmap,
