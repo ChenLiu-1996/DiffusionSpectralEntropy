@@ -204,7 +204,8 @@ def get_dataloaders(
             # Training set has too few images (5000 images in total).
             # Let's augment it into a bigger dataset.
             train_dataset = ExtendedDataset(train_dataset,
-                                            desired_len=10 * len(train_dataset))
+                                            desired_len=10 *
+                                            len(train_dataset))
 
     elif config.dataset in ['tinyimagenet', 'imagenet']:
         train_dataset = torchvision_dataset(config.dataset_dir,
@@ -253,7 +254,7 @@ def get_dataloaders(
             val_dataset,
             batch_size=config.batch_size,
             num_workers=config.num_workers,
-            shuffle=False,
+            shuffle=True,
             pin_memory=True)
 
     return (train_loader, val_loader), config
@@ -850,9 +851,18 @@ def validate_epoch(config: AttributeHashmap,
             blocks_features[i] = np.vstack(blocks_features[i])
             handlers_list[i].remove()
 
-    dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z)
-    cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z,
-                                       classic_shannon_entropy=True)
+    if config.dataset == 'tinyimagenet':
+        # For DSE, subsample for faster computation.
+        dse_Z = diffusion_spectral_entropy(
+            embedding_vectors=tensor_Z[:10000, :])
+        cse_Z = diffusion_spectral_entropy(
+            embedding_vectors=tensor_Z[:10000, :],
+            classic_shannon_entropy=True)
+    else:
+        dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z)
+        cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z,
+                                           classic_shannon_entropy=True)
+
     dsmi_Z_X, precomputed_clusters_X = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_X,

@@ -49,6 +49,153 @@ def plot_main_figure(metric: str, fig_save_path: str) -> None:
 
     for dataset, gs_y in zip(DATASET_LIST, range(len(DATASET_LIST))):
         #NOTE: First find the x and y range.
+        all_metric_list = []
+        for network in NETWORK_LIST:
+            for method_idx, method in enumerate(METHOD_LIST):
+                for seed in SEED_LIST:
+                    curr_metric_list = data_hashmap['%s-%s-%s-seed%s' %
+                                                    (dataset, method, network,
+                                                     seed)][metric]
+
+                    if len(curr_metric_list) > 0:
+                        all_metric_list.extend(curr_metric_list)
+                    del curr_metric_list
+
+        if len(all_metric_list) > 0:
+            acc_lim = [0, 100]
+            metric_range = np.max(all_metric_list) - np.min(all_metric_list)
+            metric_lim = [
+                np.min(all_metric_list) - 0.1 * metric_range,
+                np.max(all_metric_list) + 0.1 * metric_range
+            ]
+        else:
+            acc_lim = [0, 100]
+            metric_lim = [0, 1]
+        del all_metric_list
+
+        #NOTE: Now start plotting.
+        ax1 = fig.add_subplot(gs[0, gs_y])
+        ax1.spines[['right', 'top']].set_visible(False)
+        ax1.set_title('ConvNets on %s' % dataset_formal_map[dataset],
+                      fontsize=20)
+        ax1.set_xlim(acc_lim)
+        ax1.set_ylim(metric_lim)
+        ax1.set_ylabel(metric_formal_map[metric], fontsize=18)
+        ax1.set_xlabel('Val. Accuracy', fontsize=18)
+        ax1.grid()
+        ax1.tick_params(axis='both', which='major', labelsize=15)
+        ax2 = fig.add_subplot(gs[1, gs_y])
+        ax2.set_title('ViTs on %s' % dataset_formal_map[dataset], fontsize=20)
+        ax2.spines[['right', 'top']].set_visible(False)
+        ax2.set_xlim(acc_lim)
+        ax2.set_ylim(metric_lim)
+        ax2.set_ylabel(metric_formal_map[metric], fontsize=18)
+        ax2.set_xlabel('Val. Accuracy', fontsize=18)
+        ax2.grid()
+        ax2.tick_params(axis='both', which='major', labelsize=15)
+        for method_idx, method in enumerate(METHOD_LIST):
+            convnets_acc_list, convnets_metric_list = None, None
+            vits_acc_list, vits_metric_list = None, None
+            for network in NETWORK_LIST:
+                x_axis, y_axis = None, None
+                for seed in SEED_LIST:
+                    curr_acc_list = data_hashmap['%s-%s-%s-seed%s' %
+                                                 (dataset, method, network,
+                                                  seed)]['val_acc']
+                    curr_metric_list = data_hashmap['%s-%s-%s-seed%s' %
+                                                    (dataset, method, network,
+                                                     seed)][metric]
+
+                    if x_axis is None:
+                        x_axis = curr_acc_list
+                        y_axis = curr_metric_list
+                    else:
+                        if len(x_axis) > 0:
+                            x_axis = np.vstack((x_axis, curr_acc_list))
+                            y_axis = np.vstack((y_axis, curr_metric_list))
+
+                if method != 'simclr':
+                    # Subsample for less crowded plot.
+                    x_axis = x_axis[::5]
+                    y_axis = y_axis[::5]
+
+                if network in ['resnet', 'resnext', 'convnext']:
+                    if convnets_acc_list is None and len(x_axis) > 0:
+                        convnets_acc_list = x_axis[None, :]
+                        convnets_metric_list = y_axis[None, :]
+                    elif len(x_axis) > 0:
+                        convnets_acc_list = np.vstack(
+                            (convnets_acc_list, x_axis[None, :]))
+                        convnets_metric_list = np.vstack(
+                            (convnets_metric_list, y_axis[None, :]))
+                else:
+                    assert network in ['vit', 'swin', 'xcit']
+                    if vits_acc_list is None and len(x_axis) > 0:
+                        vits_acc_list = x_axis[None, :]
+                        vits_metric_list = y_axis[None, :]
+                    elif len(x_axis) > 0:
+                        vits_acc_list = np.vstack(
+                            (vits_acc_list, x_axis[None, :]))
+                        vits_metric_list = np.vstack(
+                            (vits_metric_list, y_axis[None, :]))
+
+            if convnets_acc_list is not None:
+                ax1.scatter(convnets_acc_list,
+                            convnets_metric_list,
+                            color=my_palette[method_idx],
+                            s=200,
+                            alpha=0.3)
+                if gs_y == 0:
+                    ax1.legend(
+                        [method_formal_map[item] for item in METHOD_LIST],
+                        fontsize=16)
+            if vits_metric_list is not None:
+                ax2.scatter(vits_acc_list,
+                            vits_metric_list,
+                            color=my_palette[method_idx],
+                            s=200,
+                            alpha=0.3)
+
+    fig.tight_layout()
+    fig.savefig(fig_save_path)
+    plt.close(fig=fig)
+
+
+def plot_main_figure_vs_epoch(metric: str, fig_save_path: str) -> None:
+    dataset_formal_map = {
+        'mnist': 'MNIST',
+        'cifar10': 'CIFAR-10',
+        'stl10': 'STL-10',
+        'tinyimagenet': 'ImageNet-T',
+    }
+    method_formal_map = {
+        'supervised': 'Supervised Learning',
+        'simclr': 'Contrastive Learning',
+        'wronglabel': 'Intentional Overfitting',
+    }
+    network_formal_map = {
+        'resnet': 'ResNet',
+        'resnext': 'ResNeXT',
+        'convnext': 'ConvNeXT',
+        'vit': 'ViT',
+        'swin': 'Swin Trans.',
+        'xcit': 'XCiT',
+    }
+    metric_formal_map = {
+        'dse_Z': 'DSE ' + r'$S_D(Z)$',
+        'cse_Z': 'CSE ' + r'$H(Z)$',
+        'dsmi_Z_Y': 'DSMI ' + r'$I_D(Z; Y)$',
+        'dsmi_Z_X': 'DSMI ' + r'$I_D(Z; X)$',
+        'csmi_Z_Y': 'CSMI ' + r'$I(Z; Y)$',
+        'csmi_Z_X': 'CSMI ' + r'$I(Z; X)$',
+    }
+
+    fig = plt.figure(figsize=(6 * len(METHOD_LIST), 10))
+    gs = GridSpec(2, len(DATASET_LIST), figure=fig)
+    my_palette = sns.color_palette('icefire', n_colors=len(METHOD_LIST))
+
+    for dataset, gs_y in zip(DATASET_LIST, range(len(DATASET_LIST))):
+        #NOTE: First find the x and y range.
         all_epoch_list, all_metric_list = [], []
         for network in NETWORK_LIST:
             for method_idx, method in enumerate(METHOD_LIST):
