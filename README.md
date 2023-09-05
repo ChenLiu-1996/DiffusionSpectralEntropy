@@ -13,7 +13,8 @@ This is the **official** implementation of
 
 
 ## News
-[June 2023] A non-archival version is accpeted to the [TAG-ML Workshop](https://icml.cc/virtual/2023/workshop/21480) @ **ICML 2023**. [[PDF]](https://openreview.net/pdf?id=DQW3ilre3Q)
+[Sep 2023] Under review at IEEE ICASSP-OJSP.
+[June 2023] A **non-archival** version is accpeted to the [TAG-ML Workshop](https://icml.cc/virtual/2023/workshop/21480) @ **ICML 2023**. [[PDF]](https://openreview.net/pdf?id=DQW3ilre3Q)
 
 ## Overview
 > We proposed an information-theory based framework to measure the **entropy** and **mutual information** of neural network representations.
@@ -68,10 +69,13 @@ DiffusionSpectralEntropy
     ├── assets: figures, demos, etc.
     ├── data
     └── src
-        ├── embedding_preparation: train models and store the embedding vectors
+        ├── embedding_preparation: (Initial dev stage) train models and store the embedding vectors
+        ├── manifold_investigation: (Initial dev stage) Our core investigations can be found here
         ├── nn
         ├── utils
-        └── manifold_investigation: Our core investigations can be found here
+        └── main_studies: (Our main studies)
+            ├── **training_dynamic: (intra-model) evaluating DSE/DSMI along neural network training**
+            └── **vs_acc: (inter-model) correlation analysis between DSE/DSMI and ImageNet accuracy**
 ```
 
 
@@ -80,7 +84,7 @@ DiffusionSpectralEntropy
 @inproceedings{DiffusionSpectralEntropy,
   title={Assessing Neural Network Representations During Training Using Data Diffusion Spectra},
   author={Liao, Danqi and Liu, Chen and Tong, Alexander and Huguet, Guillaume and Wolf, Guy and Nickel, Maximilian and Adelstein, Ian and Krishnaswamy, Smita},
-  booktitle={International Conference on Machine Learning (ICML) Workshop on Topology, Algebra and Geometry in Machine Learning (TAG-ML)},
+  booktitle={ICML 2023 Workshop on Topology, Algebra and Geometry in Machine Learning (TAG-ML)},
   year={2023},
 }
 ```
@@ -106,8 +110,43 @@ You can directly run the following lines for built-in unit tests.
 python dse.py
 python dsmi.py
 ```
+## Reproducing Results in the ICASSP-OJSP paper submission (Renovated codebase).
 
-## Reproducing Results in the Paper
+### Train our Supervised vs Contrastive encoders.
+Using (MNIST + Supervised + ResNet) as an example.
+```
+cd src/main_studies/training_dynamic/
+python 01_train_embeddings.py --model resnet --config ./config/mnist_simclr_seed1.yaml --random-seed 1
+```
+
+### Analysis
+Using (MNIST + Supervised + ResNet50) as an example.
+
+#### 1. Compute DSE and DSMI (on real data) along the training process.
+For all datasets, t = 1.
+These measures have already computed in the training code `01_train_embeddings.py`
+
+#### 2. Plot the main figure.
+```
+cd src/main_studies/training_dynamic/
+python 02_plot.py
+```
+
+#### 3. Compute DSE and DSMI on our toy datasets.
+```
+cd src/manifold_investigation
+python toy_data_entropy.py
+python toy_data_MI.py
+```
+
+#### 4. DSE sampling robustness.
+```
+cd src/manifold_investigation
+python toy_data_DSE_subsample.py
+```
+
+
+<details> <summary> ## Reproducing Results in the ICML Workshop paper (Code in dev stage). </summary>
 
 ### Train our Supervised vs Contrastive encoders.
 Using (MNIST + Supervised) as an example.
@@ -128,7 +167,7 @@ python visualize_embedding.py --config ../embedding_preparation/config/mnist_sup
 #### 2. Compute DSE and DSMI (on real data) along the training process.
 ```
 cd src/manifold_investigation
-# For MNIST, t = 1. For CIFAR10, t = 2.
+# For MNIST, t = 1. For CIFAR-10, t = 2.
 python diffusion_entropy.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml --t 1
 
 # After running `diffusion_entropy.py` for all experiments, we can run the following.
@@ -147,6 +186,7 @@ python toy_data_MI.py
 cd src/manifold_investigation
 python toy_data_DSE_subsample.py
 ```
+</details>
 
 
 ## Preparation
@@ -173,7 +213,7 @@ python -m pip install timm
 
 ### Dataset
 #### Most datasets
-Most datasets (MNIST, CIFAR10, CIFAR100, STL10) can be directly downloaded via the torchvision API as you run the training code. However, for the following datasets, additional effort is required.
+Most datasets (MNIST, CIFAR-10, CIFAR-100, STL-10) can be directly downloaded via the torchvision API as you run the training code. However, for the following datasets, additional effort is required.
 
 #### ImageNet data
 NOTE: In order to download the images using wget, you need to first request access from http://image-net.org/download-images.
@@ -196,7 +236,7 @@ wget -qO- https://raw.githubusercontent.com/soumith/imagenetloader.torch/master/
 ```
 
 ### Pretrained weights of external models.
-<details> <summary>NOTE: This is no longer very relevant. We prepared these but we later shifted our research focus.</summary>
+<details> <summary>NOTE: This is no longer relevant. This is a deprecated piece of code. We switched to PyTorch Image Models (timm) later.</summary>
 
 <details> <summary>Supervised</summary>
 
