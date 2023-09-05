@@ -69,13 +69,13 @@ DiffusionSpectralEntropy
     ├── assets: figures, demos, etc.
     ├── data
     └── src
-        ├── embedding_preparation: (Initial dev stage) train models and store the embedding vectors
-        ├── manifold_investigation: (Initial dev stage) Our core investigations can be found here
+        ├── embedding_preparation: (dev stage) train models and store the embedding vectors
+        ├── manifold_investigation: (dev stage) Our core investigations can be found here
         ├── nn
         ├── utils
         └── main_studies: (Our main studies)
-            ├── **training_dynamic: (intra-model) evaluating DSE/DSMI along neural network training**
-            └── **vs_acc: (inter-model) correlation analysis between DSE/DSMI and ImageNet accuracy**
+            ├── training_dynamic: (intra-model) evaluating DSE/DSMI along neural network training
+            └── vs_acc: (inter-model) correlation analysis between DSE/DSMI and ImageNet accuracy
 ```
 
 
