@@ -125,7 +125,6 @@ python 01_train_embeddings.py --model resnet --config ./config/mnist_simclr_seed
 Using (MNIST + Supervised + ResNet50) as an example.
 
 #### 1. Compute DSE and DSMI (on real data) along the training process.
-For all datasets, t = 1.
 These measures have already computed in the training code `01_train_embeddings.py`
 
 #### 2. Plot the main figure.
@@ -169,7 +168,7 @@ python visualize_embedding.py --config ../embedding_preparation/config/mnist_sup
 #### 2. Compute DSE and DSMI (on real data) along the training process.
 ```
 cd src/manifold_investigation
-# For MNIST, t = 1. For CIFAR-10, t = 2.
+# For MNIST, t = 1. For CIFAR-10, t = 2. (In the later experiments we set t = 1 consistently.)
 python diffusion_entropy.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml --t 1
 
 # After running `diffusion_entropy.py` for all experiments, we can run the following.
