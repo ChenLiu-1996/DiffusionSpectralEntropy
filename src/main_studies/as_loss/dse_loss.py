@@ -21,7 +21,7 @@ class DSE_Loss(torch.nn.Module):
                  sigma: int = 10,
                  t: int = 1,
                  eps: float = 1e-6,
-                 min_samples: int = 1000) -> None:
+                 min_samples: int = 5000) -> None:
         '''
         sigma:
             conceptually, the neighborhood size of Gaussian kernel.
@@ -44,16 +44,8 @@ class DSE_Loss(torch.nn.Module):
         assert len(x.shape) == 2, \
         'DSE_Loss currently only supports tensors with 2 dimensions.'
 
-        # Accumulate embedding vectors until enough samples are gathered.
-        if self.embedding_vectors is None or self.embedding_vectors.shape[
-                0] < self.min_samples:
-            if self.embedding_vectors is None:
-                self.embedding_vectors = x
-            else:
-                self.embedding_vectors = torch.cat([self.embedding_vectors, x],
-                                                   dim=0)
-            # Backprop nothing until enough samples are gathered.
-            return 0
+        if x.shape[0] < self.min_samples:
+            x = x.repeat(int(self.min_samples // x.shape[0] + 1), 1)
 
         # Diffusion matrix
         K = diffusion_matrix_with_gradient(x)

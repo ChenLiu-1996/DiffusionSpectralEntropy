@@ -562,6 +562,7 @@ if __name__ == '__main__':
                         data_hashmap[string] = {
                             'epoch': [],
                             'val_acc': [],
+                            'acc_diverg': [],
                             'dse_Z': [],
                             'cse_Z': [],
                             'dsmi_Z_X': [],

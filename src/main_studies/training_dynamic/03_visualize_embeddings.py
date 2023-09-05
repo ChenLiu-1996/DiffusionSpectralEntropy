@@ -26,6 +26,7 @@ from attribute_hashmap import AttributeHashmap
 from laplacian_extrema import get_laplacian_extrema
 from path_utils import update_config_dirs
 from timm_models import build_timm_model
+from seed import seed_everything
 
 # sys.path.insert(0, import_dir + '/src/main_studies/training_dynamic/')
 train_embeddings_utils = __import__('01_train_embeddings')
@@ -62,13 +63,12 @@ if __name__ == '__main__':
     if args.random_seed is not None:
         config.random_seed = args.random_seed
     method_str = config.method
-    
+
     # NOTE: Take the fixed percentage checkpoints.
     checkpoints = sorted(
-        glob('%s/%s-%s-%s-seed%s-*.pth' % (
-            config.checkpoint_dir, config.dataset,
-            config.method, config.model, config.random_seed))
-    )
+        glob('%s/%s-%s-%s-seed%s/*.pth' %
+             (config.checkpoint_dir, config.dataset, config.method,
+              config.model, config.random_seed)))
 
     save_root = './results_visualize/'
     os.makedirs(save_root, exist_ok=True)
@@ -94,21 +94,25 @@ if __name__ == '__main__':
 
     device = torch.device(
         'cuda:%d' % config.gpu_id if torch.cuda.is_available() else 'cpu')
-    
+
+    seed_everything(0)
+
     for i, checkpoint_name in enumerate(checkpoints):
         if config.method == 'wronglabel':
             val_metric = 'acc_diverg'
         else:
-            val_metric = 'val_acc'        
-        
-        val_metric_pc = checkpoint_name.split(val_metric + '_')[1].split('.')[0]
+            val_metric = 'val_acc'
+
+        val_metric_pc = checkpoint_name.split(val_metric +
+                                              '_')[1].split('.')[0]
 
         # Load model and run inference.
-        dataloaders, config = train_embeddings_utils.get_dataloaders(config=config)
-        _, val_loader, _ = dataloaders
+        dataloaders, config = train_embeddings_utils.get_dataloaders(
+            config=config)
+        _, val_loader = dataloaders
 
         model = build_timm_model(model_name=config.model,
-                             num_classes=config.num_classes).to(device)
+                                 num_classes=config.num_classes).to(device)
         model.init_params()
         model.load_state_dict(torch.load(checkpoint_name, map_location=device))
         model.eval()
@@ -130,8 +134,8 @@ if __name__ == '__main__':
                 curr_Z = model.encode(x).cpu().numpy()
 
                 if labels is None:
-                   labels = curr_Y.reshape(B, 1)
-                   embeddings = curr_Z
+                    labels = curr_Y.reshape(B, 1)
+                    embeddings = curr_Z
                 else:
                     labels = np.vstack((labels, curr_Y.reshape(B, 1)))
                     embeddings = np.vstack((embeddings, curr_Z))
@@ -143,21 +147,11 @@ if __name__ == '__main__':
 
         #
         ''' Laplacian extrema '''
-        save_path_extrema = '%s/numpy_files/laplacian-extrema/laplacian-extrema-%s.npz' % (
-            save_root, checkpoint_name)
-        os.makedirs(os.path.dirname(save_path_extrema), exist_ok=True)
-        if os.path.exists(save_path_extrema):
-            data_numpy = np.load(save_path_extrema)
-            extrema_inds = data_numpy['extrema_inds']
-            print('Pre-computed Laplacian extrema loaded.')
-        else:
-            n_extrema = num_classes
-            extrema_inds = get_laplacian_extrema(data=embeddings,
-                                                 n_extrema=n_extrema,
-                                                 knn=args.knn)
-            with open(save_path_extrema, 'wb+') as f:
-                np.savez(f, extrema_inds=extrema_inds)
-            print('Laplacian extrema computed.')
+        n_extrema = num_classes
+        extrema_inds = get_laplacian_extrema(data=embeddings,
+                                             n_extrema=n_extrema,
+                                             knn=args.knn)
+        print('Laplacian extrema computed.')
 
         #
         ''' Plotting '''

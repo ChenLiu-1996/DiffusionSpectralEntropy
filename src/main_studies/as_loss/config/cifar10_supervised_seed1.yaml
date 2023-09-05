@@ -9,4 +9,4 @@ num_workers: 8
 dataset: 'cifar10'
 method: 'supervised'
 random_seed: 1
-dse_weight: 1e-2
+dsmi_weight: -1e-1
