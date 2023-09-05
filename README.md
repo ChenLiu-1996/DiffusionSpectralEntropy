@@ -110,7 +110,9 @@ You can directly run the following lines for built-in unit tests.
 python dse.py
 python dsmi.py
 ```
-## Reproducing Results in the ICASSP-OJSP paper submission (Renovated codebase).
+
+## Reproducing Results in the ICASSP-OJSP paper submission.
+(This is after we renovated the codebase.)
 
 ### Train our Supervised vs Contrastive encoders.
 Using (MNIST + Supervised + ResNet) as an example.
@@ -146,7 +148,7 @@ python toy_data_DSE_subsample.py
 ```
 
 
-<details> <summary> ## Reproducing Results in the ICML Workshop paper (Code in dev stage). </summary>
+<details> <summary> Reproducing Results in the ICML Workshop paper (code in dev stage). </summary>
 
 ### Train our Supervised vs Contrastive encoders.
 Using (MNIST + Supervised) as an example.
