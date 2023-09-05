@@ -7,7 +7,7 @@
 
 This is the **official** implementation of
 
-**Assessing Neural Network Representations During Training Using Data Diffusion Spectra**
+**Assessing Neural Network Representations During Training Using Data Diffusion Map Spectra**
 
 <img src="assets/logos/Yale_logo.png" height="96"/> &emsp; <img src="assets/logos/Mila_logo.png" height="96"/> &emsp; <img src="assets/logos/MetaAI_logo.png" height="96"/>
 
