@@ -57,6 +57,14 @@ Conceptually, we build a data graph from the neural network representations of a
     <td><img src="assets/main_figure_DSMI(Z;Y).png" width="450"><br><img src="assets/main_figure_CSMI(Z;Y).png" width="450"></td>
  </tr>
 </table>
+</br>
+</br>
+
+By far, we have monitored DSE and DSMI **along the training process of the same model**. Now we will show how DSE and DSMI correlates with downstream classification accuracy **across many different pre-trained models**. The following result demonstrates the potential in using DSE/DSMI for pre-screening potentially competent models for your specialized dataset.
+
+<img src="assets/vs_imagenet_acc.png" width="800">
+
+
 
 ## Repository Hierarchy
 ```
