@@ -14,17 +14,20 @@ os.environ["MKL_NUM_THREADS"] = "1"  # export MKL_NUM_THREADS=1
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"  # export VECLIB_MAXIMUM_THREADS=1
 os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 
-import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
-sys.path.insert(0, import_dir + '/utils/')
-sys.path.insert(0, import_dir + '/embedding_preparation')
+import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-3])
+print(import_dir)
+sys.path.insert(0, import_dir + '/api/')
+from dse import diffusion_spectral_entropy
+from dsmi import diffusion_spectral_mutual_information
+sys.path.insert(0, import_dir + '/src/nn/')
+sys.path.insert(0, import_dir + '/src/utils/')
 from attribute_hashmap import AttributeHashmap
-from information import mutual_information_per_class_random_sample
 
 
 def generate_tree(dim: int = 2,
                   num_branches: int = 5,
                   num_points: int = 1000,
-                  random_seed: int = None):
+                  random_seed: int = 1):
     if random_seed is not None:
         np.random.seed(random_seed)
 
@@ -145,25 +148,35 @@ if __name__ == '__main__':
 
                         tree_clusters = corrupt_label(
                             tree_clusters, corruption_ratio=corruption_ratio)
+                        
+                        mi_Y_sample, _ = diffusion_spectral_mutual_information(
+                            embedding_vectors=tree_data,
+                            reference_vectors=tree_clusters,
+                            reference_discrete=True)
 
-                        mi_Y_sample, _, _ = mutual_information_per_class_random_sample(
-                            embeddings=tree_data,
-                            labels=tree_clusters,
-                            H_ZgivenY_map=None,
-                            vne_t=t,
-                            sigma=args.gaussian_kernel_sigma,
-                            chebyshev_approx=False)
+                        # mi_Y_sample, _, _ = mutual_information_per_class_random_sample(
+                        #     embeddings=tree_data,
+                        #     labels=tree_clusters,
+                        #     H_ZgivenY_map=None,
+                        #     vne_t=t,
+                        #     sigma=args.gaussian_kernel_sigma,
+                        #     chebyshev_approx=False)
+
                         mi_Y_sample_list_tree[b][k][j][i].append(mi_Y_sample)
 
                         if j == 0:
-                            mi_Y_shannon, _, _ = mutual_information_per_class_random_sample(
-                                embeddings=tree_data,
-                                labels=tree_clusters,
-                                H_ZgivenY_map=None,
-                                vne_t=t,
-                                use_shannon_entropy=True,
-                                sigma=args.gaussian_kernel_sigma,
-                                chebyshev_approx=False)
+                            mi_Y_shannon, _ = diffusion_spectral_mutual_information(
+                                embedding_vectors=tree_data,
+                                reference_vectors=tree_clusters,
+                                classic_shannon_entropy=True)
+                            # mi_Y_shannon, _, _ = mutual_information_per_class_random_sample(
+                            #     embeddings=tree_data,
+                            #     labels=tree_clusters,
+                            #     H_ZgivenY_map=None,
+                            #     vne_t=t,
+                            #     use_shannon_entropy=True,
+                            #     sigma=args.gaussian_kernel_sigma,
+                            #     chebyshev_approx=False)
                             mi_Y_shannon_list_tree[b][k][i].append(
                                 mi_Y_shannon)
 
