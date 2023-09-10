@@ -1,5 +1,5 @@
 import numpy as np
-#from DiffusionEMD.diffusion_emd import estimate_dos
+from DiffusionEMD.diffusion_emd import estimate_dos
 
 
 def approx_eigvals(A: np.array, filter_thr: float = 1e-3):

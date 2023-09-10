@@ -203,9 +203,6 @@ def diffusion_spectral_mutual_information(
 
         entropy_A_estimation = np.mean(entropy_A_estimation_list)
 
-        print('cluster_idx = %s, entropy_A_estimation = %s, entropy_AgivenB_curr_class = %s' % (
-            cluster_idx, entropy_A_estimation, entropy_AgivenB_curr_class)
-        )
         MI_by_class.append((entropy_A_estimation - entropy_AgivenB_curr_class))
 
     mutual_information = np.sum(cluster_cnts / np.sum(cluster_cnts) *

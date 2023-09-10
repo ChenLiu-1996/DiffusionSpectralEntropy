@@ -152,15 +152,10 @@ if __name__ == '__main__':
                         mi_Y_sample, _ = diffusion_spectral_mutual_information(
                             embedding_vectors=tree_data,
                             reference_vectors=tree_clusters,
-                            reference_discrete=True)
-
-                        # mi_Y_sample, _, _ = mutual_information_per_class_random_sample(
-                        #     embeddings=tree_data,
-                        #     labels=tree_clusters,
-                        #     H_ZgivenY_map=None,
-                        #     vne_t=t,
-                        #     sigma=args.gaussian_kernel_sigma,
-                        #     chebyshev_approx=False)
+                            reference_discrete=True,
+                            t=t,
+                            sigma=args.gaussian_kernel_sigma,
+                            chebyshev_approx=False)
 
                         mi_Y_sample_list_tree[b][k][j][i].append(mi_Y_sample)
 
@@ -168,15 +163,10 @@ if __name__ == '__main__':
                             mi_Y_shannon, _ = diffusion_spectral_mutual_information(
                                 embedding_vectors=tree_data,
                                 reference_vectors=tree_clusters,
-                                classic_shannon_entropy=True)
-                            # mi_Y_shannon, _, _ = mutual_information_per_class_random_sample(
-                            #     embeddings=tree_data,
-                            #     labels=tree_clusters,
-                            #     H_ZgivenY_map=None,
-                            #     vne_t=t,
-                            #     use_shannon_entropy=True,
-                            #     sigma=args.gaussian_kernel_sigma,
-                            #     chebyshev_approx=False)
+                                classic_shannon_entropy=True,
+                                t=t,
+                                sigma=args.gaussian_kernel_sigma,
+                                chebyshev_approx=False)
                             mi_Y_shannon_list_tree[b][k][i].append(
                                 mi_Y_shannon)
 
