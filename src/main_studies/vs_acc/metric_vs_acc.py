@@ -9,8 +9,6 @@ import pandas as pd
 import numpy as np
 import torch
 import torchvision
-import yaml
-from tinyimagenet import TinyImageNet
 from tqdm import tqdm
 import timm
 
@@ -22,75 +20,130 @@ from dsmi import diffusion_spectral_mutual_information
 sys.path.insert(0, import_dir + '/src/utils/')
 from attribute_hashmap import AttributeHashmap
 from seed import seed_everything
+from extend import ExtendedDataset
+
+
+class ImageNetSubset(torch.utils.data.Dataset):
+
+    def __init__(self, full_dataset: torch.utils.data.Dataset):
+        self.dataset = full_dataset
+
+        assert 'targets' in full_dataset.__dir__()
+        self.dataset.labels = full_dataset.targets
+
+        assert 'imgs' in full_dataset.__dir__()
+        self.dataset.imgs = full_dataset.imgs
+
+        # Imagenette
+        # tench, English springer, cassette player, chain saw, church,
+        # French horn, garbage truck, gas pump, golf ball, parachute.
+        imagenette_label_idx = [0, 217, 482, 491, 497, 566, 569, 571, 574, 701]
+
+        # Imagewoof
+        # Australian terrier, Border terrier, Samoyed, Beagle, Shih-Tzu,
+        # English foxhound, Rhodesian ridgeback, Dingo, Golden retriever, Old English sheepdog.
+        imagewoof_label_idx = [
+            193, 182, 258, 162, 155, 167, 159, 273, 207, 229
+        ]
+
+        label_indices = imagenette_label_idx + imagewoof_label_idx
+
+        self.indices = [y in label_indices for y in self.dataset.labels]
+        self.indices = np.argwhere(self.indices).reshape(-1)
+
+    def __getitem__(self, idx):
+        if isinstance(idx, list):
+            return self.dataset[[self.indices[i] for i in idx]]
+        return self.dataset[self.indices[idx]]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+# class TopKSubset(torch.utils.data.Dataset):
+
+#     def __init__(self, full_dataset: torch.utils.data.Dataset, topK: int = 20):
+#         self.dataset = full_dataset
+
+#         if 'targets' in full_dataset.__dir__():
+#             # `targets` used in MNIST, CIFAR10, CIFAR100, ImageNet
+#             self.dataset.labels = full_dataset.targets
+#         elif 'labels' in full_dataset.__dir__():
+#             # `labels` used in STL10
+#             self.dataset.labels = full_dataset.labels
+#         else:
+#             raise NotImplementedError(
+#                 '`TopKSubset`: check the `label` str in dataset and update me.'
+#             )
+
+#         if 'imgs' in full_dataset.__dir__():
+#             self.dataset.imgs = full_dataset.imgs
+#         else:
+#             raise NotImplementedError(
+#                 '`TopKSubset`: check the `image` str in dataset and update me.'
+#             )
+
+#         # Find the topK frequent labels.
+#         _, counts = np.unique(self.dataset.labels, return_counts=True)
+#         # `mergesort` is `stable` such that it gives the same tie-breaking consistently.
+#         topK_label_idx = np.argsort(-counts, kind='mergesort')[:topK]
+#         self.indices = [y in topK_label_idx for y in self.dataset.labels]
+#         self.indices = np.argwhere(self.indices).reshape(-1)
+
+#     def __getitem__(self, idx):
+#         if isinstance(idx, list):
+#             return self.dataset[[self.indices[i] for i in idx]]
+#         return self.dataset[self.indices[idx]]
+
+#     def __len__(self):
+#         return len(self.indices)
 
 
 def get_val_loader(
     args: AttributeHashmap
-) -> Tuple[Tuple[torch.utils.data.DataLoader, ], AttributeHashmap]:
-    if args.dataset == 'mnist':
-        dataset_mean = (0.1307, )
-        dataset_std = (0.3081, )
-        torchvision_dataset = torchvision.datasets.MNIST
-
-    elif args.dataset == 'cifar10':
-        dataset_mean = (0.4914, 0.4822, 0.4465)
-        dataset_std = (0.2023, 0.1994, 0.2010)
-        torchvision_dataset = torchvision.datasets.CIFAR10
-
-    elif args.dataset == 'stl10':
-        dataset_mean = (0.4467, 0.4398, 0.4066)
-        dataset_std = (0.2603, 0.2566, 0.2713)
-        torchvision_dataset = torchvision.datasets.STL10
-
-    elif args.dataset == 'tinyimagenet':
-        dataset_mean = (0.485, 0.456, 0.406)
-        dataset_std = (0.229, 0.224, 0.225)
-        torchvision_dataset = TinyImageNet
-
-    elif args.dataset == 'imagenet':
-        dataset_mean = (0.485, 0.456, 0.406)
-        dataset_std = (0.229, 0.224, 0.225)
-        torchvision_dataset = torchvision.datasets.ImageNet
-
-    else:
+) -> Tuple[Tuple[
+        torch.utils.data.DataLoader,
+], AttributeHashmap]:
+    try:
+        assert args.dataset == 'imagenet'
+    except:
         raise ValueError(
             '`args.dataset` value not supported. Value provided: %s.' %
             args.dataset)
 
+    dataset_mean = (0.485, 0.456, 0.406)
+    dataset_std = (0.229, 0.224, 0.225)
+    torchvision_dataset = torchvision.datasets.ImageNet
+
+    # Validation set has too few images per class. Bad for DSE and DSMI estimation.
+    # Therefore we augment and extend it by a bit.
     transform_val = torchvision.transforms.Compose([
         torchvision.transforms.Resize(
             args.imsize,
             interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
-        torchvision.transforms.CenterCrop(args.imsize),
+        torchvision.transforms.RandomResizedCrop(
+            args.imsize,
+            scale=(0.6, 1.6),
+            interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=dataset_mean, std=dataset_std)
     ])
 
-    if args.dataset in ['mnist', 'cifar10', 'cifar100']:
-        val_dataset = torchvision_dataset(args.dataset_dir,
-                                          train=False,
-                                          download=True,
-                                          transform=transform_val)
+    val_dataset = torchvision_dataset(args.dataset_dir,
+                                      split='val',
+                                      transform=transform_val)
 
-    elif args.dataset in ['stanfordcars', 'stl10', 'food101', 'flowers102']:
-        val_dataset = torchvision_dataset(args.dataset_dir,
-                                          split='test',
-                                          download=True,
-                                          transform=transform_val)
+    val_dataset = ImageNetSubset(full_dataset=val_dataset)
 
-    elif args.dataset in ['tinyimagenet', 'imagenet']:
-        val_dataset = torchvision_dataset(args.dataset_dir,
-                                          split='val',
-                                          transform=transform_val)
+    val_dataset = ExtendedDataset(val_dataset,
+                                  desired_len=3 * len(val_dataset))
 
-    # shuffle=True because we want to only sample ~5k data points
-    # for efficient DSE/DSMI computation, but meanwhile want to
-    # maintain diversity of labels.
     val_loader = torch.utils.data.DataLoader(val_dataset,
                                              batch_size=args.batch_size,
                                              num_workers=args.num_workers,
-                                             shuffle=True,
+                                             shuffle=False,
                                              pin_memory=True)
+
     return val_loader
 
 
@@ -129,19 +182,19 @@ def plot_subplot(ax: plt.Axes, data_arrays: Dict[str, Iterable], x_str: str,
         'imagenet_val_acc_top5': 'ImageNet val top5-acc',
         'imagenet_test_acc_top1': 'ImageNet test top1-acc',
         'imagenet_test_acc_top5': 'ImageNet test top5-acc',
-        'dse_Z': 'DSE(Z)',
-        'cse_Z': 'CSE(Z)',
-        'dsmi_Z_X': 'DSMI(Z; X)',
-        'csmi_Z_X': 'CSMI(Z; X)',
-        'dsmi_Z_Y': 'DSMI(Z; Y)',
-        'csmi_Z_Y': 'CSMI(Z; Y)',
+        'dse_Z': 'DSE ' + r'$S_D(Z)$',
+        'cse_Z': 'CSE ' + r'$H(Z)$',
+        'dsmi_Z_Y': 'DSMI ' + r'$I_D(Z; Y)$',
+        'dsmi_Z_X': 'DSMI ' + r'$I_D(Z; X)$',
+        'csmi_Z_Y': 'CSMI ' + r'$I(Z; Y)$',
+        'csmi_Z_X': 'CSMI ' + r'$I(Z; X)$',
     }
     ax.spines[['right', 'top']].set_visible(False)
     ax.scatter(data_arrays[x_str],
                data_arrays[y_str],
-               c='darkblue',
+               c='forestgreen',
                alpha=0.5,
-               s=np.array(data_arrays['model_params']) / 4)
+               s=np.array(data_arrays['model_params']) / 2)
     ax.set_xlabel(arr_title_map[x_str], fontsize=20)
     ax.set_ylabel(arr_title_map[y_str], fontsize=20)
     if len(data_arrays[x_str]) > 1:
@@ -221,26 +274,14 @@ def main(args: AttributeHashmap) -> None:
     save_path_fig = './results'
 
     in_channels_map = {
-        'mnist': 1,
-        'cifar10': 3,
-        'stl10': 3,
-        'tinyimagenet': 3,
         'imagenet': 3,
     }
     num_classes_map = {
-        'mnist': 10,
-        'cifar10': 10,
-        'stl10': 10,
-        'tinyimagenet': 200,
         'imagenet': 1000,
     }
     dataset_dir_map = {
-        'mnist': '/media/data1/chliu/mnist',
-        'cifar10': '/media/data1/chliu/cifar10',
-        'stl10': '/media/data1/chliu/stl10',
-        'tinyimagenet': '/media/data1/chliu/tinyimagenet',
-        # 'imagenet': '/media/data1/chliu/ImageNet',
-        'imagenet': '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/DiffusionSpectralEntropy/data/imagenet',
+        'imagenet':
+        '/gpfs/gibbs/pi/krishnaswamy_smita/cl2482/DiffusionSpectralEntropy/data/imagenet',
     }
     args.in_channels = in_channels_map[args.dataset]
     args.num_classes = num_classes_map[args.dataset]
@@ -279,7 +320,7 @@ def main(args: AttributeHashmap) -> None:
     if os.path.isfile(save_path_numpy) and not args.restart:
         npz_file = np.load(save_path_numpy)
         results_dict = {
-            'df_row_idx': int(npz_file['df_row_idx']),
+            'model_names': list(npz_file['model_names']),
             'model_params': list(npz_file['model_params']),
             'imagenet_val_acc_top1': list(npz_file['imagenet_val_acc_top1']),
             'imagenet_val_acc_top5': list(npz_file['imagenet_val_acc_top5']),
@@ -295,7 +336,7 @@ def main(args: AttributeHashmap) -> None:
 
     else:
         results_dict = {
-            'df_row_idx': 0,
+            'model_names': [],
             'model_params': [],
             'imagenet_val_acc_top1': [],
             'imagenet_val_acc_top5': [],
@@ -310,17 +351,15 @@ def main(args: AttributeHashmap) -> None:
         }
 
     # Iterate over the model candidates with pretrained weights.
-    for df_row_idx, model_candidate in tqdm(df_combined.iterrows(),
-                                            total=len(df_combined)):
+    for _i, model_candidate in tqdm(df_combined.iterrows(),
+                                    total=len(df_combined)):
 
         # This is for resuming progress.
-        if df_row_idx < results_dict['df_row_idx']:
+        if model_candidate['model'] in results_dict['model_names']:
+            print('Model already evaluated: %s' % model_candidate['model'])
             continue
-        results_dict['df_row_idx'] = df_row_idx
 
         args.imsize = model_candidate['img_size']
-        results_dict['model_params'].append(
-            float(model_candidate['param_count'].replace(',', '')))
 
         try:
             device = torch.device(
@@ -329,7 +368,12 @@ def main(args: AttributeHashmap) -> None:
             model = timm.create_model(model_name=model_candidate['model'],
                                       num_classes=args.num_classes,
                                       pretrained=True).to(device)
-        except torch.cuda.OutOfMemoryError:
+        except RuntimeError as e:
+            if not "CUDA out of memory. " in str(e):
+                print(
+                    'When evaluating %s, hit error %s. Skipping this model.' %
+                    (model_candidate['model'], e))
+                continue
             device = torch.device('cpu')
             model = timm.create_model(model_name=model_candidate['model'],
                                       num_classes=args.num_classes,
@@ -345,19 +389,15 @@ def main(args: AttributeHashmap) -> None:
         model.eval()
         val_loader = get_val_loader(args=args)
 
-        results_dict['imagenet_val_acc_top1'].append(
-            model_candidate['val_acc_top1'])
-        results_dict['imagenet_val_acc_top5'].append(
-            model_candidate['val_acc_top5'])
-        results_dict['imagenet_test_acc_top1'].append(
-            model_candidate['test_acc_top1'])
-        results_dict['imagenet_test_acc_top5'].append(
-            model_candidate['test_acc_top5'])
-
         try:
             dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y = evaluate_dse_dsmi(
                 args=args, val_loader=val_loader, model=model, device=device)
-        except torch.cuda.OutOfMemoryError:
+        except RuntimeError as e:
+            if not "CUDA out of memory. " in str(e):
+                print(
+                    'When evaluating %s, hit error %s. Skipping this model.' %
+                    (model_candidate['model'], e))
+                continue
             device = torch.device('cpu')
             model = timm.create_model(model_name=model_candidate['model'],
                                       num_classes=args.num_classes,
@@ -366,6 +406,17 @@ def main(args: AttributeHashmap) -> None:
             dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y = evaluate_dse_dsmi(
                 args=args, val_loader=val_loader, model=model, device=device)
 
+        results_dict['model_names'].append(model_candidate['model'])
+        results_dict['model_params'].append(
+            float(model_candidate['param_count'].replace(',', '')))
+        results_dict['imagenet_val_acc_top1'].append(
+            model_candidate['val_acc_top1'])
+        results_dict['imagenet_val_acc_top5'].append(
+            model_candidate['val_acc_top5'])
+        results_dict['imagenet_test_acc_top1'].append(
+            model_candidate['test_acc_top1'])
+        results_dict['imagenet_test_acc_top5'].append(
+            model_candidate['test_acc_top5'])
         results_dict['dse_Z'].append(dse_Z)
         results_dict['cse_Z'].append(cse_Z)
         results_dict['dsmi_Z_X'].append(dsmi_Z_X)
@@ -373,13 +424,16 @@ def main(args: AttributeHashmap) -> None:
         results_dict['dsmi_Z_Y'].append(dsmi_Z_Y)
         results_dict['csmi_Z_Y'].append(csmi_Z_Y)
 
+        # Delete model from cache.
+        os.system('rm -rf /home/cl2482/.cache/huggingface/hub/')
+
         # It takes a long time to evaluate all models.
         # Plot and save results after each model evaluation.
         plot_figures(results_dict, save_path_fig=save_path_fig)
         with open(save_path_numpy, 'wb+') as f:
             np.savez(
                 f,
-                df_row_idx=df_row_idx,
+                model_names=np.array(results_dict['model_names']),
                 model_params=np.array(results_dict['model_params']),
                 imagenet_val_acc_top1=np.array(
                     results_dict['imagenet_val_acc_top1']),
@@ -432,17 +486,16 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
             tensor_Z = np.vstack((tensor_Z, curr_Z))
 
     # For DSE, subsample for faster computation.
-    dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z[:1e4])
-    cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z[:1e4],
+    dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z)
+    cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z,
                                        classic_shannon_entropy=True)
     dsmi_Z_X, _ = diffusion_spectral_mutual_information(
-        embedding_vectors=tensor_Z,
-        reference_vectors=tensor_X,
-        n_clusters=args.num_classes)
+        embedding_vectors=tensor_Z, reference_vectors=tensor_X,
+        n_clusters=10)  # Imagenette
     csmi_Z_X, _ = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_X,
-        n_clusters=args.num_classes,
+        n_clusters=10,  # Imagenette
         classic_shannon_entropy=True)
 
     dsmi_Z_Y, _ = diffusion_spectral_mutual_information(
@@ -463,7 +516,7 @@ if __name__ == '__main__':
                         default=0)
     parser.add_argument('--random-seed', type=int, default=1)
     parser.add_argument('--dataset', type=str, default='imagenet')
-    parser.add_argument('--batch-size', type=int, default=64)
+    parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--num-workers', type=int, default=8)
     parser.add_argument(
         '--restart',

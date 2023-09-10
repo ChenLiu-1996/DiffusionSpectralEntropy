@@ -51,18 +51,22 @@ class CorruptLabelDataLoader(torch.utils.data.DataLoader):
     intentional mismatch between the images and labels.
     '''
 
-    def __init__(self, dataloader):
+    def __init__(self, dataloader, random_seed: int =None):
         self.dataloader = dataloader
         if 'targets' in self.dataloader.dataset.__dir__():
-            # `targets` used in MNIST, CIFAR10, CIFAR100
-            np.random.seed(config.random_seed)
+            # `targets` used in MNIST, CIFAR10, CIFAR100, ImageNet
+            if random_seed is not None:
+                np.random.seed(random_seed)
             self.dataloader.dataset.targets = np.random.permutation(
                 self.dataloader.dataset.targets)
         elif 'labels' in self.dataloader.dataset.__dir__():
             # `labels` used in STL10
-            np.random.seed(config.random_seed)
+            if random_seed is not None:
+                np.random.seed(random_seed)
             self.dataloader.dataset.labels = np.random.permutation(
                 self.dataloader.dataset.labels)
+        else:
+            raise NotImplementedError('`CorruptLabelDataLoader`: check the label name in dataset and update me.')
 
     def __getattr__(self, name):
         return self.dataloader.__getattribute__(name)
@@ -226,7 +230,8 @@ def get_dataloaders(
                                              shuffle=False,
                                              pin_memory=True)
     if config.method == 'wronglabel':
-        train_loader = CorruptLabelDataLoader(train_loader)
+        train_loader = CorruptLabelDataLoader(train_loader,
+                                              random_seed=config.random_seed)
 
     if config.dataset == 'tinyimagenet' and config.method != 'wronglabel':
         # Validation set has too few images per class. Bad for DSE and DSMI estimation.
