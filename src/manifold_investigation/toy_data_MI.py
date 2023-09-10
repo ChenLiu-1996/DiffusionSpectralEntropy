@@ -154,7 +154,7 @@ if __name__ == '__main__':
                             reference_vectors=tree_clusters,
                             reference_discrete=True,
                             t=t,
-                            sigma=args.gaussian_kernel_sigma,
+                            gaussian_kernel_sigma=args.gaussian_kernel_sigma,
                             chebyshev_approx=False)
 
                         mi_Y_sample_list_tree[b][k][j][i].append(mi_Y_sample)
@@ -165,7 +165,7 @@ if __name__ == '__main__':
                                 reference_vectors=tree_clusters,
                                 classic_shannon_entropy=True,
                                 t=t,
-                                sigma=args.gaussian_kernel_sigma,
+                                gaussian_kernel_sigma=args.gaussian_kernel_sigma,
                                 chebyshev_approx=False)
                             mi_Y_shannon_list_tree[b][k][i].append(
                                 mi_Y_shannon)
