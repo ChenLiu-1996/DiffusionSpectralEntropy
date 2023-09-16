@@ -143,7 +143,7 @@ def plot_main_figure(metric: str, fig_save_path: str) -> None:
                 ax1.scatter(convnets_acc_list,
                             convnets_metric_list,
                             color=my_palette[method_idx],
-                            s=200,
+                            s=100,
                             alpha=0.3)
                 if gs_y == 0:
                     ax1.legend(
@@ -153,7 +153,7 @@ def plot_main_figure(metric: str, fig_save_path: str) -> None:
                 ax2.scatter(vits_acc_list,
                             vits_metric_list,
                             color=my_palette[method_idx],
-                            s=200,
+                            s=100,
                             alpha=0.3)
 
     fig.tight_layout()
@@ -425,16 +425,27 @@ def plot_supp_figure(metric: str, fig_save_path: str) -> None:
                             assert (x_axis == curr_epoch_list).all()
                             y_axis = np.vstack(
                                 (y_axis, curr_metric_list[None, :]))
-                if len(y_axis) > 0:
-                    y_axis = np.mean(y_axis, axis=0)
+                # if len(y_axis) > 0:
+                #     y_axis = np.mean(y_axis, axis=0)
 
                 ax.set_xlim(epoch_lim)
                 ax.set_ylim(metric_lim)
                 if method != 'simclr':
                     # Subsample for less crowded plot.
                     x_axis = x_axis[::5]
-                    y_axis = y_axis[::5]
-                ax.plot(x_axis, y_axis, color=my_palette[method_idx], lw=4)
+                    y_axis = y_axis[:, ::5]
+                ax.plot(x_axis,
+                        np.mean(y_axis, axis=0),
+                        color=my_palette[method_idx],
+                        lw=4)
+                if y_axis.shape[0] > 1:
+                    ax.fill_between(
+                        x_axis,
+                        np.mean(y_axis, axis=0) - np.std(y_axis, axis=0),
+                        np.mean(y_axis, axis=0) + np.std(y_axis, axis=0),
+                        color=my_palette[method_idx],
+                        alpha=0.3,
+                        label='_nolegend_')
                 ax.grid()
                 ax.tick_params(axis='both', which='major', labelsize=15)
 
@@ -472,12 +483,11 @@ def plot_supp_figure(metric: str, fig_save_path: str) -> None:
 
                 ax.set_xlim(acc_lim)
                 ax.set_ylim(metric_lim)
-                ax.plot(x_axis,
-                        y_axis,
-                        color=my_palette[method_idx],
-                        marker='o',
-                        markersize=12,
-                        markerfacecolor='none')
+                ax.scatter(x_axis,
+                           y_axis,
+                           color=my_palette[method_idx],
+                           s=100,
+                           facecolor='none')
                 ax.grid()
                 ax.tick_params(axis='both', which='major', labelsize=15)
 
