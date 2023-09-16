@@ -13,7 +13,8 @@ This is the **official** implementation of
 
 
 ## News
-[Sep 2023] Under review at IEEE ICASSP-OJSP.
+[Sep 2023] Additional experiments for a new submission.
+
 [June 2023] A **non-archival** version is accepted to the [TAG-ML Workshop](https://icml.cc/virtual/2023/workshop/21480) @ **ICML 2023**. [[PDF]](https://openreview.net/pdf?id=DQW3ilre3Q)
 
 ## Overview
@@ -119,7 +120,7 @@ python dse.py
 python dsmi.py
 ```
 
-## Reproducing Results in the ICASSP-OJSP paper submission.
+## Reproducing Results in the ongoing submission.
 (This is after we renovated the codebase.)
 
 ### Train our Supervised vs Contrastive encoders.
@@ -176,7 +177,7 @@ python visualize_embedding.py --config ../embedding_preparation/config/mnist_sup
 #### 2. Compute DSE and DSMI (on real data) along the training process.
 ```
 cd src/manifold_investigation
-# For MNIST, t = 1. For CIFAR-10, t = 2. (In the later experiments for ICASSP-OJSP we set t = 1 consistently.)
+# For MNIST, t = 1. For CIFAR-10, t = 2. (In the later experiments for the new submission we set t = 1 consistently.)
 python diffusion_entropy.py --config ../embedding_preparation/config/mnist_supervised_resnet50_seed1.yaml --t 1
 
 # After running `diffusion_entropy.py` for all experiments, we can run the following.
