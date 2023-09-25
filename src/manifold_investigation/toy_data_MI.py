@@ -15,10 +15,9 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"  # export VECLIB_MAXIMUM_THREADS=1
 os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-3])
-print(import_dir)
 sys.path.insert(0, import_dir + '/api/')
-from dse import diffusion_spectral_entropy
 from dsmi import diffusion_spectral_mutual_information
+
 sys.path.insert(0, import_dir + '/src/nn/')
 sys.path.insert(0, import_dir + '/src/utils/')
 from attribute_hashmap import AttributeHashmap
@@ -115,9 +114,9 @@ if __name__ == '__main__':
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['legend.fontsize'] = 14
 
-    D = 30
+    D = 20
     num_corruption_ratio = 20
-    num_repetition = 5
+    num_repetition = 3
 
     num_branch_list = [5, 10, 20]  # Currently hard-coded. Has to be 3 items.
     t_list = [1, 2, 3, 5]
@@ -148,12 +147,13 @@ if __name__ == '__main__':
 
                         tree_clusters = corrupt_label(
                             tree_clusters, corruption_ratio=corruption_ratio)
-                        
+
                         mi_Y_sample, _ = diffusion_spectral_mutual_information(
                             embedding_vectors=tree_data,
                             reference_vectors=tree_clusters,
                             reference_discrete=True,
                             t=t,
+                            random_seed=i,
                             gaussian_kernel_sigma=args.gaussian_kernel_sigma,
                             chebyshev_approx=False)
 
@@ -165,7 +165,9 @@ if __name__ == '__main__':
                                 reference_vectors=tree_clusters,
                                 classic_shannon_entropy=True,
                                 t=t,
-                                gaussian_kernel_sigma=args.gaussian_kernel_sigma,
+                                random_seed=i,
+                                gaussian_kernel_sigma=args.
+                                gaussian_kernel_sigma,
                                 chebyshev_approx=False)
                             mi_Y_shannon_list_tree[b][k][i].append(
                                 mi_Y_shannon)
@@ -177,7 +179,8 @@ if __name__ == '__main__':
     gs = GridSpec(4, 9, figure=fig_mi)
 
     for num_branch_idx, corruption_ratio, gs_y in zip(
-        [0, 0, 0, 1, 1, 1, 2, 2, 2], [0, 0.5, 1.0, 0, 0.5, 1.0, 0, 0.5, 1.0],
+        [0, 0, 0, 1, 1, 1, 2, 2, 2],
+        [1.0, 0.5, 0.0, 1.0, 0.5, 0.0, 1.0, 0.5, 0.0],
         [0, 1, 2, 3, 4, 5, 6, 7, 8]):
         ax = fig_mi.add_subplot(gs[0, gs_y], projection='3d')
         ax.spines[['right', 'top']].set_visible(False)
@@ -207,12 +210,13 @@ if __name__ == '__main__':
                                                       ...],
                                 axis=0),
                         color=cm.get_cmap('tab10').colors[j],
+                        marker='o',
                         linestyle=linestyle_list[k])
         ax.legend([
             r'$t$ = %d, |noise| = %d%%' % (t, noise * 100) for t in t_list
             for noise in noise_level_list
         ],
-                  loc='upper right',
+                  loc='upper left',
                   ncol=2)
         for j in range(len(t_list)):
             for k in range(len(noise_level_list)):
@@ -228,6 +232,7 @@ if __name__ == '__main__':
                            axis=0),
                     color=cm.get_cmap('tab10').colors[j],
                     alpha=0.2)
+        ax.invert_xaxis()
         ax.axhline(y=0, color='gray', linestyle='-.')
         ax.tick_params(axis='both', which='major', labelsize=20)
         if num_branch_idx == 0:
@@ -240,12 +245,13 @@ if __name__ == '__main__':
             ax.plot(corruption_ratio_list,
                     np.mean(mi_Y_shannon_list_tree[num_branch_idx, k, ...],
                             axis=0),
-                    color=cm.get_cmap('tab10').colors[0],
+                    color=cm.get_cmap('tab10').colors[-1],
+                    marker='o',
                     linestyle=linestyle_list[k])
         ax.legend(
             [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
-            loc='upper right',
-            ncol=3)
+            loc='upper left',
+            ncol=1)
         for k in range(len(noise_level_list)):
             ax.fill_between(
                 corruption_ratio_list,
@@ -255,10 +261,13 @@ if __name__ == '__main__':
                 np.mean(mi_Y_shannon_list_tree[num_branch_idx, k, ...],
                         axis=0) +
                 np.std(mi_Y_shannon_list_tree[num_branch_idx, k, ...], axis=0),
-                color=cm.get_cmap('tab10').colors[0],
+                color=cm.get_cmap('tab10').colors[-1],
                 alpha=0.2)
+        ax.invert_xaxis()
+        ax.axhline(y=0, color='gray', linestyle='-.')
         ax.tick_params(axis='both', which='major', labelsize=20)
         ax.set_xlabel('Label Corruption Ratio', fontsize=25)
+        ax.set_ylim([-1.5, 2.5])
         if num_branch_idx == 0:
             ax.set_ylabel('CSMI', fontsize=20)
 
