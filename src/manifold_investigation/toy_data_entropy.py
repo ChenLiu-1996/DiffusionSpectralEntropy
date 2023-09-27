@@ -38,7 +38,7 @@ if __name__ == '__main__':
     N = 500
     D = 2048
     num_dim = 20
-    num_repetition = 5
+    num_repetition = 3
     matrix_mix_sizes = [64, 128, 256, 512, 1024, 2048]
     t_list = [1, 2, 3, 5]
     noise_level_list = [1e-2, 1e-1, 5e-1]
@@ -187,9 +187,12 @@ if __name__ == '__main__':
     ax = fig_vne.add_subplot(gs[1:3, 0:3])
     ax.spines[['right', 'top']].set_visible(False)
     for j, _ in enumerate(matrix_mix_sizes):
-        ax.plot(alpha_list,
-                np.mean(vne_list_matrix[j, ...], axis=0),
-                color=cm.get_cmap('tab10').colors[j])
+        ax.plot(
+            alpha_list,
+            np.mean(vne_list_matrix[j, ...], axis=0),
+            color=cm.get_cmap('tab10').colors[j],
+            marker='o',
+        )
     ax.legend(['$n$ = %s' % item for item in matrix_mix_sizes],
               loc='lower right',
               ncol=3)
@@ -221,6 +224,7 @@ if __name__ == '__main__':
             ax.plot(dim_list,
                     np.mean(vne_list_uniform[k, j, ...], axis=0),
                     color=cm.get_cmap('tab10').colors[j],
+                    marker='o',
                     linestyle=linestyle_list[k])
     ax.legend([
         r'$t$ = %d, |noise| = %d%%' % (t, noise * 100) for t in t_list
@@ -245,7 +249,8 @@ if __name__ == '__main__':
     for k in range(len(noise_level_list)):
         ax.plot(dim_list,
                 np.mean(se_list_uniform[k, ...], axis=0),
-                color=cm.get_cmap('tab10').colors[0],
+                color=cm.get_cmap('tab10').colors[-1],
+                marker='o',
                 linestyle=linestyle_list[k])
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
@@ -257,7 +262,7 @@ if __name__ == '__main__':
                         np.std(se_list_uniform[k, ...], axis=0),
                         np.mean(se_list_uniform[k, ...], axis=0) +
                         np.std(se_list_uniform[k, ...], axis=0),
-                        color=cm.get_cmap('tab10').colors[0],
+                        color=cm.get_cmap('tab10').colors[-1],
                         alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
     ax.set_xlabel('Data Distribution Dimension $d$', fontsize=25)
@@ -270,6 +275,7 @@ if __name__ == '__main__':
             ax.plot(dim_list,
                     np.mean(vne_list_gaussian[k, j, ...], axis=0),
                     color=cm.get_cmap('tab10').colors[j],
+                    marker='o',
                     linestyle=linestyle_list[k])
     ax.legend([
         r'$t$ = %d, |noise| = %d%%' % (t, noise * 100) for t in t_list
@@ -294,7 +300,8 @@ if __name__ == '__main__':
     for k in range(len(noise_level_list)):
         ax.plot(dim_list,
                 np.mean(se_list_gaussian[k, ...], axis=0),
-                color=cm.get_cmap('tab10').colors[0],
+                color=cm.get_cmap('tab10').colors[-1],
+                marker='o',
                 linestyle=linestyle_list[k])
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
@@ -306,7 +313,7 @@ if __name__ == '__main__':
                         np.std(se_list_gaussian[k, ...], axis=0),
                         np.mean(se_list_gaussian[k, ...], axis=0) +
                         np.std(se_list_gaussian[k, ...], axis=0),
-                        color=cm.get_cmap('tab10').colors[0],
+                        color=cm.get_cmap('tab10').colors[-1],
                         alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
     ax.set_xlabel('Data Distribution Dimension $d$', fontsize=25)

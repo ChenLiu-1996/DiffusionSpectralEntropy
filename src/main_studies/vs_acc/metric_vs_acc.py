@@ -156,17 +156,16 @@ def plot_figures(data_arrays: Dict[str, Iterable], save_path_fig: str) -> None:
     plt.rcParams['legend.fontsize'] = 20
 
     # Plot of DSE vs val top 1 acc.
-    fig = plt.figure(figsize=(40, 20))
+    fig = plt.figure(figsize=(25, 30))
     img_idx = 1
-    for y_str in [
-            'imagenet_val_acc_top1', 'imagenet_val_acc_top5',
-            'imagenet_test_acc_top1', 'imagenet_test_acc_top5'
+    for x_str in [
+            'dse_Z', 'dsmi_Z_X', 'dsmi_Z_Y', 'cse_Z', 'csmi_Z_X', 'csmi_Z_Y'
     ]:
-        for x_str in [
-                'dse_Z', 'dsmi_Z_X', 'dsmi_Z_Y', 'cse_Z', 'csmi_Z_X',
-                'csmi_Z_Y'
+        for y_str in [
+                'imagenet_val_acc_top1', 'imagenet_val_acc_top5',
+                'imagenet_test_acc_top1', 'imagenet_test_acc_top5'
         ]:
-            ax = fig.add_subplot(4, 6, img_idx)
+            ax = fig.add_subplot(6, 4, img_idx)
             img_idx += 1
             plot_subplot(ax, data_arrays, x_str, y_str)
     fig.tight_layout()
@@ -190,9 +189,16 @@ def plot_subplot(ax: plt.Axes, data_arrays: Dict[str, Iterable], x_str: str,
         'csmi_Z_X': 'CSMI ' + r'$I(Z; X)$',
     }
     ax.spines[['right', 'top']].set_visible(False)
+    is_transformer = [
+        'it' in name or 'patch' in name for name in data_arrays['model_names']
+    ]
+    color_list = [
+        'mediumblue' if item is True else 'firebrick'
+        for item in is_transformer
+    ]
     ax.scatter(data_arrays[x_str],
                data_arrays[y_str],
-               c='forestgreen',
+               c=color_list,
                alpha=0.5,
                s=np.array(data_arrays['model_params']) / 2)
     ax.set_xlabel(arr_title_map[x_str], fontsize=20)
@@ -486,23 +492,33 @@ def evaluate_dse_dsmi(args: AttributeHashmap,
             tensor_Z = np.vstack((tensor_Z, curr_Z))
 
     # For DSE, subsample for faster computation.
-    dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z)
+    dse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z,
+                                       gaussian_kernel_sigma=np.sqrt(
+                                           tensor_Z.shape[-1]))
     cse_Z = diffusion_spectral_entropy(embedding_vectors=tensor_Z,
+                                       gaussian_kernel_sigma=np.sqrt(
+                                           tensor_Z.shape[-1]),
                                        classic_shannon_entropy=True)
     dsmi_Z_X, _ = diffusion_spectral_mutual_information(
-        embedding_vectors=tensor_Z, reference_vectors=tensor_X,
-        n_clusters=10)  # Imagenette
+        embedding_vectors=tensor_Z,
+        reference_vectors=tensor_X,
+        gaussian_kernel_sigma=np.sqrt(tensor_Z.shape[-1]),
+        n_clusters=20)  # Imagenette + Imagewoof
     csmi_Z_X, _ = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_X,
-        n_clusters=10,  # Imagenette
+        gaussian_kernel_sigma=np.sqrt(tensor_Z.shape[-1]),
+        n_clusters=20,  # Imagenette + Imagewoof
         classic_shannon_entropy=True)
 
     dsmi_Z_Y, _ = diffusion_spectral_mutual_information(
-        embedding_vectors=tensor_Z, reference_vectors=tensor_Y)
+        embedding_vectors=tensor_Z,
+        reference_vectors=tensor_Y,
+        gaussian_kernel_sigma=np.sqrt(tensor_Z.shape[-1]))
     csmi_Z_Y, _ = diffusion_spectral_mutual_information(
         embedding_vectors=tensor_Z,
         reference_vectors=tensor_Y,
+        gaussian_kernel_sigma=np.sqrt(tensor_Z.shape[-1]),
         classic_shannon_entropy=True)
 
     return dse_Z, cse_Z, dsmi_Z_X, csmi_Z_X, dsmi_Z_Y, csmi_Z_Y
