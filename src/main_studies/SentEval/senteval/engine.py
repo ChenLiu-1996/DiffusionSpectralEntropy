@@ -56,8 +56,12 @@ class SE(object):
     def eval(self, name):
         # evaluate on evaluation [name], either takes string or list of strings
         if (isinstance(name, list)):
-            self.results = {x: self.eval(x) for x in name}
-            return self.results
+            self.results_and_mis = {x: self.eval(x) for x in name}
+            
+            self.results = {x[0] for x in self.results_and_mis}
+            self.mi_results = {x[1] for x in self.results_and_mis}
+            print('self : ', self.results_and_mis)
+            return self.results, self.mi_results
 
         tpath = self.params.task_path
         assert name in self.list_tasks, str(name) + ' not in ' + str(self.list_tasks)
@@ -121,4 +125,5 @@ class SE(object):
         self.results = self.evaluation.run(self.params, self.batcher)
         self.mi_results = self.evaluation.compute_mutual_information(self.params, self.batcher)
 
+        print('self.mi_results: ', self.mi_results)
         return self.results, self.mi_results

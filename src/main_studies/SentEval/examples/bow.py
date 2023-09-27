@@ -109,4 +109,5 @@ if __name__ == "__main__":
                       'MR', 'CR', 'MPQA', 'SUBJ',
                       ]
     results, mi_results = se.eval(transfer_tasks)
+    print('Evaluation Done. ')
     print(results)

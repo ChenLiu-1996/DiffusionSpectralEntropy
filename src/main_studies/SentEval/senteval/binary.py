@@ -80,7 +80,7 @@ class BinaryClassifierEval(object):
         logging.info('MI Estimation: Generated sentence embeddings.')
 
         sent_labels = np.array(self.labels)
-
+        print('Computing MIs, sent embeds: ', sent_embeddings.shape, sent_labels.shape)
         dsmi_sent_labels, _ = diffusion_spectral_mutual_information(
             embedding_vectors=sent_embeddings,
             reference_vectors=sent_labels,
