@@ -23,62 +23,28 @@ sys.path.insert(0, import_dir + '/src/utils/')
 from attribute_hashmap import AttributeHashmap
 
 
-def generate_tree(dim: int = 2,
-                  num_branches: int = 5,
-                  num_points: int = 1000,
+def generate_tree(num_points: int = 1000,
+                  dim: int = 100,
+                  num_branches: int = 10,
+                  rand_multiplier: float = 2,
                   random_seed: int = 1):
-    if random_seed is not None:
-        np.random.seed(random_seed)
+    '''
+    Adapated from
+    https://github.com/KrishnaswamyLab/PHATE/blob/8578022459060e8c29e9b37b537a2203e0c7fd6c/Python/phate/tree.py
+    '''
+    np.random.seed(random_seed)
+    branch_length = num_points // num_branches
+    M = np.cumsum(-1 + rand_multiplier * np.random.rand(branch_length, dim), 0)
+    for _ in range(num_branches - 1):
+        ind = np.random.randint(branch_length)
+        new_branch = np.cumsum(
+            -1 + rand_multiplier * np.random.rand(branch_length, dim), 0)
+        M = np.concatenate([M, new_branch + M[ind, :]])
 
-    # Define a function to generate a branch
-    def generate_branch(start_point, length, dim):
-        # Define a random direction for the branch
-        direction = np.random.uniform(low=-1, high=1, size=dim)
+    C = np.array(
+        [i // branch_length for i in range(num_branches * branch_length)])
 
-        # Generate a set of points along the branch
-        branch_points = [start_point]
-        for _ in range(int(length)):
-            branch_points.append(branch_points[-1] + direction * 0.1)
-            direction += np.random.normal(size=dim) * 0.05
-            direction /= np.linalg.norm(direction)
-
-        return branch_points
-
-    # Generate the root point
-    root_point = np.random.normal(size=dim)
-
-    # Generate the branches
-    branches = []
-    classes = []
-    cumulative_length = 0
-    for i in range(num_branches):
-        # Generate a random start point for the branch
-        start_point = root_point + np.random.normal(size=dim) * 0.1
-
-        # Generate a random length and angle for the branch
-        if i < num_branches - 1:
-            length = np.random.randint(num_points // (num_branches + 1),
-                                       num_points // num_branches)
-            cumulative_length += length + 1
-        else:
-            length = num_points - cumulative_length - 1
-
-        # Generate the points for the branch
-        branch_points = generate_branch(start_point, length, dim)
-
-        # Add the branch points to the list of all points
-        branches.append(branch_points)
-        classes += [i] * (length + 1)
-
-    # Concatenate all the branch points into a single array
-    points = np.concatenate(branches)
-    classes = np.array(classes)
-
-    # Add some noise to the points
-    noise = np.random.normal(size=(points.shape[0], dim)) * 0.2
-    points += noise
-
-    return points, classes
+    return M, C
 
 
 def corrupt_label(labels: np.array,
@@ -118,7 +84,7 @@ if __name__ == '__main__':
     num_corruption_ratio = 20
     num_repetition = 3
 
-    num_branch_list = [5, 10, 20]  # Currently hard-coded. Has to be 3 items.
+    num_branch_list = [2, 5, 10]  # Currently hard-coded. Has to be 3 items.
     t_list = [1, 2, 3, 5]
     noise_level_list = [1e-2, 1e-1, 5e-1]
 
