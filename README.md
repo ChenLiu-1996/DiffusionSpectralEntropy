@@ -42,8 +42,8 @@ Conceptually, we build a data graph from the neural network representations of a
     <td><b>Diffusion Spectral Mutual Information</b> (top panel) <br>outperforms <br>Classic Shannon Mutual Information (bottom panel) <br>on toy data</td>
  </tr>
  <tr>
-    <td><img src="assets/toy_data_E.png" width="450"></td>
-    <td><img src="assets/toy_data_MI.png" width="450"></td>
+    <td><img src="assets/toy-data-entropy.png" width="450"></td>
+    <td><img src="assets/toy-data-MI.png" width="450"></td>
  </tr>
 </table>
 
