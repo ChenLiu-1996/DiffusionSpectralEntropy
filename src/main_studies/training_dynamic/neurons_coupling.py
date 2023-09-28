@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
     plt.rcParams['font.family'] = 'serif'
     num_rows = len(checkpoints)
-    fig = plt.figure(figsize=(3 * num_rows, 3))
+    fig = plt.figure(figsize=(9, 3 * num_rows))
 
     for i, checkpoint_name in enumerate(checkpoints):
         if config.method == 'wronglabel':
@@ -155,8 +155,12 @@ if __name__ == '__main__':
         neurons = embeddings.T
         sr, _ = spearmanr(neurons, axis=1)
 
+        assert sr.shape[0] == D
+        assert sr.shape[1] == D
+
         # Plot histogram
         ax = fig.add_subplot(num_rows, 1, i + 1)
+        ax.spines[['right', 'top', 'left']].set_visible(False)
         ax.hist(sr, bins=config.num_bins)
 
     fig.tight_layout()
