@@ -55,6 +55,11 @@ if __name__ == '__main__':
         help='Number of bins for histogram',
         type=int,
         default=100)
+    parser.add_argument(
+        '--summary-bins',
+        help='Number of bins for summary histogram, should be much smaller',
+        type=int,
+        default=5)
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -161,7 +166,16 @@ if __name__ == '__main__':
         # Plot histogram
         ax = fig.add_subplot(num_rows, 1, i + 1)
         ax.spines[['right', 'top', 'left']].set_visible(False)
-        ax.hist(sr, bins=config.num_bins)
+        ax.hist(sr.flatten(), bins=config.num_bins)
+
+        # Summary of histogram
+        counts, bins = np.histogram(sr, bins=config.summary_bins)
+        title_str = ""
+        for i in range(len(bins)) - 1:
+            title_str += '%d - %d: %d'%(bins[i], bins[i+1], counts[i])
+            title_str += "\n"
+        ax.set_title(title_str)
+
 
     fig.tight_layout()
     fig.savefig(save_path_fig)
