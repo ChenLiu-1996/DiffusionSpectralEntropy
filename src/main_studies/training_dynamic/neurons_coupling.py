@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
     plt.rcParams['font.family'] = 'serif'
     num_rows = len(checkpoints)
-    fig = plt.figure(figsize=(3 * num_rows, 6))
+    fig = plt.figure(figsize=(3 * num_rows, 3))
 
     for i, checkpoint_name in enumerate(checkpoints):
         if config.method == 'wronglabel':
@@ -153,13 +153,10 @@ if __name__ == '__main__':
 
         # Compute Pearson Correlation, Spearman Correlation between D x N neurons
         neurons = embeddings.T
-        pr, _ = pearsonr(neurons, axis=1)
         sr, _ = spearmanr(neurons, axis=1)
 
         # Plot histogram
-        ax = fig.add_subplot(num_rows, 2, 2*i + 1)
-        ax.hist(pr, bins=config.num_bins)
-        ax = fig.add_subplot(num_rows, 2, 2*i + 2)
+        ax = fig.add_subplot(num_rows, 1, i + 1)
         ax.hist(sr, bins=config.num_bins)
 
     fig.tight_layout()
