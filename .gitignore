@@ -8,6 +8,10 @@ training
 validation
 testing
 
+# Logs
+logs
+**/*.log
+
 # Models
 **/*.pt
 **/*.pkl

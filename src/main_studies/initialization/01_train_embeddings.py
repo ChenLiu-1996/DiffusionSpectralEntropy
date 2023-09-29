@@ -723,10 +723,7 @@ def train(config: AttributeHashmap) -> None:
                 config.checkpoint_dir, config.dataset, config.method,
                 config.model, config.conv_init_std, config.random_seed,
                 epoch_idx)
-            torch.save(best_model, model_save_path)
-
-        if epoch_idx >= 50:
-            break
+            torch.save(model.state_dict(), model_save_path)
 
     # Save the results after training.
     save_path_numpy = '%s/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
@@ -1013,10 +1010,11 @@ if __name__ == '__main__':
         help='model name: [resnet, resnext, convnext, vit, swin, xcit]',
         type=str,
         required=True)
-    parser.add_argument('--conv-init-std',
-                        help='conv block initialization std (please use this format: 1e-3)',
-                        type=str,
-                        required=True)
+    parser.add_argument(
+        '--conv-init-std',
+        help='conv block initialization std (please use this format: 1e-3)',
+        type=str,
+        required=True)
     parser.add_argument(
         '--block-by-block',
         action='store_true',
