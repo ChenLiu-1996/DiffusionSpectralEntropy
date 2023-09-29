@@ -725,6 +725,9 @@ def train(config: AttributeHashmap) -> None:
                 epoch_idx)
             torch.save(model.state_dict(), model_save_path)
 
+        if epoch_idx > 30:
+            break
+
     # Save the results after training.
     save_path_numpy = '%s/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
         config.output_save_path, config.dataset, config.method, config.model,
