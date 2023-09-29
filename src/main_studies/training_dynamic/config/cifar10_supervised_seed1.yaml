@@ -1,4 +1,5 @@
 checkpoint_dir: '$ROOT_DIR/src/main_studies/training_dynamic/checkpoints/'
+initialization_ckpt_dir: '$ROOT_DIR/src/main_studies/training_dynamic/initialization/checkpoints/'
 log_dir: '$ROOT_DIR/src/main_studies/training_dynamic/logs/'
 output_save_path: '$ROOT_DIR/src/main_studies/training_dynamic/results/'
 dataset_dir: '$ROOT_DIR/data/cifar10/'

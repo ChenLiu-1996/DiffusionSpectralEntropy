@@ -60,6 +60,19 @@ if __name__ == '__main__':
         help='Number of bins for summary histogram, should be much smaller',
         type=int,
         default=5)
+    parser.add_argument(
+        '--initialization-exp',
+        help='whether it is for intialization experiments',
+        action='store_true',
+        default=False
+    )
+    parser.add_argument(
+        '--std-exponent',
+        help='the initialization std exponent, default -1(aka e-1).',
+        type=int,
+        default=-1,
+    )
+
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
 
@@ -70,22 +83,36 @@ if __name__ == '__main__':
     config.gpu_id = args.gpu_id
     config.model = args.model
     config.num_bins = args.num_bins
+    config.summary_bins = args.summary_bins
 
     if args.random_seed is not None:
         config.random_seed = args.random_seed
-    method_str = config.method
-    # NOTE: Take the fixed percentage checkpoints.
-    checkpoints = sorted(
-        glob('%s/%s-%s-%s-seed%s/*.pth' %
-             (config.checkpoint_dir, config.dataset, config.method,
-              config.model, config.random_seed)))
 
+    method_str = config.method
     save_root = './results_coupling/'
     os.makedirs(save_root, exist_ok=True)
-    save_path_fig = '%s/coupling-%s-%s-%s-seed%s.png' % (
-        save_root, config.dataset, method_str, config.model,
-        config.random_seed)
-
+    # NOTE: Take the fixed percentage checkpoints.
+    if args.initialization_exp is False:
+        checkpoints = sorted(
+            glob('%s/%s-%s-%s-seed%s/*.pth' %
+                (config.checkpoint_dir, config.dataset, config.method,
+                config.model, config.random_seed)))
+        save_path_fig = '%s/coupling-%s-%s-%s-seed%s.png' % (
+            save_root, config.dataset, method_str, config.model,
+            config.random_seed)
+    else:
+        # Initialization Experiments, take epoch checkpoints
+        checkpoints = sorted(
+            glob('%s/%s-%s-%s-ConvInitStd-1e%d-seed%s/*.pth' %
+                (config.initialization_ckpt_dir, config.dataset, config.method,
+                config.model, int(args.std_exponent), config.random_seed)))
+        save_path_fig = '%s/coupling-%s-%s-%s-ConvInitSdt-1e%d-seed%s.png' % (
+            save_root, config.dataset, method_str, config.model,
+            int(args.std_exponent), config.random_seed)
+    print('%s/%s-%s-%s-ConvInitStd-1e%d-seed%s/*.pth' %
+                (config.initialization_ckpt_dir, config.dataset, config.method,
+                config.model, int(args.std_exponent), config.random_seed))
+    print('checkpoints: ', len(checkpoints))
     if config.dataset in ['mnist', 'cifar10', 'stl10']:
         num_classes = 10
     elif config.dataset in ['cifar100']:
@@ -105,17 +132,9 @@ if __name__ == '__main__':
 
     plt.rcParams['font.family'] = 'serif'
     num_rows = len(checkpoints)
-    fig = plt.figure(figsize=(9, 3 * num_rows))
+    fig = plt.figure(figsize=(18, 3 * num_rows))
 
     for i, checkpoint_name in enumerate(checkpoints):
-        if config.method == 'wronglabel':
-            val_metric = 'acc_diverg'
-        else:
-            val_metric = 'val_acc'
-
-        val_metric_pc = checkpoint_name.split(val_metric +
-                                              '_')[1].split('.')[0]
-
         # Load model and run inference.
         dataloaders, config = train_embeddings_utils.get_dataloaders(
             config=config)
@@ -171,8 +190,8 @@ if __name__ == '__main__':
         # Summary of histogram
         counts, bins = np.histogram(sr, bins=config.summary_bins)
         title_str = ""
-        for i in range(len(bins)) - 1:
-            title_str += '%d - %d: %d'%(bins[i], bins[i+1], counts[i])
+        for i in range(len(bins)-1):
+            title_str += '%.3f - %.3f: %d'%(bins[i], bins[i+1], counts[i])
             title_str += "\n"
         ax.set_title(title_str)
 
