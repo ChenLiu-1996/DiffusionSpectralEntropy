@@ -1,0 +1,11 @@
+checkpoint_dir: '$ROOT_DIR/src/main_studies/initialization/checkpoints/'
+log_dir: '$ROOT_DIR/src/main_studies/initialization/logs/'
+output_save_path: '$ROOT_DIR/src/main_studies/initialization/results/'
+dataset_dir: '$ROOT_DIR/data/cifar10/'
+max_epoch: 200
+batch_size: 128
+learning_rate: 1e-4
+num_workers: 8
+dataset: 'cifar10'
+method: 'supervised'
+random_seed: 1

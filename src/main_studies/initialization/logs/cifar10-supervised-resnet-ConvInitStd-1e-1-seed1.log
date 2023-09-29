@@ -1,0 +1,105 @@
+Config: 
+checkpoint_dir: /gpfs/gibbs/pi/krishnaswamy_smita/cl2482/DiffusionSpectralEntropy/src/main_studies/initialization/checkpoints//cifar10-supervised-resnet-ConvInitStd-1e-1-seed1/
+log_dir: /gpfs/gibbs/pi/krishnaswamy_smita/cl2482/DiffusionSpectralEntropy/src/main_studies/initialization/logs/
+output_save_path: /gpfs/gibbs/pi/krishnaswamy_smita/cl2482/DiffusionSpectralEntropy/src/main_studies/initialization/results/
+dataset_dir: /gpfs/gibbs/pi/krishnaswamy_smita/cl2482/DiffusionSpectralEntropy/data/cifar10/
+max_epoch: 200
+batch_size: 128
+learning_rate: 1e-4
+num_workers: 8
+dataset: cifar10
+method: supervised
+random_seed: 1
+config_file_name: ./config/cifar10_supervised_seed1.yaml
+gpu_id: 0
+model: resnet
+block_by_block: False
+conv_init_std: 1e-1
+in_channels: 3
+num_classes: 10
+
+Training History:
+Epoch: 0. train_loss: Not started. train_acc: Not started. val_loss: 31956032258.048000. val_acc: 10.000. acc_diverg: Not started. 
+Epoch: 1. train_loss: 2.264939. train_acc: 13.926. val_loss: 2.086789. val_acc: 20.930. acc_diverg: -7.004. 
+Best model (so far) successfully saved.
+Epoch: 2. train_loss: 1.994947. train_acc: 23.302. val_loss: 1.782853. val_acc: 31.960. acc_diverg: -8.658. 
+Best model (so far) successfully saved.
+Epoch: 3. train_loss: 1.837922. train_acc: 30.586. val_loss: 1.594042. val_acc: 39.990. acc_diverg: -9.404. 
+Best model (so far) successfully saved.
+Epoch: 4. train_loss: 1.736176. train_acc: 35.074. val_loss: 1.489645. val_acc: 44.220. acc_diverg: -9.146. 
+Best model (so far) successfully saved.
+Epoch: 5. train_loss: 1.635203. train_acc: 39.486. val_loss: 1.440730. val_acc: 46.660. acc_diverg: -7.174. 
+Best model (so far) successfully saved.
+Epoch: 6. train_loss: 1.535031. train_acc: 43.918. val_loss: 1.458256. val_acc: 46.620. acc_diverg: -2.702. 
+Epoch: 7. train_loss: 1.424072. train_acc: 48.334. val_loss: 1.239578. val_acc: 54.810. acc_diverg: -6.476. 
+Best model (so far) successfully saved.
+Epoch: 8. train_loss: 1.303659. train_acc: 53.008. val_loss: 1.122172. val_acc: 59.440. acc_diverg: -6.432. 
+Best model (so far) successfully saved.
+Epoch: 9. train_loss: 1.199663. train_acc: 57.022. val_loss: 1.026273. val_acc: 64.060. acc_diverg: -7.038. 
+Best model (so far) successfully saved.
+Epoch: 10. train_loss: 1.102687. train_acc: 60.868. val_loss: 0.932001. val_acc: 66.180. acc_diverg: -5.312. 
+Best model (so far) successfully saved.
+Epoch: 11. train_loss: 1.021892. train_acc: 63.790. val_loss: 0.882735. val_acc: 68.660. acc_diverg: -4.870. 
+Best model (so far) successfully saved.
+Epoch: 12. train_loss: 0.941743. train_acc: 66.748. val_loss: 0.937509. val_acc: 67.310. acc_diverg: -0.562. 
+Epoch: 13. train_loss: 0.872384. train_acc: 69.406. val_loss: 0.820070. val_acc: 71.140. acc_diverg: -1.734. 
+Best model (so far) successfully saved.
+Epoch: 14. train_loss: 0.821272. train_acc: 71.292. val_loss: 0.717066. val_acc: 74.760. acc_diverg: -3.468. 
+Best model (so far) successfully saved.
+Epoch: 15. train_loss: 0.771348. train_acc: 72.948. val_loss: 0.655815. val_acc: 77.330. acc_diverg: -4.382. 
+Best model (so far) successfully saved.
+Epoch: 16. train_loss: 0.727640. train_acc: 74.792. val_loss: 0.693707. val_acc: 76.630. acc_diverg: -1.838. 
+Epoch: 17. train_loss: 0.692655. train_acc: 75.994. val_loss: 0.633768. val_acc: 78.580. acc_diverg: -2.586. 
+Best model (so far) successfully saved.
+Epoch: 18. train_loss: 0.660823. train_acc: 77.022. val_loss: 0.610379. val_acc: 79.180. acc_diverg: -2.158. 
+Best model (so far) successfully saved.
+Epoch: 19. train_loss: 0.633698. train_acc: 77.974. val_loss: 0.572785. val_acc: 80.630. acc_diverg: -2.656. 
+Best model (so far) successfully saved.
+Epoch: 20. train_loss: 0.604939. train_acc: 79.004. val_loss: 0.597336. val_acc: 80.060. acc_diverg: -1.056. 
+Epoch: 21. train_loss: 0.582292. train_acc: 79.818. val_loss: 0.556013. val_acc: 80.670. acc_diverg: -0.852. 
+Best model (so far) successfully saved.
+Epoch: 22. train_loss: 0.559674. train_acc: 80.610. val_loss: 0.550505. val_acc: 81.320. acc_diverg: -0.710. 
+Best model (so far) successfully saved.
+Epoch: 23. train_loss: 0.538308. train_acc: 81.362. val_loss: 0.510127. val_acc: 82.580. acc_diverg: -1.218. 
+Best model (so far) successfully saved.
+Epoch: 24. train_loss: 0.518205. train_acc: 81.952. val_loss: 0.497759. val_acc: 83.040. acc_diverg: -1.088. 
+Best model (so far) successfully saved.
+Epoch: 25. train_loss: 0.497648. train_acc: 82.736. val_loss: 0.483221. val_acc: 83.560. acc_diverg: -0.824. 
+Best model (so far) successfully saved.
+Epoch: 26. train_loss: 0.482130. train_acc: 83.486. val_loss: 0.516654. val_acc: 82.560. acc_diverg: 0.926. 
+Epoch: 27. train_loss: 0.470856. train_acc: 83.576. val_loss: 0.444081. val_acc: 84.840. acc_diverg: -1.264. 
+Best model (so far) successfully saved.
+Epoch: 28. train_loss: 0.446351. train_acc: 84.582. val_loss: 0.455814. val_acc: 84.690. acc_diverg: -0.108. 
+Epoch: 29. train_loss: 0.427485. train_acc: 85.198. val_loss: 0.439934. val_acc: 85.150. acc_diverg: 0.048. 
+Best model (so far) successfully saved.
+Epoch: 30. train_loss: 0.417666. train_acc: 85.550. val_loss: 0.452114. val_acc: 84.710. acc_diverg: 0.840. 
+Epoch: 31. train_loss: 0.407984. train_acc: 85.826. val_loss: 0.455403. val_acc: 84.580. acc_diverg: 1.246. 
+Epoch: 32. train_loss: 0.391591. train_acc: 86.360. val_loss: 0.431071. val_acc: 85.590. acc_diverg: 0.770. 
+Best model (so far) successfully saved.
+Epoch: 33. train_loss: 0.384596. train_acc: 86.628. val_loss: 0.429735. val_acc: 85.860. acc_diverg: 0.768. 
+Best model (so far) successfully saved.
+Epoch: 34. train_loss: 0.374615. train_acc: 87.032. val_loss: 0.424796. val_acc: 85.900. acc_diverg: 1.132. 
+Best model (so far) successfully saved.
+Epoch: 35. train_loss: 0.365583. train_acc: 87.258. val_loss: 0.448004. val_acc: 85.130. acc_diverg: 2.128. 
+Epoch: 36. train_loss: 0.351214. train_acc: 87.844. val_loss: 0.419626. val_acc: 85.940. acc_diverg: 1.904. 
+Best model (so far) successfully saved.
+Epoch: 37. train_loss: 0.338264. train_acc: 88.138. val_loss: 0.416333. val_acc: 86.080. acc_diverg: 2.058. 
+Best model (so far) successfully saved.
+Epoch: 38. train_loss: 0.327819. train_acc: 88.630. val_loss: 0.414994. val_acc: 86.310. acc_diverg: 2.320. 
+Best model (so far) successfully saved.
+Epoch: 39. train_loss: 0.325296. train_acc: 88.784. val_loss: 0.383471. val_acc: 87.130. acc_diverg: 1.654. 
+Best model (so far) successfully saved.
+Epoch: 40. train_loss: 0.308939. train_acc: 89.246. val_loss: 0.419657. val_acc: 86.410. acc_diverg: 2.836. 
+Epoch: 41. train_loss: 0.304447. train_acc: 89.192. val_loss: 0.395379. val_acc: 87.240. acc_diverg: 1.952. 
+Best model (so far) successfully saved.
+Epoch: 42. train_loss: 0.293479. train_acc: 89.804. val_loss: 0.394394. val_acc: 87.320. acc_diverg: 2.484. 
+Best model (so far) successfully saved.
+Epoch: 43. train_loss: 0.288409. train_acc: 89.840. val_loss: 0.397512. val_acc: 87.140. acc_diverg: 2.700. 
+Epoch: 44. train_loss: 0.281038. train_acc: 90.044. val_loss: 0.427314. val_acc: 86.340. acc_diverg: 3.704. 
+Epoch: 45. train_loss: 0.273579. train_acc: 90.544. val_loss: 0.404948. val_acc: 87.180. acc_diverg: 3.364. 
+Epoch: 46. train_loss: 0.260688. train_acc: 90.812. val_loss: 0.400406. val_acc: 86.970. acc_diverg: 3.842. 
+Epoch: 47. train_loss: 0.259937. train_acc: 90.866. val_loss: 0.374627. val_acc: 88.190. acc_diverg: 2.676. 
+Best model (so far) successfully saved.
+Epoch: 48. train_loss: 0.256501. train_acc: 91.068. val_loss: 0.400864. val_acc: 87.320. acc_diverg: 3.748. 
+Epoch: 49. train_loss: 0.242300. train_acc: 91.438. val_loss: 0.402192. val_acc: 87.100. acc_diverg: 4.338. 
+Epoch: 50. train_loss: 0.236416. train_acc: 91.746. val_loss: 0.377090. val_acc: 87.890. acc_diverg: 3.856. 
