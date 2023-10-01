@@ -1,5 +1,12 @@
-import argparse
 import os
+
+os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
+os.environ["OPENBLAS_NUM_THREADS"] = "1"  # export OPENBLAS_NUM_THREADS=1
+os.environ["MKL_NUM_THREADS"] = "1"  # export MKL_NUM_THREADS=1
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"  # export VECLIB_MAXIMUM_THREADS=1
+os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
+
+import argparse
 import sys
 import numpy as np
 from matplotlib import pyplot as plt
@@ -7,12 +14,6 @@ from matplotlib import cm
 from tqdm import tqdm
 import random
 import torch
-
-os.environ["OMP_NUM_THREADS"] = "1"  # export OMP_NUM_THREADS=1
-os.environ["OPENBLAS_NUM_THREADS"] = "1"  # export OPENBLAS_NUM_THREADS=1
-os.environ["MKL_NUM_THREADS"] = "1"  # export MKL_NUM_THREADS=1
-os.environ["VECLIB_MAXIMUM_THREADS"] = "1"  # export VECLIB_MAXIMUM_THREADS=1
-os.environ["NUMEXPR_NUM_THREADS"] = "1"  # export NUMEXPR_NUM_THREADS=1
 
 import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-3])
 sys.path.insert(0, import_dir + '/api/')

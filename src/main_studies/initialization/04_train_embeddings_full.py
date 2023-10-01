@@ -546,10 +546,10 @@ def train(config: AttributeHashmap) -> None:
     best_val_metric = 0
     best_model = None
 
-    # val_metric_pct_list = [20, 30, 40, 50, 60, 70, 80, 90]
-    # is_model_saved = {}
-    # for val_metric_pct in val_metric_pct_list:
-    #     is_model_saved[str(val_metric_pct)] = False
+    val_metric_pct_list = [20, 30, 40, 50, 60, 70, 80, 90]
+    is_model_saved = {}
+    for val_metric_pct in val_metric_pct_list:
+        is_model_saved[str(val_metric_pct)] = False
 
     for epoch_idx in tqdm(range(1, config.max_epoch)):
         # For SimCLR, only perform validation / linear probing every 5 epochs.
@@ -704,14 +704,21 @@ def train(config: AttributeHashmap) -> None:
                     filepath=log_path,
                     to_console=False)
 
-            model_save_path = '%s/%s-%s-%s-ConvInitStd-%s-seed%s-epoch-%s.pth' % (
-                config.checkpoint_dir, config.dataset, config.method,
-                config.model, config.conv_init_std, config.random_seed,
-                epoch_idx)
-            torch.save(model.state_dict(), model_save_path)
-
-        if epoch_idx > 30:
-            break
+                # Save model at each percentile.
+                for val_metric_pct in val_metric_pct_list:
+                    if state_dict[val_metric] > val_metric_pct and \
+                    not is_model_saved[str(val_metric_pct)]:
+                        model_save_path = '%s/%s-%s-%s-ConvInitStd-%s-seed%s-%s' % (
+                            config.checkpoint_dir, config.dataset,
+                            config.method, config.model, config.conv_init_std,
+                            config.random_seed, '%s_%s%%.pth' %
+                            (val_metric, val_metric_pct))
+                        torch.save(best_model, model_save_path)
+                        is_model_saved[str(val_metric_pct)] = True
+                        log('%s:%s%% model successfully saved.' %
+                            (val_metric, val_metric_pct),
+                            filepath=log_path,
+                            to_console=False)
 
     # Save the results after training.
     save_path_numpy = '%s/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
