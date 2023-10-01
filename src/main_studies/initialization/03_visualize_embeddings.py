@@ -123,7 +123,7 @@ if __name__ == '__main__':
     # Initialization Experiments, take training history.
     save_path_numpy = '%s/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
         config.output_save_path, config.dataset, config.method, config.model,
-        config.conv_init_std, config.random_seed, 'results.npz')
+        args.conv_init_std, config.random_seed, 'results.npz')
 
     save_path_fig = '%s/phate-%s-%s-%s-ConvInitStd-%s-seed%s' % (
         save_root, config.dataset, method_str, config.model,
