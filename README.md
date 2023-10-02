@@ -15,7 +15,7 @@ This is the **official** implementation of
 ## News
 [Sep 2023] Additional experiments for a new submission.
 
-[June 2023] A **non-archival** version is accepted to the [TAG-ML Workshop](https://icml.cc/virtual/2023/workshop/21480) @ **ICML 2023**. [[PDF]](https://openreview.net/pdf?id=DQW3ilre3Q)
+[June 2023] A **non-archival** version is accepted to the [TAG-ML Workshop](https://icml.cc/virtual/2023/workshop/21480) @ **ICML 2023**.
 
 ## Overview
 > We proposed an information-theory based framework to measure the **entropy** and **mutual information** of neural network representations.
