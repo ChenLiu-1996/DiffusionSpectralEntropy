@@ -115,17 +115,12 @@ if __name__ == '__main__':
     os.makedirs(save_root, exist_ok=True)
 
     # Initialization Experiments, take epoch checkpoints
-    checkpoints = sorted(
-        glob('%s/%s-%s-%s-ConvInitStd-%s-seed%s/*.pth' %
-             (config.checkpoint_dir, config.dataset, config.method,
-              config.model, args.conv_init_std, config.random_seed)))
+    save_path_numpy = '%s/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
+        config.output_save_path, config.dataset, config.method, config.model,
+        args.conv_init_std, config.random_seed, 'results.npz')
     save_path_fig = '%s/coupling-%s-%s-%s-ConvInitSdt-%s-seed%s' % (
         save_root, config.dataset, method_str, config.model,
         args.conv_init_std, config.random_seed)
-    print('%s/%s-%s-%s-ConvInitStd-%s-seed%s/*.pth' %
-          (config.checkpoint_dir, config.dataset, config.method, config.model,
-           args.conv_init_std, config.random_seed))
-    print('checkpoints: ', len(checkpoints))
     if config.dataset in ['mnist', 'cifar10', 'stl10']:
         num_classes = 10
     elif config.dataset in ['cifar100']:
@@ -143,8 +138,10 @@ if __name__ == '__main__':
 
     seed_everything(0)
 
+    results_dict = np.load(save_path_numpy)
+    dse_Z = results_dict['dse_Z']
+
     plt.rcParams['font.family'] = 'serif'
-    # epochs = [0, 1, 2, 3, 4, 5, 8, 10, 20]
     epochs = [0, 1, 2, 3, 4, 10, 20, 50, 100, 200]
     num_rows = len(epochs)
 
@@ -164,7 +161,12 @@ if __name__ == '__main__':
         if i == 0:
             model.init_params(conv_init_std=float(args.conv_init_std))
         else:
-            checkpoint_name = checkpoints[epochs[i] - 1]
+            epoch_idx = epochs[i]
+            checkpoint_name = sorted(
+                glob('%s/%s-%s-%s-ConvInitStd-%s-seed%s/*-epoch%s.pth' %
+                     (config.checkpoint_dir, config.dataset, config.method,
+                      config.model, args.conv_init_std, config.random_seed,
+                      epoch_idx)))[0]
             model.load_state_dict(
                 torch.load(checkpoint_name, map_location=device))
         model.eval()
@@ -175,38 +177,38 @@ if __name__ == '__main__':
         neurons = embeddings.T
 
         # #NOTE: Pairwise Pearson R is sooooo slow!
-        pr = np.empty((neurons.shape[0], neurons.shape[0]))
-        for _i in range(neurons.shape[0]):
-            for _j in range(_i, neurons.shape[0]):
-                value = pearsonr(neurons[_i], neurons[_j])[0]
-                pr[_i][_j] = value
-                pr[_j][_i] = value
+        # pr = np.empty((neurons.shape[0], neurons.shape[0]))
+        # for _i in range(neurons.shape[0]):
+        #     for _j in range(_i, neurons.shape[0]):
+        #         value = pearsonr(neurons[_i], neurons[_j])[0]
+        #         pr[_i][_j] = value
+        #         pr[_j][_i] = value
 
         sr, _ = spearmanr(neurons, axis=1)
 
-        assert pr.shape[0] == neurons.shape[0]
-        assert pr.shape[1] == neurons.shape[0]
+        # assert pr.shape[0] == neurons.shape[0]
+        # assert pr.shape[1] == neurons.shape[0]
         assert sr.shape[0] == neurons.shape[0]
         assert sr.shape[1] == neurons.shape[0]
 
-        # Plot histogram
-        ax = fig_pr.add_subplot(num_rows, 1, i + 1)
-        ax.spines[['right', 'top', 'left']].set_visible(False)
-        ax.hist(pr.flatten(),
-                bins=config.num_bins,
-                color='firebrick',
-                edgecolor='white',
-                alpha=0.5)
-        ax.set_xlim([-1, 1])
-        ax.set_yticks([])
-        ax.set_yticklabels([])
+        # # Plot histogram
+        # ax = fig_pr.add_subplot(num_rows, 1, i + 1)
+        # ax.spines[['right', 'top', 'left']].set_visible(False)
+        # ax.hist(pr.flatten(),
+        #         bins=config.num_bins,
+        #         color='firebrick',
+        #         edgecolor='white',
+        #         alpha=0.5)
+        # ax.set_xlim([-1, 1])
+        # ax.set_yticks([])
+        # ax.set_yticklabels([])
 
-        # Summary of histogram
-        title_str = 'epoch: %d.  |R|>0.75: %.2f%%, |R|>0.5: %.2f%%, |R|>0.25: %.2f%%' % (
-            epochs[i], (np.abs(sr) > 0.75).sum() / len(sr.flatten()) * 100,
-            (np.abs(sr) > 0.5).sum() / len(sr.flatten()) * 100,
-            (np.abs(sr) > 0.25).sum() / len(sr.flatten()) * 100)
-        ax.set_title(title_str)
+        # # Summary of histogram
+        # title_str = 'epoch: %d.  |R|>0.75: %.2f%%, |R|>0.5: %.2f%%, |R|>0.25: %.2f%%' % (
+        #     epochs[i], (np.abs(sr) > 0.75).sum() / len(sr.flatten()) * 100,
+        #     (np.abs(sr) > 0.5).sum() / len(sr.flatten()) * 100,
+        #     (np.abs(sr) > 0.25).sum() / len(sr.flatten()) * 100)
+        # ax.set_title(title_str)
 
         ax = fig_sr.add_subplot(num_rows, 1, i + 1)
         ax.spines[['right', 'top', 'left']].set_visible(False)
@@ -219,13 +221,13 @@ if __name__ == '__main__':
         ax.set_yticks([])
         ax.set_yticklabels([])
 
-        title_str = 'epoch: %d.  |R|>0.75: %.2f%%, |R|>0.5: %.2f%%, |R|>0.25: %.2f%%' % (
-            epochs[i], (np.abs(sr) > 0.75).sum() / len(sr.flatten()) * 100,
+        title_str = 'epoch: %d.  DSE: %.1f. |R|>0.75: %.2f%%, |R|>0.5: %.2f%%, |R|>0.25: %.2f%%' % (
+            epochs[i], dse_Z[epochs[i]], (np.abs(sr) > 0.75).sum() / len(sr.flatten()) * 100,
             (np.abs(sr) > 0.5).sum() / len(sr.flatten()) * 100,
             (np.abs(sr) > 0.25).sum() / len(sr.flatten()) * 100)
         ax.set_title(title_str, fontsize=16)
 
-        fig_pr.tight_layout()
-        fig_pr.savefig(save_path_fig + 'PearsonR')
-        # fig_sr.tight_layout()
-        # fig_sr.savefig(save_path_fig + 'SpearmanR')
+        # fig_pr.tight_layout()
+        # fig_pr.savefig(save_path_fig + 'PearsonR')
+        fig_sr.tight_layout()
+        fig_sr.savefig(save_path_fig + 'SpearmanR')
