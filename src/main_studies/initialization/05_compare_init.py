@@ -106,13 +106,14 @@ if __name__ == '__main__':
     # Initialization Experiments, take training history.
     training_history_dict = {}
     for conv_init_std in args.conv_init_std:
-        save_path_numpy = '%s/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
+        save_path_numpy = '%s/old/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
             config.output_save_path, config.dataset, config.method,
             config.model, conv_init_std, config.random_seed, 'results.npz')
         results_dict = np.load(save_path_numpy)
         training_history_dict[conv_init_std] = {
             'epoch': results_dict['epoch'],
             'val_acc': results_dict['val_acc'],
+            'dse_Z': results_dict['dse_Z'],
         }
 
     save_path_fig = '%s/compare-%s-%s-%s-ConvInitStd-%s-seed%s' % (
@@ -137,8 +138,23 @@ if __name__ == '__main__':
 
     my_palette = sns.color_palette('icefire', n_colors=len(args.conv_init_std))
     plt.rcParams['font.family'] = 'serif'
-    fig = plt.figure(figsize=(6, 4))
-    ax = fig.add_subplot(1, 1, 1)
+    fig = plt.figure(figsize=(10, 4))
+    gs = fig.add_gridspec(1, 3)
+
+    ax = fig.add_subplot(gs[0])
+    ax.spines[['right', 'top']].set_visible(False)
+    for i, conv_init_std in enumerate(args.conv_init_std):
+        ax.plot(
+            training_history_dict[conv_init_std]['epoch'][:15],
+            training_history_dict[conv_init_std]['dse_Z'][:15],
+            color=my_palette[i],
+            linestyle='-.',
+        )
+    ax.legend([r'conv. init. std. = 0.01', r'conv. init. std. = 0.1'])
+    ax.set_xlabel('Epochs Trained')
+    ax.set_ylabel(r'DSE $S_D(Z)$')
+
+    ax = fig.add_subplot(gs[1:])
     ax.spines[['right', 'top']].set_visible(False)
     ax.add_patch(
         patches.Rectangle((50, 85),
@@ -166,8 +182,10 @@ if __name__ == '__main__':
             color=my_palette[i],
             label='_nolegend_',
         )
-    ax.legend(
-        [r'Initial DSE $S_D$(Z) is low', r'Initial DSE $S_D$(Z) is high'])
+    ax.legend([
+        r'Initial DSE $S_D$(Z) is low (conv. init. std. = 0.01)',
+        r'Initial DSE $S_D$(Z) is high (conv. init. std. = 0.1)'
+    ])
     ax.set_xlabel('Epochs Trained')
     ax.set_ylabel('Val. Accuracy')
 

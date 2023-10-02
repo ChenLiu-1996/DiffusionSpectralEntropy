@@ -507,7 +507,7 @@ if __name__ == '__main__':
     ax.set_xticks(np.log10(dim_list))
     ax.set_xticklabels(dim_list, fontsize=16)
     ax.tick_params(axis='both', which='major', labelsize=14)
-    ax.set_xlabel(r'Data Distribution Dimension $d$ (log scale)', fontsize=16)
+    ax.set_xlabel(r'Dimension $D$ (log scale)', fontsize=16)
     ax.set_ylabel('Estimated Mutual Information', fontsize=16)
 
     fig_mi.tight_layout()

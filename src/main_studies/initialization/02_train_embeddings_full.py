@@ -546,12 +546,13 @@ def train(config: AttributeHashmap) -> None:
     best_val_metric = 0
     best_model = None
 
+    must_save_epochs = [1, 2, 3, 4, 10, 20, 50, 100, 200]
     val_metric_pct_list = [20, 30, 40, 50, 60, 70, 80, 90]
     is_model_saved = {}
     for val_metric_pct in val_metric_pct_list:
         is_model_saved[str(val_metric_pct)] = False
 
-    for epoch_idx in tqdm(range(1, config.max_epoch)):
+    for epoch_idx in tqdm(range(1, config.max_epoch + 1)):
         # For SimCLR, only perform validation / linear probing every 5 epochs.
         skip_epoch_simlr = epoch_idx % 5 != 0
 
@@ -719,6 +720,13 @@ def train(config: AttributeHashmap) -> None:
                             (val_metric, val_metric_pct),
                             filepath=log_path,
                             to_console=False)
+
+        if epoch_idx in must_save_epochs:
+            model_save_path = '%s/%s-%s-%s-ConvInitStd-%s-seed%s-epoch%d.pth' % (
+                config.checkpoint_dir, config.dataset, config.method,
+                config.model, config.conv_init_std, config.random_seed,
+                epoch_idx)
+            torch.save(model.state_dict(), model_save_path)
 
     # Save the results after training.
     save_path_numpy = '%s/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
