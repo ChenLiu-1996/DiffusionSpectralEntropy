@@ -1,4 +1,4 @@
-# Diffusion Spectral Entropy
+# Diffusion Spectral Entropy and Mutual Information
 **Krishnaswamy Lab, Yale University**
 
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
