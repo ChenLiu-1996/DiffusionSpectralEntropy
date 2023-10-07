@@ -431,7 +431,6 @@ if __name__ == '__main__':
                 alpha=0.2,
                 label='_nolegend_')
 
-    ax.invert_xaxis()
     ax.legend([
         r'%s, |noise| = %d%%' % (m, noise * 100) for m in method_list
         for noise in noise_level_list
@@ -467,7 +466,6 @@ if __name__ == '__main__':
                 alpha=0.2,
                 label='_nolegend_')
 
-    ax.invert_xaxis()
     ax.legend([
         r'%s, |noise| = %d%%' % (m, noise * 100) for m in method_list
         for noise in noise_level_list

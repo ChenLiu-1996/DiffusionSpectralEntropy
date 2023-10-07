@@ -15,6 +15,7 @@ def diffusion_spectral_mutual_information(
         n_clusters: int = 10,
         precomputed_clusters: np.array = None,
         classic_shannon_entropy: bool = False,
+        matrix_entry_entropy: bool = False,
         num_bins_per_dim: int = 2,
         random_seed: int = 0,
         verbose: bool = False):
@@ -100,6 +101,11 @@ def diffusion_spectral_mutual_information(
             Whether or not we use CSE to replace DSE in the computation.
             NOTE: If true, the resulting mutual information will be CSMI instead of DSMI.
 
+        matrix_entry_entropy: bool
+            An alternative formulation where, instead of computing the entropy on
+            diffusion matrix eigenvalues, we compute the entropy on diffusion matrix entries.
+            Only relevant to DSE.
+
         num_bins_per_dim: int
             Number of bins per feature dim.
             Only relevant to CSE (i.e., `classic_shannon_entropy` is True).
@@ -180,6 +186,7 @@ def diffusion_spectral_mutual_information(
             t=t,
             chebyshev_approx=chebyshev_approx,
             classic_shannon_entropy=classic_shannon_entropy,
+            matrix_entry_entropy=matrix_entry_entropy,
             num_bins_per_dim=num_bins_per_dim)
 
         # DSE(A*)
@@ -198,6 +205,7 @@ def diffusion_spectral_mutual_information(
                 t=t,
                 chebyshev_approx=chebyshev_approx,
                 classic_shannon_entropy=classic_shannon_entropy,
+                matrix_entry_entropy=matrix_entry_entropy,
                 num_bins_per_dim=num_bins_per_dim)
             entropy_A_estimation_list.append(entropy_A_subsample_rep)
 
@@ -252,3 +260,12 @@ if __name__ == '__main__':
         reference_vectors=class_labels,
         classic_shannon_entropy=True)
     print('CSMI =', CSMI)
+
+    print('\n6th run. DSMI-matrix-entry, Classification dataset.')
+    embedding_vectors, class_labels = make_classification(n_samples=1000,
+                                                          n_features=5)
+    DSMI_matrix_entry, _ = diffusion_spectral_mutual_information(
+        embedding_vectors=embedding_vectors,
+        reference_vectors=class_labels,
+        matrix_entry_entropy=True)
+    print('DSMI-matrix-entry =', DSMI_matrix_entry)

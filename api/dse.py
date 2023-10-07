@@ -13,6 +13,7 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
                                eigval_save_path: str = None,
                                eigval_save_precision: np.dtype = np.float16,
                                classic_shannon_entropy: bool = False,
+                               matrix_entry_entropy: bool = False,
                                num_bins_per_dim: int = 2,
                                random_seed: int = 0,
                                verbose: bool = False):
@@ -69,6 +70,11 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
         classic_shannon_entropy: bool
             Toggle between DSE and CSE. False (default) == DSE.
 
+        matrix_entry_entropy: bool
+            An alternative formulation where, instead of computing the entropy on
+            diffusion matrix eigenvalues, we compute the entropy on diffusion matrix entries.
+            Only relevant to DSE.
+
         num_bins_per_dim: int
             Number of bins per feature dim.
             Only relevant to CSE (i.e., `classic_shannon_entropy` is True).
@@ -78,55 +84,73 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
     '''
 
     # Subsample embedding vectors if number of data sample is too large.
-    if max_N is not None and len(embedding_vectors) > max_N:
+    if max_N is not None and embedding_vectors is not None and len(
+            embedding_vectors) > max_N:
         if random_seed is not None:
             random.seed(random_seed)
-        rand_inds = np.array(random.sample(range(len(embedding_vectors)), k=max_N))
+        rand_inds = np.array(
+            random.sample(range(len(embedding_vectors)), k=max_N))
         embedding_vectors = embedding_vectors[rand_inds, :]
 
     if not classic_shannon_entropy:
         # Computing Diffusion Spectral Entropy.
         if verbose: print('Computing Diffusion Spectral Entropy...')
 
-        if eigval_save_path is not None and os.path.exists(eigval_save_path):
-            if verbose:
-                print('Loading pre-computed eigenvalues from %s' %
-                      eigval_save_path)
-            eigvals = np.load(eigval_save_path)['eigvals']
-            eigvals = eigvals.astype(np.float64)  # mitigate rounding error.
-            if verbose: print('Pre-computed eigenvalues loaded.')
-
-        else:
+        if matrix_entry_entropy:
             if verbose: print('Computing diffusion matrix.')
             # Note that `K` is a symmetric matrix with the same eigenvalues as the diffusion matrix `P`.
             K = compute_diffusion_matrix(embedding_vectors,
                                          sigma=gaussian_kernel_sigma)
             if verbose: print('Diffusion matrix computed.')
 
-            if verbose: print('Computing eigenvalues.')
-            if chebyshev_approx:
-                if verbose: print('Using Chebyshev approximation.')
-                eigvals = approx_eigvals(K)
-            else:
-                eigvals = exact_eigvals(K)
-            if verbose: print('Eigenvalues computed.')
+            entries = K.reshape(-1)
+            entries = np.abs(entries)
+            prob = entries / entries.sum()
 
-            if eigval_save_path is not None:
-                os.makedirs(os.path.dirname(eigval_save_path), exist_ok=True)
-                # Save eigenvalues.
+        else:
+            if eigval_save_path is not None and os.path.exists(
+                    eigval_save_path):
+                if verbose:
+                    print('Loading pre-computed eigenvalues from %s' %
+                          eigval_save_path)
+                eigvals = np.load(eigval_save_path)['eigvals']
                 eigvals = eigvals.astype(
-                    eigval_save_precision)  # reduce storage space.
-                with open(eigval_save_path, 'wb+') as f:
-                    np.savez(f, eigvals=eigvals)
-                if verbose: print('Eigenvalues saved to %s' % eigval_save_path)
+                    np.float64)  # mitigate rounding error.
+                if verbose: print('Pre-computed eigenvalues loaded.')
 
-        # Eigenvalues may be negative. Only care about the magnitude, not the sign.
-        eigvals = np.abs(eigvals)
+            else:
+                if verbose: print('Computing diffusion matrix.')
+                # Note that `K` is a symmetric matrix with the same eigenvalues as the diffusion matrix `P`.
+                K = compute_diffusion_matrix(embedding_vectors,
+                                             sigma=gaussian_kernel_sigma)
+                if verbose: print('Diffusion matrix computed.')
 
-        # Power eigenvalues to `t` to mitigate effect of noise.
-        eigvals = eigvals**t
+                if verbose: print('Computing eigenvalues.')
+                if chebyshev_approx:
+                    if verbose: print('Using Chebyshev approximation.')
+                    eigvals = approx_eigvals(K)
+                else:
+                    eigvals = exact_eigvals(K)
+                if verbose: print('Eigenvalues computed.')
 
-        prob = eigvals / eigvals.sum()
+                if eigval_save_path is not None:
+                    os.makedirs(os.path.dirname(eigval_save_path),
+                                exist_ok=True)
+                    # Save eigenvalues.
+                    eigvals = eigvals.astype(
+                        eigval_save_precision)  # reduce storage space.
+                    with open(eigval_save_path, 'wb+') as f:
+                        np.savez(f, eigvals=eigvals)
+                    if verbose:
+                        print('Eigenvalues saved to %s' % eigval_save_path)
+
+            # Eigenvalues may be negative. Only care about the magnitude, not the sign.
+            eigvals = np.abs(eigvals)
+
+            # Power eigenvalues to `t` to mitigate effect of noise.
+            eigvals = eigvals**t
+
+            prob = eigvals / eigvals.sum()
 
     else:
         # Computing Classic Shannon Entropy.
@@ -159,7 +183,9 @@ if __name__ == '__main__':
     DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors)
     print('DSE =', DSE)
 
-    print('\n2nd run, random vecs, saving eigvals (np.float16).')
+    print(
+        '\n2nd run, random vecs, saving eigvals (np.float16). May be slightly off due to float16 saving.'
+    )
     tmp_path = './test_dse_eigval.npz'
     embedding_vectors = np.random.uniform(0, 1, (1000, 256))
     DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
@@ -194,3 +220,11 @@ if __name__ == '__main__':
     CSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
                                      classic_shannon_entropy=True)
     print('CSE =', CSE)
+
+    print(
+        '\n7th run, Entropy on diffusion matrix entries rather than eigenvalues.'
+    )
+    embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+    DSE_matrix_entry = diffusion_spectral_entropy(
+        embedding_vectors=embedding_vectors, matrix_entry_entropy=True)
+    print('DSE-matrix-entry =', DSE_matrix_entry)

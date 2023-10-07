@@ -279,8 +279,6 @@ def run(config: AttributeHashmap) -> None:
 
     conv_init_std_list = []
     dse_Z_list = []
-    # dsmi_Z_Y_list = []
-    # dsmi_Z_X_list = []
 
     for conv_init_std in [1e-3, 1e-2, 2e-2, 3e-2, 4e-2, 5e-2, 8e-2, 1e-1]:
         model.init_params(conv_init_std=conv_init_std)
@@ -297,8 +295,6 @@ def run(config: AttributeHashmap) -> None:
 
         conv_init_std_list.append(conv_init_std)
         dse_Z_list.append(dse_Z)
-        # dsmi_Z_Y_list.append(dsmi_Z_Y)
-        # dsmi_Z_X_list.append(dsmi_Z_X)
 
         plt.rcParams['font.family'] = 'serif'
         plt.rcParams['legend.fontsize'] = 12
@@ -308,14 +304,8 @@ def run(config: AttributeHashmap) -> None:
         ax.plot(conv_init_std_list, dse_Z_list, marker='o', c='darkblue')
         ax.set_ylabel(r'DSE $S_D$(Z)', fontsize=12)
         ax.set_xlabel('Conv. Layer Initialization std.', fontsize=12)
-        # ax = fig.add_subplot(2, 1, 2)
-        # ax.spines[['right', 'top']].set_visible(False)
-        # ax.plot(conv_init_std_list, dsmi_Z_X_list, marker='o', c='mediumblue')
-        # ax.plot(conv_init_std_list, dsmi_Z_Y_list, marker='o', c='crimson')
-        # ax.legend(['DSMI(Z; X)', 'DSMI(Z; Y)'])
-        # ax.set_xlabel('Conv init std', fontsize=12)
-        # ax.tick_params(axis='both', which='major', labelsize=12)
-        fig.savefig('init_method_test')
+        os.makedirs('./check_init/', exist_ok=True)
+        fig.savefig('./check_init/init_method_%s_%s' % (config.dataset, config.model))
     return
 
 

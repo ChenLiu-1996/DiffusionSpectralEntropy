@@ -106,7 +106,7 @@ if __name__ == '__main__':
     # Initialization Experiments, take training history.
     training_history_dict = {}
     for conv_init_std in args.conv_init_std:
-        save_path_numpy = '%s/old/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
+        save_path_numpy = '%s/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
             config.output_save_path, config.dataset, config.method,
             config.model, conv_init_std, config.random_seed, 'results.npz')
         results_dict = np.load(save_path_numpy)

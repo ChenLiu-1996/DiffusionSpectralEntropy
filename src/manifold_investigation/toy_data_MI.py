@@ -146,7 +146,7 @@ if __name__ == '__main__':
 
     for num_branch_idx, corruption_ratio, gs_y in zip(
         [0, 0, 0, 1, 1, 1, 2, 2, 2],
-        [1.0, 0.5, 0.0, 1.0, 0.5, 0.0, 1.0, 0.5, 0.0],
+        [0.0, 0.5, 1.0, 0.0, 0.5, 1.0, 0.0, 0.5, 1.0],
         [0, 1, 2, 3, 4, 5, 6, 7, 8]):
         ax = fig_mi.add_subplot(gs[0, gs_y], projection='3d')
         ax.spines[['right', 'top']].set_visible(False)
@@ -182,7 +182,7 @@ if __name__ == '__main__':
             r'$t$ = %d, |noise| = %d%%' % (t, noise * 100) for t in t_list
             for noise in noise_level_list
         ],
-                  loc='upper left',
+                  loc='upper right',
                   ncol=2)
         for j in range(len(t_list)):
             for k in range(len(noise_level_list)):
@@ -198,7 +198,6 @@ if __name__ == '__main__':
                            axis=0),
                     color=cm.get_cmap('tab10').colors[j],
                     alpha=0.2)
-        ax.invert_xaxis()
         ax.axhline(y=0, color='gray', linestyle='-.')
         ax.tick_params(axis='both', which='major', labelsize=20)
         if num_branch_idx == 0:
@@ -216,7 +215,7 @@ if __name__ == '__main__':
                     linestyle=linestyle_list[k])
         ax.legend(
             [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
-            loc='upper left',
+            loc='upper right',
             ncol=1)
         for k in range(len(noise_level_list)):
             ax.fill_between(
@@ -229,7 +228,6 @@ if __name__ == '__main__':
                 np.std(mi_Y_shannon_list_tree[num_branch_idx, k, ...], axis=0),
                 color=cm.get_cmap('tab10').colors[-1],
                 alpha=0.2)
-        ax.invert_xaxis()
         ax.axhline(y=0, color='gray', linestyle='-.')
         ax.tick_params(axis='both', which='major', labelsize=20)
         ax.set_xlabel('Label Corruption Ratio', fontsize=25)
