@@ -142,7 +142,7 @@ if __name__ == '__main__':
     num_repetition = 2
 
     method_list = [
-        'CSMI_bin5', 'CSMI_bin10', 'CSMI_bin100', 'NPEET', 'MINE', 'DSMI'
+        'CSMI_bin5', 'CSMI_bin10', 'CSMI_bin100', 'NPEET', 'MINE', 'DSMI', 'DMEE'
     ]
 
     mi_by_corruption_d_20_dict = {}
@@ -175,6 +175,17 @@ if __name__ == '__main__':
                     diffusion_spectral_mutual_information(
                         embedding_vectors=blobs_data,
                         reference_vectors=blobs_label,
+                        reference_discrete=True,
+                        t=1,
+                        gaussian_kernel_sigma=np.sqrt(default_dim),
+                        chebyshev_approx=False,
+                        random_seed=rep)[0])
+                
+                mi_by_corruption_d_20_dict['DMEE'][i][j].append(
+                    diffusion_spectral_mutual_information(
+                        embedding_vectors=blobs_data,
+                        reference_vectors=blobs_label,
+                        matrix_entry_entropy=True,
                         reference_discrete=True,
                         t=1,
                         gaussian_kernel_sigma=np.sqrt(default_dim),
@@ -251,6 +262,17 @@ if __name__ == '__main__':
                         gaussian_kernel_sigma=np.sqrt(default_dim),
                         chebyshev_approx=False,
                         random_seed=rep)[0])
+                
+                mi_by_corruption_d_100_dict['DMEE'][i][j].append(
+                    diffusion_spectral_mutual_information(
+                        embedding_vectors=blobs_data,
+                        reference_vectors=blobs_label,
+                        matrix_entry_entropy=True,
+                        reference_discrete=True,
+                        t=1,
+                        gaussian_kernel_sigma=np.sqrt(default_dim),
+                        chebyshev_approx=False,
+                        random_seed=rep)[0])
 
                 mi_by_corruption_d_100_dict['CSMI_bin5'][i][j].append(
                     diffusion_spectral_mutual_information(
@@ -314,6 +336,17 @@ if __name__ == '__main__':
                     diffusion_spectral_mutual_information(
                         embedding_vectors=blobs_data,
                         reference_vectors=blobs_label,
+                        reference_discrete=True,
+                        t=1,
+                        gaussian_kernel_sigma=np.sqrt(dim),
+                        chebyshev_approx=False,
+                        random_seed=rep)[0])
+                
+                mi_by_dim_dict['DMEE'][i][j].append(
+                    diffusion_spectral_mutual_information(
+                        embedding_vectors=blobs_data,
+                        reference_vectors=blobs_label,
+                        matrix_entry_entropy=True,
                         reference_discrete=True,
                         t=1,
                         gaussian_kernel_sigma=np.sqrt(dim),
