@@ -98,7 +98,7 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
 
         if matrix_entry_entropy:
             if verbose: print('Computing diffusion matrix.')
-            # Note that `K` is a symmetric matrix with the same eigenvalues as the diffusion matrix `P`.
+            # Compute diffusion matrix `P`.
             K = compute_diffusion_matrix(embedding_vectors,
                                          sigma=gaussian_kernel_sigma)
             # Row normalize to get proper row stochastic matrix P
