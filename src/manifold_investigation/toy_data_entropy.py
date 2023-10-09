@@ -83,8 +83,12 @@ if __name__ == '__main__':
                 # DMEE
                 D_inv = np.diag(1.0 / np.sum(matrix, axis=1))
                 diffusion_matrix = D_inv @ matrix
-                dmee = diffusion_spectral_entropy(
-                    embedding_vectors=diffusion_matrix, matrix_entry_entropy=True)
+                entries = diffusion_matrix.reshape(-1)
+                entries = np.abs(entries)
+                prob = entries / entries.sum()
+                prob = prob + np.finfo(float).eps
+                dmee = -np.sum(prob * np.log2(prob))
+                
                 dmee_list_matrix[j][i].append(dmee)
 
         for dim in tqdm(dim_list):
@@ -104,9 +108,8 @@ if __name__ == '__main__':
                         se = shannon_entropy(embeddings)
                         se_list_uniform[k][i].append(se)
                         
-                        D_inv = np.diag(1.0 / np.sum(diffusion_matrix, axis=1))
                         dmee = diffusion_spectral_entropy(
-                                embedding_vectors=D_inv@diffusion_matrix, 
+                                embedding_vectors=embeddings, 
                                 matrix_entry_entropy=True)
                         dmee_list_uniform[k][i].append(dmee)
 
@@ -124,9 +127,8 @@ if __name__ == '__main__':
                         se = shannon_entropy(embeddings)
                         se_list_gaussian[k][i].append(se)
 
-                        D_inv = np.diag(1.0 / np.sum(diffusion_matrix, axis=1))
                         dmee = diffusion_spectral_entropy(
-                                embedding_vectors=D_inv@diffusion_matrix, 
+                                embedding_vectors=embeddings, 
                                 matrix_entry_entropy=True)
                         dmee_list_gaussian[k][i].append(dmee)
 
