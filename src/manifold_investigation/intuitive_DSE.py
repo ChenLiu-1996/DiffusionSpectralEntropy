@@ -31,12 +31,15 @@ def force_aspect(ax):
     xmin_, xmax_ = ax.get_xlim()
     ymin_, ymax_ = ax.get_ylim()
     aspect = (xmax_ - xmin_) / (ymax_ - ymin_)
-    ax.set_aspect(aspect=aspect, adjustable='box')
+    aspect = 1 / 1
+    #ax.set_aspect(aspect=aspect, adjustable='box')
+
+    ax.set_aspect('equal')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--transform', action='store_true')
+    parser.add_argument('--transform', action='store_false')
 
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
@@ -47,16 +50,18 @@ if __name__ == '__main__':
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams['legend.fontsize'] = 15
 
-    num_classes = 5
+    num_classes = 3
     cluster_std = 1
-    cluster_std_lists = [1.0, 1.0, 1.0, 1.0, 1.0]
+    cluster_std_lists = [1.0, 1.0, 1.0]
     center_box = (-30.0, 30.0)
 
-    N = 1000 * num_classes
+    #N = 1000 * num_classes
+    N = 3000
     save_path_fig = '%s/intuitive_DSE.png' % (save_root)
 
     D_list = [2, 3]
-    t_list = list(range(5))
+    t_list = list(range(1, 1000))
+    strech_factor = 3
 
     separated_DSEs = [[[] for _ in range(len(t_list))]
                        for _ in range(len(D_list))]
@@ -73,9 +78,11 @@ if __name__ == '__main__':
             center_box=center_box)
         labels = labels.reshape(N, 1)
         if args.transform == True:
-            transformation = np.random.normal(loc=0,
-                                                scale=0.3,
-                                                size=(dim, dim))  # D x D
+            # transformation = np.random.normal(loc=0,
+            #                                     scale=0.3,
+            #                                     size=(dim, dim))  # D x D
+            transformation = np.diag(np.ones(dim))
+            transformation[0,0] = strech_factor
             embeddings = np.dot(embeddings, transformation)
         embeddings /= np.sqrt(dim)
         
@@ -99,7 +106,12 @@ if __name__ == '__main__':
                                             n_features=dim,
                                             centers=1,
                                             cluster_std=cluster_std)
+        if args.transform == True:
+            transformation = np.diag(np.ones(dim))
+            transformation[0,0] = strech_factor
+            embeddings = np.dot(embeddings, transformation)
         embeddings /= np.sqrt(dim)
+
         num_per_class = N // num_classes
         labels = np.zeros(N)
         # Randomly assign class labels
@@ -132,6 +144,7 @@ if __name__ == '__main__':
     fig_mi = plt.figure(figsize=(28, 10))
     gs = GridSpec(3, 4, figure=fig_mi)
 
+    # Visualize multiple blobs
     for dim, gs_x, gs_y in zip([2, 3], [0, 0], [0, 1]):
         if dim == 3:
             ax = fig_mi.add_subplot(gs[gs_x, gs_y], projection='3d')
@@ -147,12 +160,14 @@ if __name__ == '__main__':
                                                  random_state=0)
         if args.transform == True:
             #transformation = np.random.randn(dim, dim)# D x D
-            transformation = np.random.normal(loc=0,
-                                              scale=0.3,
-                                              size=(dim, dim))  # D x D
+            # transformation = np.random.normal(loc=0,
+            #                                   scale=0.3,
+            #                                   size=(dim, dim))  # D x D
+            transformation = np.diag(np.ones(dim))
+            transformation[0,0] = strech_factor
             embeddings = np.dot(embeddings, transformation)
         if dim == 2:
-            for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:cyan']):
+            for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green']):
                 inds = np.where(labels == k)
                 ax.scatter(embeddings[inds, 0],
                            embeddings[inds, 1],
@@ -160,15 +175,16 @@ if __name__ == '__main__':
                            alpha=0.5)
                 force_aspect(ax)
         elif dim == 3:
-            for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:cyan']):
+            for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green']):
                 inds = np.where(labels == k)
                 ax.scatter(embeddings[inds, 0],
                            embeddings[inds, 1],
                            embeddings[inds, 2],
                            color=color,
                            alpha=0.5)
+                #force_aspect(ax)
 
-
+    # Visualize single blob
     for dim, gs_x, gs_y in zip([2, 3], [0, 0], [2, 3]):
         if dim == 3:
             ax = fig_mi.add_subplot(gs[gs_x, gs_y], projection='3d')
@@ -181,6 +197,14 @@ if __name__ == '__main__':
                                             centers=1,
                                             cluster_std=cluster_std,
                                             random_state=0)
+        if args.transform == True:
+        #transformation = np.random.randn(dim, dim)# D x D
+        # transformation = np.random.normal(loc=0,
+        #                                   scale=0.3,
+        #                                   size=(dim, dim))  # D x D
+            transformation = np.diag(np.ones(dim))
+            transformation[0,0] = strech_factor
+            embeddings = np.dot(embeddings, transformation)
         num_per_class = N // num_classes
         labels = np.zeros(N)
         # Randomly assign class labels
@@ -192,7 +216,7 @@ if __name__ == '__main__':
         labels = labels - 1  # class 1,2,3 -> class 0,1,2
 
         if dim == 2:
-            for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:cyan']):
+            for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green']):
                 inds = np.where(labels == k)
                 ax.scatter(embeddings[inds, 0],
                            embeddings[inds, 1],
@@ -200,13 +224,14 @@ if __name__ == '__main__':
                            alpha=0.5)
                 force_aspect(ax)
         elif dim == 3:
-            for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green', 'tab:purple', 'tab:cyan']):
+            for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green']):
                 inds = np.where(labels == k)
                 ax.scatter(embeddings[inds, 0],
                            embeddings[inds, 1],
                            embeddings[inds, 2],
                            color=color,
                            alpha=0.5)
+                force_aspect(ax)
 
     # DSE vs. t
     ymin = min([np.min(separated_DSEs[0:2]),
@@ -216,7 +241,7 @@ if __name__ == '__main__':
     
     ax = fig_mi.add_subplot(gs[1:3, 0:1])
     ax.spines[['right', 'top']].set_visible(False)
-    ax.plot(separated_DSEs[0])
+    ax.plot(t_list, separated_DSEs[0], marker='o', color='black')
     ax.set_ylim([ymin, ymax])
     ax.set_xlabel('Diffusion $t$', fontsize=25)
     ax.set_ylabel('DSE', fontsize=25)
@@ -224,7 +249,7 @@ if __name__ == '__main__':
 
     ax = fig_mi.add_subplot(gs[1:3, 1:2])
     ax.spines[['right', 'top']].set_visible(False)
-    ax.plot(separated_DSEs[1])
+    ax.plot(t_list, separated_DSEs[1], marker='o', color='black')
     ax.set_ylim([ymin, ymax])
     ax.set_xlabel('Diffusion $t$', fontsize=25)
     ax.tick_params(axis='both', which='major', labelsize=20)
@@ -232,14 +257,14 @@ if __name__ == '__main__':
 
     ax = fig_mi.add_subplot(gs[1:3, 2:3])
     ax.spines[['right', 'top']].set_visible(False)
-    ax.plot(single_DSEs[0])
+    ax.plot(t_list, single_DSEs[0], marker='o', color='black')
     ax.set_ylim([ymin, ymax])
     ax.set_xlabel('Diffusion $t$', fontsize=25)
     ax.tick_params(axis='both', which='major', labelsize=20)
 
     ax = fig_mi.add_subplot(gs[1:3, 3:4])
     ax.spines[['right', 'top']].set_visible(False)
-    ax.plot(single_DSEs[1])
+    ax.plot(t_list, single_DSEs[1], marker='o', color='black')
     ax.set_ylim([ymin, ymax])
     ax.set_xlabel('Diffusion $t$', fontsize=25)
     ax.tick_params(axis='both', which='major', labelsize=20)
