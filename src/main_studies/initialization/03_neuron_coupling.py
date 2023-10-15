@@ -85,11 +85,6 @@ if __name__ == '__main__':
                         type=int,
                         default=100)
     parser.add_argument(
-        '--summary-bins',
-        help='Number of bins for summary histogram, should be much smaller',
-        type=int,
-        default=5)
-    parser.add_argument(
         '--conv-init-std',
         help='conv block initialization std (please use this format: 1e-3)',
         type=str,
@@ -105,7 +100,6 @@ if __name__ == '__main__':
     config.gpu_id = args.gpu_id
     config.model = args.model
     config.num_bins = args.num_bins
-    config.summary_bins = args.summary_bins
 
     if args.random_seed is not None:
         config.random_seed = args.random_seed
