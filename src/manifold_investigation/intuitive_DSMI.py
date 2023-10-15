@@ -18,28 +18,21 @@ import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-2])
 sys.path.insert(0, import_dir + '/utils/')
 sys.path.insert(0, import_dir + '/embedding_preparation')
 from attribute_hashmap import AttributeHashmap
-from information import exact_eigvals, von_neumann_entropy, shannon_entropy
-from diffusion import compute_diffusion_matrix
-
-import_dir = '/'.join(os.path.realpath(__file__).split('/')[:-3])
-sys.path.insert(0, import_dir + '/api/')
-from dse import diffusion_spectral_entropy
-from dsmi import diffusion_spectral_mutual_information
+from information import mutual_information_per_class_random_sample
 
 
 def force_aspect(ax):
     xmin_, xmax_ = ax.get_xlim()
     ymin_, ymax_ = ax.get_ylim()
     aspect = (xmax_ - xmin_) / (ymax_ - ymin_)
-    aspect = 1 / 1
-    #ax.set_aspect(aspect=aspect, adjustable='box')
-
-    ax.set_aspect('equal')
+    ax.set_aspect(aspect=aspect, adjustable='box')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--transform', action='store_false')
+    parser.add_argument('--random-seed', type=int, default=0)
+    parser.add_argument('--gaussian-kernel-sigma', type=float, default=1)
+    parser.add_argument('--transform', action='store_true')
 
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
@@ -55,96 +48,84 @@ if __name__ == '__main__':
     cluster_std_lists = [1.0, 1.0, 1.0]
     center_box = (-30.0, 30.0)
 
-    #N = 1000 * num_classes
-    N = 3000
-    save_path_fig = '%s/intuitive_DSE.png' % (save_root)
+    N = 1000 * num_classes
+    save_path_fig = '%s/intuitive-DSMI.png' % (save_root)
+
+    num_repetition = 5
 
     D_list = [2, 3]
-    t_list = list(range(1, 1000))
-    strech_factor = 3
+    t_list = [1, 2, 3, 4, 5, 10, 100, 1000]
 
-    separated_DSEs = [[[] for _ in range(len(t_list))]
-                      for _ in range(len(D_list))]
-    single_DSEs = [[[] for _ in range(len(t_list))]
-                   for _ in range(len(D_list))]
+    separated_mi_Ys = [[[[] for _ in range(num_repetition)]
+                        for _ in range(len(t_list))]
+                       for _ in range(len(D_list))]
+    single_mi_Ys = [[[[] for _ in range(num_repetition)]
+                     for _ in range(len(t_list))] for _ in range(len(D_list))]
 
-    # Multiple blobs
-    for d, dim in enumerate(D_list):
-        embeddings, labels = datasets.make_blobs(n_samples=N,
-                                                 n_features=dim,
-                                                 centers=num_classes,
-                                                 cluster_std=cluster_std_lists,
-                                                 center_box=center_box)
-        labels = labels.reshape(N, 1)
-        if args.transform == True:
-            # transformation = np.random.normal(loc=0,
-            #                                     scale=0.3,
-            #                                     size=(dim, dim))  # D x D
-            transformation = np.diag(np.ones(dim))
-            transformation[0,0] = strech_factor
-            embeddings = np.dot(embeddings, transformation)
-        embeddings /= np.sqrt(dim)
+    for k in tqdm(range(num_repetition)):
+        for d, dim in enumerate(D_list):
+            embeddings, labels = datasets.make_blobs(
+                n_samples=N,
+                n_features=dim,
+                centers=num_classes,
+                cluster_std=cluster_std_lists,
+                center_box=center_box,
+                random_state=k)
+            labels = labels.reshape(N, 1)
+            if args.transform == True:
+                transformation = np.random.normal(loc=0,
+                                                  scale=0.3,
+                                                  size=(dim, dim))  # D x D
+                embeddings = np.dot(embeddings, transformation)
+            embeddings /= np.sqrt(dim)
+            embeddings[:, 0] = embeddings[:, 0] * 3
+            for j, t in enumerate(t_list):
+                mi_Y, _, H_ZgivenY = mutual_information_per_class_random_sample(
+                    embeddings=embeddings,
+                    labels=labels,
+                    H_ZgivenY_map=None,
+                    sigma=args.gaussian_kernel_sigma,
+                    vne_t=t,
+                )
+                separated_mi_Ys[d][j][k] = mi_Y
 
-        # DSE
-        for j, t in enumerate(tqdm(t_list)):
-            diffusion_matrix = compute_diffusion_matrix(embeddings,
-                                                        sigma=np.sqrt(dim))
-            eigvals = exact_eigvals(diffusion_matrix)
-            eigvals = np.abs(eigvals)
-            # Power eigenvalues to `t` to mitigate effect of noise.
-            eigvals = eigvals**t
-            prob = eigvals / eigvals.sum()
-            prob = prob + np.finfo(float).eps
-            dse = -np.sum(prob * np.log2(prob))
+    for k in tqdm(range(num_repetition)):
+        for d, dim in enumerate(D_list):
+            embeddings, _ = datasets.make_blobs(n_samples=N,
+                                                n_features=dim,
+                                                centers=1,
+                                                cluster_std=cluster_std,
+                                                random_state=k)
+            embeddings /= np.sqrt(dim)
+            embeddings[:, 0] = embeddings[:, 0] * 3
+            num_per_class = N // num_classes
+            labels = np.zeros(N)
+            # Randomly assign class labels
+            for i in range(1, num_classes + 1):
+                inds = np.random.choice(np.where(labels == 0)[0],
+                                        num_per_class,
+                                        replace=False)
+                labels[inds] = i
+            labels = labels - 1  # class 1,2,3 -> class 0,1,2
+            labels = labels.reshape(N, 1)
 
-            separated_DSEs[d][j] = dse
+            for j, t in enumerate(t_list):
+                mi_Y, _, _ = mutual_information_per_class_random_sample(
+                    embeddings=embeddings,
+                    labels=labels,
+                    H_ZgivenY_map=None,
+                    sigma=args.gaussian_kernel_sigma,
+                    vne_t=t,
+                )
+                single_mi_Ys[d][j][k] = mi_Y
 
-    # Single blob
-    for d, dim in enumerate(D_list):
-        embeddings, _ = datasets.make_blobs(n_samples=N,
-                                            n_features=dim,
-                                            centers=1,
-                                            cluster_std=cluster_std)
-        if args.transform == True:
-            transformation = np.diag(np.ones(dim))
-            transformation[0,0] = strech_factor
-            embeddings = np.dot(embeddings, transformation)
-        embeddings /= np.sqrt(dim)
-
-        num_per_class = N // num_classes
-        labels = np.zeros(N)
-        # Randomly assign class labels
-        for i in range(1, num_classes + 1):
-            inds = np.random.choice(np.where(labels == 0)[0],
-                                    num_per_class,
-                                    replace=False)
-            labels[inds] = i
-        labels = labels - 1  # class 1,2,3 -> class 0,1,2
-        labels = labels.reshape(N, 1)
-
-        #DSE
-        for j, t in enumerate(tqdm(t_list)):
-            diffusion_matrix = compute_diffusion_matrix(embeddings,
-                                                        sigma=np.sqrt(dim))
-            eigvals = exact_eigvals(diffusion_matrix)
-            eigvals = np.abs(eigvals)
-            # Power eigenvalues to `t` to mitigate effect of noise.
-            eigvals = eigvals**t
-            prob = eigvals / eigvals.sum()
-            prob = prob + np.finfo(float).eps
-            dse = -np.sum(prob * np.log2(prob))
-
-            single_DSEs[d][j] = dse
-
-    separated_DSEs = np.array(separated_DSEs)
-    single_mi_DSEs = np.array(single_DSEs)
-
-    print(separated_DSEs.shape, single_mi_DSEs)
+    separated_mi_Ys = np.array(separated_mi_Ys)
+    single_mi_Ys = np.array(single_mi_Ys)
+    # print(separated_mi_Ys.shape, single_mi_Ys)
 
     fig_mi = plt.figure(figsize=(28, 10))
     gs = GridSpec(3, 4, figure=fig_mi)
 
-    # Visualize multiple blobs
     for dim, gs_x, gs_y in zip([2, 3], [0, 0], [0, 1]):
         if dim == 3:
             ax = fig_mi.add_subplot(gs[gs_x, gs_y], projection='3d')
@@ -160,12 +141,11 @@ if __name__ == '__main__':
                                                  random_state=0)
         if args.transform == True:
             #transformation = np.random.randn(dim, dim)# D x D
-            # transformation = np.random.normal(loc=0,
-            #                                   scale=0.3,
-            #                                   size=(dim, dim))  # D x D
-            transformation = np.diag(np.ones(dim))
-            transformation[0,0] = strech_factor
+            transformation = np.random.normal(loc=0,
+                                              scale=0.3,
+                                              size=(dim, dim))  # D x D
             embeddings = np.dot(embeddings, transformation)
+        embeddings[:, 0] = embeddings[:, 0] * 3
         if dim == 2:
             for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green']):
                 inds = np.where(labels == k)
@@ -173,7 +153,7 @@ if __name__ == '__main__':
                            embeddings[inds, 1],
                            color=color,
                            alpha=0.5)
-                force_aspect(ax)
+                # force_aspect(ax)
         elif dim == 3:
             for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green']):
                 inds = np.where(labels == k)
@@ -182,9 +162,7 @@ if __name__ == '__main__':
                            embeddings[inds, 2],
                            color=color,
                            alpha=0.5)
-                #force_aspect(ax)
 
-    # Visualize single blob
     for dim, gs_x, gs_y in zip([2, 3], [0, 0], [2, 3]):
         if dim == 3:
             ax = fig_mi.add_subplot(gs[gs_x, gs_y], projection='3d')
@@ -197,14 +175,7 @@ if __name__ == '__main__':
                                             centers=1,
                                             cluster_std=cluster_std,
                                             random_state=0)
-        if args.transform == True:
-        #transformation = np.random.randn(dim, dim)# D x D
-        # transformation = np.random.normal(loc=0,
-        #                                   scale=0.3,
-        #                                   size=(dim, dim))  # D x D
-            transformation = np.diag(np.ones(dim))
-            transformation[0,0] = strech_factor
-            embeddings = np.dot(embeddings, transformation)
+        embeddings[:, 0] = embeddings[:, 0] * 3
         num_per_class = N // num_classes
         labels = np.zeros(N)
         # Randomly assign class labels
@@ -222,7 +193,7 @@ if __name__ == '__main__':
                            embeddings[inds, 1],
                            color=color,
                            alpha=0.5)
-                force_aspect(ax)
+                # force_aspect(ax)
         elif dim == 3:
             for k, color in enumerate(['tab:blue', 'tab:orange', 'tab:green']):
                 inds = np.where(labels == k)
@@ -231,41 +202,44 @@ if __name__ == '__main__':
                            embeddings[inds, 2],
                            color=color,
                            alpha=0.5)
-                force_aspect(ax)
 
-    # DSE vs. t
-    ymin = min([np.min(separated_DSEs[0:2]), np.min(single_DSEs[0:2])]) - 0.1
-    ymax = max([np.max(separated_DSEs[0:2]), np.max(single_DSEs[0:2])]) + 0.1
-
+    # MI vs. t
+    ymin = min([np.min(separated_mi_Ys[0:2].T),
+                np.min(single_mi_Ys[0:2].T)]) - 0.1
+    ymax = max([np.max(separated_mi_Ys[0:2].T),
+                np.max(single_mi_Ys[0:2].T)]) + 0.1
     ax = fig_mi.add_subplot(gs[1:3, 0:1])
     ax.spines[['right', 'top']].set_visible(False)
-    ax.plot(t_list, separated_DSEs[0], marker='o', color='black')
+    ax.boxplot(separated_mi_Ys[0].T, sym='')
+    ax.set_xticklabels(t_list)
     ax.set_ylim([ymin, ymax])
     ax.set_xlabel('Diffusion $t$', fontsize=25)
-    ax.set_ylabel('DSE', fontsize=25)
+    ax.set_ylabel('DSMI', fontsize=25)
     ax.tick_params(axis='both', which='major', labelsize=20)
-
     ax = fig_mi.add_subplot(gs[1:3, 1:2])
     ax.spines[['right', 'top']].set_visible(False)
-    ax.plot(t_list, separated_DSEs[1], marker='o', color='black')
+    ax.boxplot(separated_mi_Ys[1].T, sym='')
+    ax.set_xticklabels(t_list)
     ax.set_ylim([ymin, ymax])
     ax.set_xlabel('Diffusion $t$', fontsize=25)
     ax.tick_params(axis='both', which='major', labelsize=20)
 
     ax = fig_mi.add_subplot(gs[1:3, 2:3])
     ax.spines[['right', 'top']].set_visible(False)
-    ax.plot(t_list, single_DSEs[0], marker='o', color='black')
+    ax.boxplot(single_mi_Ys[0].T, sym='')
+    ax.set_xticklabels(t_list)
     ax.set_ylim([ymin, ymax])
     ax.set_xlabel('Diffusion $t$', fontsize=25)
     ax.tick_params(axis='both', which='major', labelsize=20)
 
     ax = fig_mi.add_subplot(gs[1:3, 3:4])
     ax.spines[['right', 'top']].set_visible(False)
-    ax.plot(t_list, single_DSEs[1], marker='o', color='black')
+    ax.boxplot(single_mi_Ys[1].T, sym='')
+    ax.set_xticklabels(t_list)
     ax.set_ylim([ymin, ymax])
     ax.set_xlabel('Diffusion $t$', fontsize=25)
     ax.tick_params(axis='both', which='major', labelsize=20)
 
     fig_mi.tight_layout()
-    fig_mi.savefig(save_path_fig)
+    fig_mi.savefig(save_path_fig, bbox_inches='tight')
     plt.close(fig=fig_mi)

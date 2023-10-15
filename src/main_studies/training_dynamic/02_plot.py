@@ -185,13 +185,14 @@ def plot_main_figure(metric: str, fig_save_path: str) -> None:
                     ax1.legend(handles=legend_elements, fontsize=14, ncol=2)
             if vits_metric_list is not None:
                 for network_idx in range(len(NETWORK_LIST_VIT)):
-                    ax2.scatter(vits_acc_list[..., network_idx],
-                                vits_metric_list[..., network_idx],
-                                color=my_palette[method_idx],
-                                s=100,
-                                alpha=0.2,
-                                marker=LEGEND_MARKER_LIST[network_idx],
-                                label='_nolegend_')
+                    for seed_idx in range(len(SEED_LIST)):
+                        ax2.scatter(vits_acc_list[:, seed_idx, network_idx],
+                                    vits_metric_list[:, seed_idx, network_idx],
+                                    color=my_palette[method_idx],
+                                    s=100,
+                                    alpha=0.2,
+                                    marker=LEGEND_MARKER_LIST[network_idx],
+                                    label='_nolegend_')
                 if gs_y == 0:
                     legend_elements = []
                     for network_idx, network in enumerate(NETWORK_LIST_VIT):

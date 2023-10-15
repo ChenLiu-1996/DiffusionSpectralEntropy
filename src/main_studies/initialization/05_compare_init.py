@@ -65,7 +65,6 @@ if __name__ == '__main__':
                         help='Available GPU index.',
                         type=int,
                         default=0)
-    parser.add_argument('--knn', help='k for knn graph.', type=int, default=10)
     parser.add_argument(
         '--random-seed',
         help='Only enter if you want to override the config!!!',
@@ -75,11 +74,6 @@ if __name__ == '__main__':
                         help='Number of bins for histogram',
                         type=int,
                         default=100)
-    parser.add_argument(
-        '--summary-bins',
-        help='Number of bins for summary histogram, should be much smaller',
-        type=int,
-        default=5)
 
     args = vars(parser.parse_args())
     args = AttributeHashmap(args)
@@ -91,10 +85,9 @@ if __name__ == '__main__':
     config.gpu_id = args.gpu_id
     config.model = args.model
     config.num_bins = args.num_bins
-    config.summary_bins = args.summary_bins
 
-    if args.random_seed is not None:
-        config.random_seed = args.random_seed
+    # NOTE: Not customized. Assuming we have seeds [1, 2, 3].
+    random_seeds = [1, 2, 3]
 
     # NOTE: For simplicity of legend, I just manually set the std now.
     args.conv_init_std = ['1e-2', '1e-1']
@@ -106,19 +99,30 @@ if __name__ == '__main__':
     # Initialization Experiments, take training history.
     training_history_dict = {}
     for conv_init_std in args.conv_init_std:
-        save_path_numpy = '%s/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
-            config.output_save_path, config.dataset, config.method,
-            config.model, conv_init_std, config.random_seed, 'results.npz')
-        results_dict = np.load(save_path_numpy)
-        training_history_dict[conv_init_std] = {
-            'epoch': results_dict['epoch'],
-            'val_acc': results_dict['val_acc'],
-            'dse_Z': results_dict['dse_Z'],
-        }
+        for random_seed in random_seeds:
+            save_path_numpy = '%s/%s-%s-%s-ConvInitStd-%s-seed%s/%s' % (
+                config.output_save_path, config.dataset, config.method,
+                config.model, conv_init_std, random_seed, 'results.npz')
+            results_dict = np.load(save_path_numpy)
+            if conv_init_std not in training_history_dict.keys():
+                training_history_dict[conv_init_std] = {
+                    'epoch': results_dict['epoch'][None, ...],
+                    'val_acc': results_dict['val_acc'][None, ...],
+                    'dse_Z': results_dict['dse_Z'][None, ...],
+                }
+            else:
+                training_history_dict[conv_init_std]['epoch'] = \
+                    np.vstack((training_history_dict[conv_init_std]['epoch'], results_dict['epoch'][None, ...]))
+                training_history_dict[conv_init_std]['val_acc'] = \
+                    np.vstack((training_history_dict[conv_init_std]['val_acc'], results_dict['val_acc'][None, ...]))
+                training_history_dict[conv_init_std]['dse_Z'] = \
+                    np.vstack((training_history_dict[conv_init_std]['dse_Z'], results_dict['dse_Z'][None, ...]))
 
     save_path_fig = '%s/compare-%s-%s-%s-ConvInitStd-%s-seed%s' % (
         save_root, config.dataset, method_str, config.model, '-'.join(
-            [item for item in args.conv_init_std]), config.random_seed)
+            args.conv_init_std), '-'.join([str(item)
+                                           for item in random_seeds]))
+
     if config.dataset in ['mnist', 'cifar10', 'stl10']:
         num_classes = 10
     elif config.dataset in ['cifar100']:
@@ -145,41 +149,99 @@ if __name__ == '__main__':
     ax.spines[['right', 'top']].set_visible(False)
     for i, conv_init_std in enumerate(args.conv_init_std):
         ax.plot(
-            training_history_dict[conv_init_std]['epoch'][:15],
-            training_history_dict[conv_init_std]['dse_Z'][:15],
+            np.mean(training_history_dict[conv_init_std]['epoch'],
+                    axis=0)[:15],
+            np.mean(training_history_dict[conv_init_std]['dse_Z'],
+                    axis=0)[:15],
             color=my_palette[i],
             linestyle='-.',
+        )
+        ax.fill_between(
+            np.mean(training_history_dict[conv_init_std]['epoch'],
+                    axis=0)[:15],
+            np.mean(training_history_dict[conv_init_std]['dse_Z'],
+                    axis=0)[:15] -
+            np.std(training_history_dict[conv_init_std]['dse_Z'], axis=0)[:15],
+            np.mean(training_history_dict[conv_init_std]['dse_Z'],
+                    axis=0)[:15] +
+            np.std(training_history_dict[conv_init_std]['dse_Z'], axis=0)[:15],
+            color=my_palette[i],
+            alpha=0.2,
+            label='_nolegend_',
         )
     ax.legend([r'conv. init. std. = 0.01', r'conv. init. std. = 0.1'])
     ax.set_xlabel('Epochs Trained')
     ax.set_ylabel(r'DSE $S_D(Z)$')
 
     ax = fig.add_subplot(gs[1:])
+    box_x_min = 50
+    box_x_width = 152
+    box_y_min = 100
+    box_y_max = 0
+    for conv_init_std in args.conv_init_std:
+        box_y_min = min(
+            box_y_min,
+            np.min(training_history_dict[conv_init_std]['val_acc'][:,
+                                                                   box_x_min:])
+            - 1)
+        box_y_max = max(
+            box_y_max,
+            np.max(training_history_dict[conv_init_std]['val_acc'][:,
+                                                                   box_x_min:])
+            + 1)
+    box_y_height = box_y_max - box_y_min
     ax.spines[['right', 'top']].set_visible(False)
     ax.add_patch(
-        patches.Rectangle((50, 85),
-                          152,
-                          11,
+        patches.Rectangle((box_x_min, box_y_min),
+                          box_x_width,
+                          box_y_height,
                           linewidth=1,
                           linestyle='--',
                           edgecolor='darkgreen',
                           facecolor='none',
                           label='_nolegend_'))
 
-    rect = [0.35, 0.35, 0.6, 0.56]
+    rect = [0.3, 0.35, 0.7, 0.5]
     ax_sub = add_subplot_axes(ax, rect)
     ax_sub.spines[['right', 'top']].set_visible(False)
 
     for i, conv_init_std in enumerate(args.conv_init_std):
         ax.plot(
-            training_history_dict[conv_init_std]['epoch'],
-            training_history_dict[conv_init_std]['val_acc'],
+            np.mean(training_history_dict[conv_init_std]['epoch'], axis=0),
+            np.mean(training_history_dict[conv_init_std]['val_acc'], axis=0),
             color=my_palette[i],
         )
-        ax_sub.plot(
-            training_history_dict[conv_init_std]['epoch'][50:],
-            training_history_dict[conv_init_std]['val_acc'][50:],
+        ax.fill_between(
+            np.mean(training_history_dict[conv_init_std]['epoch'], axis=0),
+            np.mean(training_history_dict[conv_init_std]['val_acc'], axis=0) -
+            np.std(training_history_dict[conv_init_std]['val_acc'], axis=0),
+            np.mean(training_history_dict[conv_init_std]['val_acc'], axis=0) +
+            np.std(training_history_dict[conv_init_std]['val_acc'], axis=0),
             color=my_palette[i],
+            alpha=0.2,
+            label='_nolegend_',
+        )
+        ax_sub.plot(
+            np.mean(training_history_dict[conv_init_std]['epoch'],
+                    axis=0)[50:],
+            np.mean(training_history_dict[conv_init_std]['val_acc'],
+                    axis=0)[50:],
+            color=my_palette[i],
+            label='_nolegend_',
+        )
+        ax_sub.fill_between(
+            np.mean(training_history_dict[conv_init_std]['epoch'],
+                    axis=0)[50:],
+            np.mean(training_history_dict[conv_init_std]['val_acc'],
+                    axis=0)[50:] -
+            np.std(training_history_dict[conv_init_std]['val_acc'],
+                   axis=0)[50:],
+            np.mean(training_history_dict[conv_init_std]['val_acc'],
+                    axis=0)[50:] +
+            np.std(training_history_dict[conv_init_std]['val_acc'],
+                   axis=0)[50:],
+            color=my_palette[i],
+            alpha=0.2,
             label='_nolegend_',
         )
     ax.legend([
