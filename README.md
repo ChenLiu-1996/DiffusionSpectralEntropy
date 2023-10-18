@@ -7,7 +7,7 @@
 
 This is the **official** implementation of
 
-**Assessing Neural Network Representations During Training Using Data Diffusion Map Spectra**
+**Assessing Neural Network Representations During Training Using Noise-resilient Diffusion Spectral Entropy**
 
 <img src="assets/logos/Yale_logo.png" height="96"/> &emsp; <img src="assets/logos/Mila_logo.png" height="96"/> &emsp; <img src="assets/logos/MetaAI_logo.png" height="96"/>
 
@@ -109,8 +109,8 @@ DiffusionSpectralEntropy
 ## Citation
 ```
 @inproceedings{DiffusionSpectralEntropy,
-  title={Assessing Neural Network Representations During Training Using Data Diffusion Spectra},
-  author={Liao, Danqi and Liu, Chen and Tong, Alexander and Huguet, Guillaume and Wolf, Guy and Nickel, Maximilian and Adelstein, Ian and Krishnaswamy, Smita},
+  title={Assessing Neural Network Representations During Training Using Noise-resilient Diffusion Spectral Entropy},
+  author={Liao, Danqi and Liu, Chen and Christensen, Ben and Tong, Alexander and Huguet, Guillaume and Wolf, Guy and Nickel, Maximilian and Adelstein, Ian and Krishnaswamy, Smita},
   booktitle={ICML 2023 Workshop on Topology, Algebra and Geometry in Machine Learning (TAG-ML)},
   year={2023},
 }
