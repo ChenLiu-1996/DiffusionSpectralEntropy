@@ -61,7 +61,7 @@ Conceptually, we build a data graph from the neural network representations of a
 </br>
 </br>
 
-Next, we look at how well DSE and DSMI behave at higher dimensions. In the example above, we already see DSE can function well at high dimensions. In the figure below, we will show how DSMI outperforms other mutual information estimators when the dimension is high.
+We also look at how well DSE and DSMI behave at higher dimensions. In the example above, we already see DSE can function well at high dimensions. In the figure below, we will show how DSMI outperforms other mutual information estimators when the dimension is high.
 
 <img src="assets/toy_MI_blob.png" width="800">
 
