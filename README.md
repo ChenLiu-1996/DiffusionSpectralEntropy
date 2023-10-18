@@ -66,10 +66,9 @@ We also look at how well DSE and DSMI behave at higher dimensions. In the exampl
 <img src="assets/toy_MI_blob.png" width="800">
 
 </br>
-</br>
+
 
 ## Utilities
-
 One may ask, besides just peeking into the training dynamics of neural networks, how can we _REALLY_ use DSE and DSMI? Here comes the utility studies.
 
 ### Guiding network initialization with DSE
@@ -78,7 +77,6 @@ We sought to assess the effects of network initialization in terms of DSE. We we
 We found that if we initialize the convolutional layers with weights $\sim \mathcal{N}(0, \sigma)$, DSE $S_D(Z)$ is affected by $\sigma$. We then trained ResNet models with networks initialized at high ($\approx$ log(n)) versus low ($\approx 0$) DSE by setting $\sigma=0.1$ and $\sigma=0.01$, respectively. The training history suggests that initializing the network at a lower $S_D(Z)$ can improve the convergence speed and final performance. We believe this is because the high initial DSE from random initialization corresponds to an undesirable high-entropy state, which the network needs to get away from (causing the DSE decrease) before it migrates to the desirable high-entropy state (causing the DSE increase).
 
 <img src="assets/compare-cifar10-supervised-resnet-ConvInitStd-1e-2-1e-1-seed1-2-3.png" width="400"> <img src="assets/compare-stl10-supervised-resnet-ConvInitStd-1e-2-1e-1-seed1-2-3.png" width="400">
-
 
 ### ImageNet cross-model correlation
 By far, we have monitored DSE and DSMI **along the training process of the same model**. Now we will show how DSMI correlates with downstream classification accuracy **across many different pre-trained models**. The following result demonstrates the potential in using DSMI for pre-screening potentially competent models for your specialized dataset.
