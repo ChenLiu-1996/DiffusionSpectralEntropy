@@ -1,5 +1,5 @@
 import numpy as np
-from dse import diffusion_spectral_entropy
+from dse import diffusion_spectral_entropy, adjacency_spectral_entropy
 from sklearn.cluster import SpectralClustering
 import random
 
@@ -223,6 +223,8 @@ def adjacency_spectral_mutual_information(
         reference_vectors: np.array,
         reference_discrete: bool = None,
         gaussian_kernel_sigma: float = 10,
+        use_knn: bool = False,
+        anisotropic: bool = False,
         num_repetitions: int = 5,
         n_clusters: int = 10,
         precomputed_clusters: np.array = None,
@@ -314,7 +316,7 @@ def adjacency_spectral_mutual_information(
     if N_embedding != N_reference:
         if verbose:
             print(
-                'WARNING: DSMI embedding and reference do not have the same N: %s vs %s'
+                'WARNING: ASMI embedding and reference do not have the same N: %s vs %s'
                 % (N_embedding, N_reference))
 
     if reference_discrete is None:
@@ -361,7 +363,7 @@ def adjacency_spectral_mutual_information(
                                             return_counts=True)
 
     #
-    '''STEP 2. Compute DSMI.'''
+    '''STEP 2. Compute ASMI.'''
     MI_by_class = []
 
     for cluster_idx in clusters_list:
@@ -369,16 +371,13 @@ def adjacency_spectral_mutual_information(
         inds = (precomputed_clusters == cluster_idx).reshape(-1)
         embeddings_curr_class = embedding_vectors[inds, :]
 
-        entropy_AgivenB_curr_class = diffusion_spectral_entropy(
+        entropy_AgivenB_curr_class = adjacency_spectral_entropy(
             embedding_vectors=embeddings_curr_class,
             gaussian_kernel_sigma=gaussian_kernel_sigma,
-            t=t,
-            chebyshev_approx=chebyshev_approx,
-            classic_shannon_entropy=classic_shannon_entropy,
-            matrix_entry_entropy=matrix_entry_entropy,
-            num_bins_per_dim=num_bins_per_dim)
+            use_knn=use_knn,
+            anisotropic=anisotropic)
 
-        # DSE(A*)
+        # ASE(A*)
         if random_seed is not None:
             random.seed(random_seed)
         entropy_A_estimation_list = []
@@ -388,14 +387,11 @@ def adjacency_spectral_mutual_information(
                               k=np.sum(precomputed_clusters == cluster_idx)))
             embeddings_random_subset = embedding_vectors[rand_inds, :]
 
-            entropy_A_subsample_rep = diffusion_spectral_entropy(
+            entropy_A_subsample_rep = adjacency_spectral_entropy(
                 embedding_vectors=embeddings_random_subset,
                 gaussian_kernel_sigma=gaussian_kernel_sigma,
-                t=t,
-                chebyshev_approx=chebyshev_approx,
-                classic_shannon_entropy=classic_shannon_entropy,
-                matrix_entry_entropy=matrix_entry_entropy,
-                num_bins_per_dim=num_bins_per_dim)
+                use_knn=use_knn,
+                anisotropic=anisotropic)
             entropy_A_estimation_list.append(entropy_A_subsample_rep)
 
         entropy_A_estimation = np.mean(entropy_A_estimation_list)
@@ -458,4 +454,31 @@ if __name__ == '__main__':
         reference_vectors=class_labels,
         matrix_entry_entropy=True)
     print('DSMI-matrix-entry =', DSMI_matrix_entry)
+
+    print('\n7th run. ASMI-KNN, Classification dataset.')
+    embedding_vectors, class_labels = make_classification(n_samples=1000,
+                                                          n_features=5)
+    ASMI_knn, _ = adjacency_spectral_mutual_information(
+        embedding_vectors=embedding_vectors,
+        reference_vectors=class_labels,
+        use_knn=True)
+    print('ASMI-KNN =', ASMI_knn)
+
+    print('\n7th run. ASMI-Gaussian, Classification dataset.')
+    embedding_vectors, class_labels = make_classification(n_samples=1000,
+                                                          n_features=5)
+    ASMI_gausadj, _ = adjacency_spectral_mutual_information(
+        embedding_vectors=embedding_vectors,
+        reference_vectors=class_labels)
+    print('ASMI-Gaussian-Adj =', ASMI_gausadj)
+
+    print('\n8th run. ASMI-Gaussian-Anisotropic, Classification dataset.')
+    embedding_vectors, class_labels = make_classification(n_samples=1000,
+                                                          n_features=5)
+    ASMI_anisotropic, _ = adjacency_spectral_mutual_information(
+        embedding_vectors=embedding_vectors,
+        reference_vectors=class_labels,
+        anisotropic=True)
+    print('ASMI-Anisotropic-Adj =', ASMI_anisotropic)
+
 

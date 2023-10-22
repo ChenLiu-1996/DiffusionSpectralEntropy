@@ -321,7 +321,7 @@ if __name__ == '__main__':
                         color=cm.get_cmap('tab10').colors[-1],
                         alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
-    ax.set_ylabel('KNN Adj', fontsize=25)
+    ax.set_ylabel('KNN', fontsize=25)
     #Gaussian
     ax = fig_vne.add_subplot(gs[6:7, 0:3])
     ax.spines[['right', 'top']].set_visible(False)
@@ -345,7 +345,7 @@ if __name__ == '__main__':
                         color=cm.get_cmap('tab10').colors[-1],
                         alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
-    ax.set_ylabel('Gaussian Adj', fontsize=25)
+    ax.set_ylabel('Gaussian', fontsize=25)
     #Anisotropic Gaussian
     ax = fig_vne.add_subplot(gs[7:8, 0:3])
     ax.spines[['right', 'top']].set_visible(False)
@@ -369,7 +369,7 @@ if __name__ == '__main__':
                         color=cm.get_cmap('tab10').colors[-1],
                         alpha=0.2)
     ax.tick_params(axis='both', which='major', labelsize=20)
-    ax.set_ylabel('Anisotropic Gaussian Adj', fontsize=25)
+    ax.set_ylabel('Anisotropic', fontsize=25)
 
     ax.set_xlabel('Data Distribution Dimension $d$', fontsize=25)
 
