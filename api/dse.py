@@ -4,6 +4,8 @@ from diffusion import compute_diffusion_matrix
 import os
 import random
 
+from sklearn.metrics import pairwise_distances
+
 
 def diffusion_spectral_entropy(embedding_vectors: np.array,
                                gaussian_kernel_sigma: float = 10,
@@ -179,6 +181,126 @@ def diffusion_spectral_entropy(embedding_vectors: np.array,
 
     return entropy
 
+def adjacency_spectral_entropy(embedding_vectors: np.array,
+                               gaussian_kernel_sigma: float = 10,
+                               anisotropic: bool = False,
+                               use_knn: bool = False,
+                               knn: int = 10,
+                               max_N: int = 10000,
+                               eigval_save_path: str = None,
+                               eigval_save_precision: np.dtype = np.float16,
+                               random_seed: int = 0,
+                               verbose: bool = False):
+    '''
+        Entropy based on eigenvals from adjacency matrix instead of diffusion matrix
+        
+        embedding_vectors: np.array of shape [N, D]
+            N: number of data points / samples
+            D: number of feature dimensions of the neural representation
+
+        gaussian_kernel_sigma: float
+            The bandwidth of Gaussian kernel (for computation of the affinity matrix)
+            Can be adjusted per the dataset.
+            Increase if the data points are very far away from each other.
+        
+        anisotropic: bool
+            Whether to use anisotropic normalization
+            Default false
+        
+        use_knn: bool
+            Whether to use KNN for computing adjacency matrix (binarized)
+            Default False, and the defualt is using Gaussian kernel for adjacency (non-binarized)
+        
+        knn: int
+            Number of neighbors for KNN adj matrix
+
+        max_N: int
+            Max number of data points / samples used for computation.
+
+        eigval_save_path: str
+            If provided,
+                (1) If running for the first time, will save the computed eigenvalues in this location.
+                (2) Otherwise, if the file already exists, skip eigenvalue computation and load from this file.
+
+        eigval_save_precision: np.dtype
+            We use `np.float16` by default to reduce storage space required.
+            For best precision, use `np.float64` instead.
+
+        verbose: bool
+            Whether or not to print progress to console.
+    '''
+    # Subsample embedding vectors if number of data sample is too large.
+    if max_N is not None and embedding_vectors is not None and len(
+            embedding_vectors) > max_N:
+        if random_seed is not None:
+            random.seed(random_seed)
+        rand_inds = np.array(
+            random.sample(range(len(embedding_vectors)), k=max_N))
+        embedding_vectors = embedding_vectors[rand_inds, :]
+    
+    if eigval_save_path is not None and os.path.exists(eigval_save_path):
+        if verbose:
+            print('Loading pre-computed eigenvalues from %s' %
+                    eigval_save_path)
+        eigvals = np.load(eigval_save_path)['eigvals']
+        eigvals = eigvals.astype(
+            np.float64)  # mitigate rounding error.
+        if verbose: print('Pre-computed eigenvalues loaded.')
+    else:
+        if verbose: print('Computing adjacency matrix.')
+        adj_matrix = None
+
+        # Construct the distance matrix.
+        D = pairwise_distances(embedding_vectors)  
+        if use_knn != True:
+            ''' Gaussian kernel adj '''
+            G = (1 / (gaussian_kernel_sigma * np.sqrt(2 * np.pi))) * np.exp((-D**2) / (2 * gaussian_kernel_sigma**2))
+
+            if anisotropic == True:
+                # Anisotropic density normalization.
+                Deg = np.diag(1 / np.sum(G, axis=1)**0.5)
+                K = Deg @ G @ Deg
+                adj_matrix = K
+            else:
+                adj_matrix = G
+
+        else:
+            N = D.shape[0]
+            adj_matrix = np.zeros(D.shape)
+            ''' KNN binarized adj '''
+            mink_index = np.argpartition(D, knn-1, axis=1)
+            mink_vals = D[np.arange(N), mink_index[:, knn-1]] # the kth shortest val for D's each row
+            filter_mask = np.tile(mink_vals.reshape(N, 1), (1, N)) # (N, N) filter mask
+            adj_matrix = (D <= filter_mask) * 1
+            if verbose: print('Create binary Adj Matrix... with mean  ', np.mean(np.sum(adj_matrix, axis=1)))
+        if verbose: print('Adjacency matrix computed.')
+
+        if verbose: print('Computing eigenvalues.')
+        eigvals = exact_eigvals(adj_matrix)
+        if verbose: print('Eigenvalues computed.')
+
+        if eigval_save_path is not None:
+            os.makedirs(os.path.dirname(eigval_save_path),
+                        exist_ok=True)
+            # Save eigenvalues.
+            eigvals = eigvals.astype(
+                eigval_save_precision)  # reduce storage space.
+            with open(eigval_save_path, 'wb+') as f:
+                np.savez(f, eigvals=eigvals)
+            if verbose:
+                print('Eigenvalues saved to %s' % eigval_save_path)
+
+    # Eigenvalues may be negative. Only care about the magnitude, not the sign.
+    eigvals = np.abs(eigvals)
+
+    prob = eigvals / eigvals.sum()
+
+    prob = prob + np.finfo(float).eps
+    entropy = -np.sum(prob * np.log2(prob))
+
+    return entropy
+
+
 
 if __name__ == '__main__':
     print('Testing Diffusion Spectral Entropy.')
@@ -232,3 +354,27 @@ if __name__ == '__main__':
     DSE_matrix_entry = diffusion_spectral_entropy(
         embedding_vectors=embedding_vectors, matrix_entry_entropy=True)
     print('DSE-matrix-entry =', DSE_matrix_entry)
+
+    print(
+        '\n8th run, Entropy on KNN binarized adjacency matrix.'
+    )
+    embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+    knn_binarized_entropy = adjacency_spectral_entropy(
+        embedding_vectors=embedding_vectors, use_knn=True, knn=10, verbose=True)
+    print('KNN binarized adjacency matrix =', knn_binarized_entropy)
+
+    print(
+        '\n9th run, Entropy on Gaussian adjacency matrix.'
+    )
+    embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+    gaussian_adj_entropy = adjacency_spectral_entropy(
+        embedding_vectors=embedding_vectors, anisotropic=False, verbose=True)
+    print('KNN binarized adjacency matrix =', gaussian_adj_entropy)
+
+    print(
+        '\n10th run, Entropy on Anisotropic Gaussian adjacency matrix.'
+    )
+    embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+    aniso_adj_entropy = adjacency_spectral_entropy(
+        embedding_vectors=embedding_vectors, anisotropic=True, verbose=True)
+    print('KNN binarized adjacency matrix =', aniso_adj_entropy)
