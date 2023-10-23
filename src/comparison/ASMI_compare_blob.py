@@ -131,19 +131,18 @@ if __name__ == '__main__':
     save_root = './results_toy/'
     os.makedirs(save_root, exist_ok=True)
 
-    save_path_fig = '%s/toy-MI-blob.png' % (save_root)
+    save_path_fig = '%s/ASMI-toy-MI-blob.png' % (save_root)
 
     device = torch.device('cuda:%s' %
                           args.gpu_id if torch.cuda.is_available() else 'cpu')
 
     dim_list = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
     corruption_ratio_list = np.linspace(0.0, 1.0, 11)
-    noise_level_list = [1e-2, 1e-1, 5e-1]
+    noise_level_list = [1e-2, 1e-1, 5e-1, 7e-1]
     num_repetition = 2
 
     method_list = [
-        'CSMI_bin5', 'CSMI_bin10', 'CSMI_bin100', 'NPEET', 'MINE', 'DSMI', 'DMEE', 
-        'ASMI_KNN', 'ASMI_Gaussian', 'ASMI_Anisotropic'
+        'DSMI', 'DMEE', 'ASMI_KNN', 'ASMI_Gaussian', 'ASMI_Anisotropic'
     ]
 
     mi_by_corruption_d_20_dict = {}
@@ -219,56 +218,6 @@ if __name__ == '__main__':
                         gaussian_kernel_sigma=np.sqrt(default_dim),
                         random_seed=rep)[0])
 
-                mi_by_corruption_d_20_dict['CSMI_bin5'][i][j].append(
-                    diffusion_spectral_mutual_information(
-                        embedding_vectors=blobs_data,
-                        reference_vectors=blobs_label,
-                        classic_shannon_entropy=True,
-                        t=1,
-                        num_bins_per_dim=5,
-                        chebyshev_approx=False,
-                        random_seed=rep)[0])
-
-                mi_by_corruption_d_20_dict['CSMI_bin10'][i][j].append(
-                    diffusion_spectral_mutual_information(
-                        embedding_vectors=blobs_data,
-                        reference_vectors=blobs_label,
-                        classic_shannon_entropy=True,
-                        t=1,
-                        num_bins_per_dim=10,
-                        chebyshev_approx=False,
-                        random_seed=rep)[0])
-
-                mi_by_corruption_d_20_dict['CSMI_bin100'][i][j].append(
-                    diffusion_spectral_mutual_information(
-                        embedding_vectors=blobs_data,
-                        reference_vectors=blobs_label,
-                        classic_shannon_entropy=True,
-                        t=1,
-                        num_bins_per_dim=100,
-                        chebyshev_approx=False,
-                        random_seed=rep)[0])
-
-                mi_by_corruption_d_20_dict['NPEET'][i][j].append(
-                    MI_npeet.mi(blobs_data, blobs_label))
-
-                mine_loader = torch.utils.data.DataLoader(ZipTwoDataset(
-                    blobs_data, blobs_label),
-                                                          batch_size=500,
-                                                          shuffle=True)
-                model = train_MINE(dimX=default_dim,
-                                   dimY=1,
-                                   lr=1e-4,
-                                   batch_size=500,
-                                   epochs=200,
-                                   train_loader=mine_loader,
-                                   device=device)
-
-                mine_mi = test_MINE(model=model,
-                                    test_dataloader=mine_loader,
-                                    device=device)
-                mi_by_corruption_d_20_dict['MINE'][i][j].append(mine_mi)
-
     default_dim = 100
     for i, corruption_ratio in enumerate(tqdm(corruption_ratio_list)):
         blobs_data, blobs_label = make_blobs(n_samples=5000,
@@ -327,55 +276,6 @@ if __name__ == '__main__':
                         gaussian_kernel_sigma=np.sqrt(default_dim),
                         random_seed=rep)[0])
 
-                mi_by_corruption_d_100_dict['CSMI_bin5'][i][j].append(
-                    diffusion_spectral_mutual_information(
-                        embedding_vectors=blobs_data,
-                        reference_vectors=blobs_label,
-                        classic_shannon_entropy=True,
-                        t=1,
-                        num_bins_per_dim=5,
-                        chebyshev_approx=False,
-                        random_seed=rep)[0])
-
-                mi_by_corruption_d_100_dict['CSMI_bin10'][i][j].append(
-                    diffusion_spectral_mutual_information(
-                        embedding_vectors=blobs_data,
-                        reference_vectors=blobs_label,
-                        classic_shannon_entropy=True,
-                        t=1,
-                        num_bins_per_dim=10,
-                        chebyshev_approx=False,
-                        random_seed=rep)[0])
-
-                mi_by_corruption_d_100_dict['CSMI_bin100'][i][j].append(
-                    diffusion_spectral_mutual_information(
-                        embedding_vectors=blobs_data,
-                        reference_vectors=blobs_label,
-                        classic_shannon_entropy=True,
-                        t=1,
-                        num_bins_per_dim=100,
-                        chebyshev_approx=False,
-                        random_seed=rep)[0])
-
-                mi_by_corruption_d_100_dict['NPEET'][i][j].append(
-                    MI_npeet.mi(blobs_data, blobs_label))
-
-                mine_loader = torch.utils.data.DataLoader(ZipTwoDataset(
-                    blobs_data, blobs_label),
-                                                          batch_size=500,
-                                                          shuffle=True)
-                model = train_MINE(dimX=default_dim,
-                                   dimY=1,
-                                   lr=1e-4,
-                                   batch_size=500,
-                                   epochs=200,
-                                   train_loader=mine_loader,
-                                   device=device)
-
-                mine_mi = test_MINE(model=model,
-                                    test_dataloader=mine_loader,
-                                    device=device)
-                mi_by_corruption_d_100_dict['MINE'][i][j].append(mine_mi)
 
     # Experiment 2: vary the dimension.
     for i, dim in enumerate(tqdm(dim_list)):
@@ -432,56 +332,6 @@ if __name__ == '__main__':
                         gaussian_kernel_sigma=np.sqrt(dim),
                         random_seed=rep)[0])
 
-                mi_by_dim_dict['CSMI_bin5'][i][j].append(
-                    diffusion_spectral_mutual_information(
-                        embedding_vectors=blobs_data,
-                        reference_vectors=blobs_label,
-                        classic_shannon_entropy=True,
-                        t=1,
-                        num_bins_per_dim=5,
-                        chebyshev_approx=False,
-                        random_seed=rep)[0])
-
-                mi_by_dim_dict['CSMI_bin10'][i][j].append(
-                    diffusion_spectral_mutual_information(
-                        embedding_vectors=blobs_data,
-                        reference_vectors=blobs_label,
-                        classic_shannon_entropy=True,
-                        t=1,
-                        num_bins_per_dim=10,
-                        chebyshev_approx=False,
-                        random_seed=rep)[0])
-
-                mi_by_dim_dict['CSMI_bin100'][i][j].append(
-                    diffusion_spectral_mutual_information(
-                        embedding_vectors=blobs_data,
-                        reference_vectors=blobs_label,
-                        classic_shannon_entropy=True,
-                        t=1,
-                        num_bins_per_dim=100,
-                        chebyshev_approx=False,
-                        random_seed=rep)[0])
-
-                mi_by_dim_dict['NPEET'][i][j].append(
-                    MI_npeet.mi(blobs_data, blobs_label))
-
-                mine_loader = torch.utils.data.DataLoader(ZipTwoDataset(
-                    blobs_data, blobs_label),
-                                                          batch_size=500,
-                                                          shuffle=True)
-                model = train_MINE(dimX=dim,
-                                   dimY=1,
-                                   lr=1e-4,
-                                   batch_size=500,
-                                   epochs=200,
-                                   train_loader=mine_loader,
-                                   device=device)
-
-                mine_mi = test_MINE(model=model,
-                                    test_dataloader=mine_loader,
-                                    device=device)
-                mi_by_dim_dict['MINE'][i][j].append(mine_mi)
-
     for m in method_list:
         mi_by_corruption_d_20_dict[m] = np.array(mi_by_corruption_d_20_dict[m])
         mi_by_corruption_d_100_dict[m] = np.array(
@@ -523,6 +373,8 @@ if __name__ == '__main__':
     ax.tick_params(axis='both', which='major', labelsize=14)
     ax.set_xlabel(r'Label Corruption Ratio (with $d$ = 20)', fontsize=16)
     ax.set_ylabel('Estimated Mutual Information', fontsize=16)
+    bottom, top = ax.get_ylim()
+    ax.set_ylim(bottom=bottom, top=top+1)
 
     ax = fig_mi.add_subplot(1, 3, 2)
     ax.spines[['right', 'top']].set_visible(False)
@@ -558,6 +410,8 @@ if __name__ == '__main__':
     ax.tick_params(axis='both', which='major', labelsize=14)
     ax.set_xlabel(r'Label Corruption Ratio (with $d$ = 100)', fontsize=16)
     ax.set_ylabel('Estimated Mutual Information', fontsize=16)
+    bottom, top = ax.get_ylim()
+    ax.set_ylim(bottom=bottom, top=top+1)
 
     ax = fig_mi.add_subplot(1, 3, 3)
     ax.spines[['right', 'top']].set_visible(False)
@@ -591,6 +445,8 @@ if __name__ == '__main__':
     ax.tick_params(axis='both', which='major', labelsize=14)
     ax.set_xlabel(r'Dimension $D$ (log scale)', fontsize=16)
     ax.set_ylabel('Estimated Mutual Information', fontsize=16)
+    bottom, top = ax.get_ylim()
+    ax.set_ylim(bottom=bottom, top=top+1)
 
     fig_mi.tight_layout()
     fig_mi.savefig(save_path_fig)
