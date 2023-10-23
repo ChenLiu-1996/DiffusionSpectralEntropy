@@ -262,7 +262,7 @@ if __name__ == '__main__':
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
-        ncol=3)
+        ncol=2)
     for k in range(len(noise_level_list)):
         ax.fill_between(dim_list,
                         np.mean(se_list_uniform[k, ...], axis=0) -
@@ -286,7 +286,7 @@ if __name__ == '__main__':
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
-        ncol=3)
+        ncol=2)
     for k in range(len(noise_level_list)):
         ax.fill_between(dim_list,
                         np.mean(dmee_list_uniform[k, ...], axis=0) -
@@ -311,7 +311,7 @@ if __name__ == '__main__':
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
-        ncol=3)
+        ncol=2)
     for k in range(len(noise_level_list)):
         ax.fill_between(dim_list,
                         np.mean(knn_list_uniform[k, ...], axis=0) -
@@ -335,7 +335,7 @@ if __name__ == '__main__':
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
-        ncol=3)
+        ncol=2)
     for k in range(len(noise_level_list)):
         ax.fill_between(dim_list,
                         np.mean(gausadj_list_uniform[k, ...], axis=0) -
@@ -359,7 +359,7 @@ if __name__ == '__main__':
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
-        ncol=3)
+        ncol=2)
     for k in range(len(noise_level_list)):
         ax.fill_between(dim_list,
                         np.mean(anisotropic_list_uniform[k, ...], axis=0) -
@@ -413,7 +413,7 @@ if __name__ == '__main__':
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
-        ncol=3)
+        ncol=2)
     for k in range(len(noise_level_list)):
         ax.fill_between(dim_list,
                         np.mean(se_list_gaussian[k, ...], axis=0) -
@@ -436,7 +436,7 @@ if __name__ == '__main__':
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
-        ncol=3)
+        ncol=2)
     for k in range(len(noise_level_list)):
         ax.fill_between(dim_list,
                         np.mean(dmee_list_gaussian[k, ...], axis=0) -
@@ -460,7 +460,7 @@ if __name__ == '__main__':
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
-        ncol=3)
+        ncol=2)
     for k in range(len(noise_level_list)):
         ax.fill_between(dim_list,
                         np.mean(knn_list_gaussian[k, ...], axis=0) -
@@ -483,7 +483,7 @@ if __name__ == '__main__':
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
-        ncol=3)
+        ncol=2)
     for k in range(len(noise_level_list)):
         ax.fill_between(dim_list,
                         np.mean(gausadj_list_gaussian[k, ...], axis=0) -
@@ -506,7 +506,7 @@ if __name__ == '__main__':
     ax.legend(
         [r'|noise| = %d%%' % (noise * 100) for noise in noise_level_list],
         loc='lower right',
-        ncol=3)
+        ncol=2)
     for k in range(len(noise_level_list)):
         ax.fill_between(dim_list,
                         np.mean(anisotropic_list_gaussian[k, ...], axis=0) -
