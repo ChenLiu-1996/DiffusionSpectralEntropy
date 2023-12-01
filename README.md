@@ -60,11 +60,11 @@ Finally, it's time to put them in practice! We use DSE and DSMI to visualize the
 
 DSE(Z) increasese during training. This happens for both generalizable training and overfitting. The former case coincides with our theoretical finding that DSE(Z) shall increase as the model learns to separate data representation into clusters.
 
-<img src="assets/main_figure_DSMI(Z;Y).png" width="500">
+<img src="assets/main_figure_DSMI(Z;Y).png" width="400">
 
 DSMI(Z; Y) increases during generalizable training but stays stagnant during overfitting. This is very much expected.
 
-<img src="assets/main_figure_DSMI(Z;X).png" width="500">
+<img src="assets/main_figure_DSMI(Z;X).png" width="400">
 
 DSMI(Z; X) shows quite intriguing trends. On MNIST, it keeps increasing. On CIFAR-10 and STL-10, it peaks quickly and gradually decreases. Recall that IB [Tishby et al.] suggests that I(Z; X) shall decrease while [Saxe et al. ICLR'18] believes the opposite. We find that both of them could be correct since the trend we observe is dataset-dependent. One possibility is that MNIST features are too easy to learn (and perhaps the models all overfit?) --- and we leave this to future explorations.
 
