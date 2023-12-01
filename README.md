@@ -37,8 +37,7 @@ Conceptually, we build a data graph from the neural network representations of a
 ## Quick Flavors of the Results
 
 ### Definition
-<img src="assets/def_DSE.png" width="400">
-<img src="assets/def_DSMI.png" width="400">
+<img src="assets/def_DSE.png" width="400"> <img src="assets/def_DSMI.png" width="400">
 
 ### Theoretical Results
 One major statement to make is that the proposed DSE and DSMI are "not conceptually the same as" the classic Shannon counterparts. They are defined differently and while they maintain the gist of "entropy" and "mutual information" measures, they have their own unique properties. For example, DSE is *more sensitive to the underlying dimension and structures (e.g., number of branches or clusters) than to the spread or noise in the data itself, which is contracted to the manifold by raising the diffusion operator to the power of t*.
