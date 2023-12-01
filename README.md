@@ -27,12 +27,12 @@ Compared to the classic Shannon formulation using the binning method, e.g. as in
 ## Main Advantage
 No binning and hence **no curse of dimensionality**. Therefore, **it works on modern deep neural networks** (e.g., ResNet-50), not just on toy models with double digit layer width. See "Limitations of the Classic Shannon Entropy and Mutual Information" in our paper for details.
 
-<img src="assets/curse_of_dim.png" width="800">
+<img src="assets/curse_of_dim.png" width="600">
 
 ## A One-Minute Explanation of the Methods
 Conceptually, we build a data graph from the neural network representations of all data points in a dataset, and compute the diffusion matrix of the data graph. This matrix is a condensed representation of the diffusion geometry of the neural representation manifold. Our proposed **Diffusion Spectral Entropy (DSE)** and **Diffusion Spectral Mutual Information (DSMI)** can be computed from this diffusion matrix.
 
-<img src="assets/procedure.png" width="800">
+<img src="assets/procedure.png" width="600">
 
 ## Quick Flavors of the Results
 
