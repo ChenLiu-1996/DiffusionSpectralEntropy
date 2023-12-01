@@ -7,7 +7,7 @@
 
 This is the **official** implementation of
 
-**Assessing Neural Network Representations During Training Using Noise-resilient Diffusion Spectral Entropy**
+**Assessing Neural Network Representations During Training Using Noise-Resilient Diffusion Spectral Entropy**
 
 <img src="assets/logos/Yale_logo.png" height="96"/> &emsp; <img src="assets/logos/Mila_logo.png" height="96"/> &emsp; <img src="assets/logos/MetaAI_logo.png" height="96"/>
 
