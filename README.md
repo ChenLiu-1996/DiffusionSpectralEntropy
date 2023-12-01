@@ -56,15 +56,15 @@ Then, we also look at how well DSE and DSMI behave at higher dimensions. In the 
 
 Finally, it's time to put them in practice! We use DSE and DSMI to visualize the training dynamics of classification networks of 6 backbones (3 ConvNets and 3 Transformers) under 3 training conditions and 3 random seeds. We are evaluating the penultimate layer of the neural network --- the second-to-last layer where people believe embeds the rich representation of the data and are often used for visualization, linear-probing evaluation, etc.
 
-<img src="assets/main_figure_DSE(Z).png" width="400">
+<img src="assets/main_figure_DSE(Z).png" width="600">
 
 DSE(Z) increasese during training. This happens for both generalizable training and overfitting. The former case coincides with our theoretical finding that DSE(Z) shall increase as the model learns to separate data representation into clusters.
 
-<img src="assets/main_figure_DSMI(Z;Y).png" width="400">
+<img src="assets/main_figure_DSMI(Z;Y).png" width="600">
 
 DSMI(Z; Y) increases during generalizable training but stays stagnant during overfitting. This is very much expected.
 
-<img src="assets/main_figure_DSMI(Z;X).png" width="400">
+<img src="assets/main_figure_DSMI(Z;X).png" width="600">
 
 DSMI(Z; X) shows quite intriguing trends. On MNIST, it keeps increasing. On CIFAR-10 and STL-10, it peaks quickly and gradually decreases. Recall that IB [Tishby et al.] suggests that I(Z; X) shall decrease while [Saxe et al. ICLR'18] believes the opposite. We find that both of them could be correct since the trend we observe is dataset-dependent. One possibility is that MNIST features are too easy to learn (and perhaps the models all overfit?) --- and we leave this to future explorations.
 
@@ -77,12 +77,12 @@ We sought to assess the effects of network initialization in terms of DSE. We we
 
 We found that if we initialize the convolutional layers with weights $\sim \mathcal{N}(0, \sigma)$, DSE $S_D(Z)$ is affected by $\sigma$. We then trained ResNet models with networks initialized at high ($\approx$ log(n)) versus low ($\approx 0$) DSE by setting $\sigma=0.1$ and $\sigma=0.01$, respectively. The training history suggests that initializing the network at a lower $S_D(Z)$ can improve the convergence speed and final performance. We believe this is because the high initial DSE from random initialization corresponds to an undesirable high-entropy state, which the network needs to get away from (causing the DSE decrease) before it migrates to the desirable high-entropy state (causing the DSE increase).
 
-<img src="assets/compare-cifar10-supervised-resnet-ConvInitStd-1e-2-1e-1-seed1-2-3.png" width="400"> <img src="assets/compare-stl10-supervised-resnet-ConvInitStd-1e-2-1e-1-seed1-2-3.png" width="400">
+<img src="assets/compare-cifar10-supervised-resnet-ConvInitStd-1e-2-1e-1-seed1-2-3.png" width="300"> <img src="assets/compare-stl10-supervised-resnet-ConvInitStd-1e-2-1e-1-seed1-2-3.png" width="300">
 
 ### ImageNet cross-model correlation
 By far, we have monitored DSE and DSMI **along the training process of the same model**. Now we will show how DSMI correlates with downstream classification accuracy **across many different pre-trained models**. The following result demonstrates the potential in using DSMI for pre-screening potentially competent models for your specialized dataset.
 
-<img src="assets/vs_imagenet_acc.png" width="800">
+<img src="assets/vs_imagenet_acc.png" width="600">
 
 
 
