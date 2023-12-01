@@ -18,57 +18,42 @@ This is the **official** implementation of
 [June 2023] A **non-archival** version is accepted to the [TAG-ML Workshop](https://icml.cc/virtual/2023/workshop/21480) @ **ICML 2023**.
 
 ## Overview
-> We proposed an information-theory based framework to measure the **entropy** and **mutual information** of neural network representations.
+> We proposed a framework to measure the **entropy** and **mutual information** in high dimensional data and thus applicable to modern neural networks.
 
 We can measure, with respect to a given set of data samples, (1) the entropy of the neural representation at a specific layer and (2) the mutual information between a random variable (e.g., model input or output) and the neural representation at a specific layer.
 
 Compared to the classic Shannon formulation using the binning method, e.g. as in the famous paper **_Deep Learning and the Information Bottleneck Principle_** [[PDF]](https://arxiv.org/abs/1503.02406) [[Github1]](https://github.com/stevenliuyi/information-bottleneck) [[Github2]](https://github.com/artemyk/ibsgd), our proposed method is more robust and expressive.
 
 ## Main Advantage
-No binning and hence **no curse of dimensionality**. Therefore, **it works on modern deep neural networks** (e.g., ResNet-50), not just on toy models with double digit layer width. See the "Limitations of the Classic Shannon Entropy and Mutual Information" section in our paper for details.
+No binning and hence **no curse of dimensionality**. Therefore, **it works on modern deep neural networks** (e.g., ResNet-50), not just on toy models with double digit layer width. See "Limitations of the Classic Shannon Entropy and Mutual Information" in our paper for details.
 
 <img src="assets/curse_of_dim.png" width="800">
 
 ## A One-Minute Explanation of the Methods
-Conceptually, we build a data graph from the neural network representations of all data points in a dataset, and compute the diffusion matrix of the data graph. This matrix is a condensed representation of the diffusion geometry of the neural representation manifold. Our proposed **Diffusion Spectral Entropy** and **Diffusion Spectral Mutual Information** can be computed from this diffusion matrix.
+Conceptually, we build a data graph from the neural network representations of all data points in a dataset, and compute the diffusion matrix of the data graph. This matrix is a condensed representation of the diffusion geometry of the neural representation manifold. Our proposed **Diffusion Spectral Entropy (DSE)** and **Diffusion Spectral Mutual Information (DSMI)** can be computed from this diffusion matrix.
 
 <img src="assets/procedure.png" width="800">
 
 ## Quick Flavors of the Results
 
-<table border="0">
- <tr>
-    <td><b>Diffusion Spectral Entropy</b> (top panel) <br>outperforms <br>Classic Shannon Entropy (bottom panel) <br>on toy data</td>
-    <td><b>Diffusion Spectral Mutual Information</b> (top panel) <br>outperforms <br>Classic Shannon Mutual Information (bottom panel) <br>on toy data</td>
- </tr>
- <tr>
-    <td><img src="assets/toy-data-entropy.png" width="450"></td>
-    <td><img src="assets/toy-data-MI.png" width="450"></td>
- </tr>
-</table>
+### Theoretical Results
+One major statement to make is that the proposed DSE and DSMI are "not conceptually the same as" the classic Shannon counterparts. They are defined differently and while they maintain the gist of "entropy" and "mutual information" measures, they have their own unique properties. For example, DSE is *more sensitive to the underlying dimension and structures (e.g., number of branches or clusters) than to the spread or noise in the data itself, which is contracted to the manifold by raising the diffusion operator to the power of t*.
 
+In the theoretical results, we upper- and lower-bounded the proposed DSE and DSMI. More interestingly, we showed that if a data distribution originates as a single Gaussian blob but later evolves into $k$ distinct Gaussian blobs, the upper bound of the expected DSE will increase. This has implication for the training process of classification networks.
 
-<table border="0">
- <tr>
-    <td><b>Diffusion Spectral Entropy</b> (top figure) <br>outperforms <br>Classic Shannon Entropy (bottom figure) <br>on real data</td>
-    <td><b>Diffusion Spectral Mutual Information</b> (top figure) <br>outperforms <br>Classic Shannon Mutual Information (bottom figure) <br>on real data</td>
- </tr>
- <tr>
-    <td><img src="assets/main_figure_DSE(Z).png" width="450"><br><img src="assets/main_figure_CSE(Z).png" width="450"></td>
-    <td><img src="assets/main_figure_DSMI(Z;Y).png" width="450"><br><img src="assets/main_figure_CSMI(Z;Y).png" width="450"></td>
- </tr>
-</table>
-</br>
-</br>
+### Empirical Results
+We first use toy experiments to showcase that DSE and DSMI "behave properly" as measures of entropy and mutual information. We also show they are more robust to high dimensions than the classic counterparts.
 
-We also look at how well DSE and DSMI behave at higher dimensions. In the example above, we already see DSE can function well at high dimensions. In the figure below, we will show how DSMI outperforms other mutual information estimators when the dimension is high.
+Then, we also look at how well DSE and DSMI behave at higher dimensions. In the figure below, we will show how DSMI outperforms other mutual information estimators when the dimension is high.
 
 <img src="assets/toy_MI_blob.png" width="800">
 
 </br>
 
+Finally, it's time to put them in practice! We use DSE and DSMI to visualize the training dynamics of classification networks of 6 backbones (3 ConvNets and 3 Transformers) under 3 training conditions and 3 random seeds.
 
-## Utilities
+
+## Utility Studies: How can we use DSE and DSMI?
 One may ask, besides just peeking into the training dynamics of neural networks, how can we _REALLY_ use DSE and DSMI? Here comes the utility studies.
 
 ### Guiding network initialization with DSE
