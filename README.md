@@ -36,6 +36,10 @@ Conceptually, we build a data graph from the neural network representations of a
 
 ## Quick Flavors of the Results
 
+### Definition
+<img src="assets/def_DSE.png" width="600">
+<img src="assets/def_DSMI.png" width="800">
+
 ### Theoretical Results
 One major statement to make is that the proposed DSE and DSMI are "not conceptually the same as" the classic Shannon counterparts. They are defined differently and while they maintain the gist of "entropy" and "mutual information" measures, they have their own unique properties. For example, DSE is *more sensitive to the underlying dimension and structures (e.g., number of branches or clusters) than to the spread or noise in the data itself, which is contracted to the manifold by raising the diffusion operator to the power of t*.
 
@@ -44,13 +48,25 @@ In the theoretical results, we upper- and lower-bounded the proposed DSE and DSM
 ### Empirical Results
 We first use toy experiments to showcase that DSE and DSMI "behave properly" as measures of entropy and mutual information. We also show they are more robust to high dimensions than the classic counterparts.
 
-Then, we also look at how well DSE and DSMI behave at higher dimensions. In the figure below, we will show how DSMI outperforms other mutual information estimators when the dimension is high.
+Then, we also look at how well DSE and DSMI behave at higher dimensions. In the figure below, we will show how DSMI outperforms other mutual information estimators when the dimension is high. Besides, the runtime comparison shows DSMI scales better with respect to dimension.
 
-<img src="assets/toy_MI_blob.png" width="800">
+<img src="assets/method_comparison.png" width="800">
 
 </br>
 
-Finally, it's time to put them in practice! We use DSE and DSMI to visualize the training dynamics of classification networks of 6 backbones (3 ConvNets and 3 Transformers) under 3 training conditions and 3 random seeds.
+Finally, it's time to put them in practice! We use DSE and DSMI to visualize the training dynamics of classification networks of 6 backbones (3 ConvNets and 3 Transformers) under 3 training conditions and 3 random seeds. We are evaluating the penultimate layer of the neural network --- the second-to-last layer where people believe embeds the rich representation of the data and are often used for visualization, linear-probing evaluation, etc.
+
+<img src="assets/main_figure_DSE(Z).png" width="400">
+
+DSE(Z) increasese during training. This happens for both generalizable training and overfitting. The former case coincides with our theoretical finding that DSE(Z) shall increase as the model learns to separate data representation into clusters.
+
+<img src="assets/main_figure_DSMI(Z;Y).png" width="500">
+
+DSMI(Z; Y) increases during generalizable training but stays stagnant during overfitting. This is very much expected.
+
+<img src="assets/main_figure_DSMI(Z;X).png" width="500">
+
+DSMI(Z; X) shows quite intriguing trends. On MNIST, it keeps increasing. On CIFAR-10 and STL-10, it peaks quickly and gradually decreases. Recall that IB [Tishby et al.] suggests that I(Z; X) shall decrease while [Saxe et al. ICLR'18] believes the opposite. We find that both of them could be correct since the trend we observe is dataset-dependent. One possibility is that MNIST features are too easy to learn (and perhaps the models all overfit?) --- and we leave this to future explorations.
 
 
 ## Utility Studies: How can we use DSE and DSMI?
