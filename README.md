@@ -11,6 +11,16 @@ This is the **official** implementation of
 
 <img src="assets/logos/Yale_logo.png" height="96"/> &emsp; <img src="assets/logos/Mila_logo.png" height="96"/> &emsp; <img src="assets/logos/MetaAI_logo.png" height="96"/>
 
+## Citation
+```
+@inproceedings{DiffusionSpectralEntropy,
+  title={Assessing Neural Network Representations During Training Using Noise-Resilient Diffusion Spectral Entropy},
+  author={Liao, Danqi and Liu, Chen and Christensen, Ben and Tong, Alexander and Huguet, Guillaume and Wolf, Guy and Nickel, Maximilian and Adelstein, Ian and Krishnaswamy, Smita},
+  booktitle={ICML 2023 Workshop on Topology, Algebra and Geometry in Machine Learning (TAG-ML)},
+  year={2023},
+}
+```
+
 
 ## News
 [Sep 2023] Additional experiments for a new submission.
@@ -105,16 +115,6 @@ DiffusionSpectralEntropy
             └── vs_acc: (inter-model) correlation analysis between DSE/DSMI and ImageNet accuracy
 ```
 
-
-## Citation
-```
-@inproceedings{DiffusionSpectralEntropy,
-  title={Assessing Neural Network Representations During Training Using Noise-resilient Diffusion Spectral Entropy},
-  author={Liao, Danqi and Liu, Chen and Christensen, Ben and Tong, Alexander and Huguet, Guillaume and Wolf, Guy and Nickel, Maximilian and Adelstein, Ian and Krishnaswamy, Smita},
-  booktitle={ICML 2023 Workshop on Topology, Algebra and Geometry in Machine Learning (TAG-ML)},
-  year={2023},
-}
-```
 
 ## API: Your One-Stop Shop
 Here we present the refactored and reorganized go-to APIs for this project.
