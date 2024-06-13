@@ -4,15 +4,14 @@
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/DiffusionSpectralEntropy.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/DiffusionSpectralEntropy/)
 
+## Announcement
+**Due to certain internal policies, we removed the codebase from public access. However, for the benefit of future researchers, we hereby provide the DSE/DSMI implementations.**
 
 This is the **official** implementation of
 
 [**Assessing Neural Network Representations During Training Using Noise-Resilient Diffusion Spectral Entropy**](https://arxiv.org/abs/2312.04823)
 
 <img src="assets/logos/Yale_logo.png" height="96"/> &emsp; <img src="assets/logos/Mila_logo.png" height="96"/> &emsp; <img src="assets/logos/MetaAI_logo.png" height="96"/>
-
-## Announcement
-**Due to certain internal policies, we removed the codebase from public access. However, for the benefit of future researchers, we hereby provide the DSE/DSMI implementations.**
 
 ## Citation
 ```
