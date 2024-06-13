@@ -12,7 +12,7 @@ This is the **official** implementation of
 <img src="assets/logos/Yale_logo.png" height="96"/> &emsp; <img src="assets/logos/Mila_logo.png" height="96"/> &emsp; <img src="assets/logos/MetaAI_logo.png" height="96"/>
 
 ## Announcement
-**Due to certain internal policies, we have to remove the codebase from public access. However, for the benefit of future researchers, we have kept one last folder of the DSE/DSMI implementations.**
+**Due to certain internal policies, we removed the codebase from public access. However, for the benefit of future researchers, we hereby provide the DSE/DSMI implementations.**
 
 ## Citation
 ```
