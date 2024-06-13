@@ -12,7 +12,7 @@ This is the **official** implementation of
 
 
 ## Announcement
-**Due to certain internal policies, we removed the codebase from public access. However, for the benefit of future researchers, we hereby provide the DSE/DSMI implementations.**
+**Due to certain internal policies, we removed the codebase from public access. However, for the benefit of future researchers, we hereby provide the DSE/DSMI functions.**
 
 ## Citation
 ```
