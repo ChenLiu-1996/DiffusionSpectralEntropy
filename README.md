@@ -3,6 +3,7 @@
 
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social&label=Follow)](https://twitter.com/KrishnaswamyLab)
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/DiffusionSpectralEntropy.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/DiffusionSpectralEntropy/)
+[![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1109/CISS59072.2024.10480166)](https://juleskreuer.eu/citation-badge/)
 
 This is the **official** implementation of
 
