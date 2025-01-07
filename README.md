@@ -12,6 +12,7 @@
 [![ArXiv](https://img.shields.io/badge/ArXiv-DSE/DSMI-firebrick)](https://arxiv.org/abs/2312.04823)
 [![Slides](https://img.shields.io/badge/Slides-yellow)](https://chenliu-1996.github.io/slides/DSE_slides.pdf)
 [![Twitter](https://img.shields.io/twitter/follow/KrishnaswamyLab.svg?style=social)](https://twitter.com/KrishnaswamyLab)
+[![Twitter](https://img.shields.io/twitter/follow/DanqiLiao.svg?style=social)](https://x.com/DanqiLiao73090)
 [![Twitter](https://img.shields.io/twitter/follow/ChenLiu-1996.svg?style=social)](https://twitter.com/ChenLiu_1996)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-ChenLiu-1996?color=blue)](https://www.linkedin.com/in/chenliu1996/)
 [![Github Stars](https://img.shields.io/github/stars/ChenLiu-1996/DiffusionSpectralEntropy.svg?style=social&label=Stars)](https://github.com/ChenLiu-1996/DiffusionSpectralEntropy/)
