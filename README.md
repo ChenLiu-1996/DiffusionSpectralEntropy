@@ -51,19 +51,19 @@ This is the **official** implementation of
 ```
 
 
-## API: Your One-Stop Shop
+## `DSE`: Your APIs
 Here we present the refactored and reorganized APIs for this project.
 
 ### Diffusion Spectral Entropy
-[Go to function](./api/dse.py/#L7)
+[Go to function](./dse/dse.py/#L10)
 ```
-api > dse.py > diffusion_spectral_entropy
+dse > dse.py > diffusion_spectral_entropy
 ```
 
 ### Diffusion Spectral Mutual Information
-[Go to function](./api/dsmi.py/#L7)
+[Go to function](./dse/dsmi.py/#L8)
 ```
-api > dsmi.py > diffusion_spectral_mutual_information
+dse > dsmi.py > diffusion_spectral_mutual_information
 ```
 
 ### Unit Tests for DSE and DSMI

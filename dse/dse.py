@@ -1,10 +1,10 @@
 import numpy as np
-from information_utils import approx_eigvals, exact_eigvals
-from diffusion import compute_diffusion_matrix
 import os
 import random
-
 from sklearn.metrics import pairwise_distances
+
+from .information_utils import approx_eigvals, exact_eigvals
+from .diffusion import compute_diffusion_matrix
 
 
 def diffusion_spectral_entropy(embedding_vectors: np.array,
@@ -193,7 +193,7 @@ def adjacency_spectral_entropy(embedding_vectors: np.array,
                                verbose: bool = False):
     '''
         Entropy based on eigenvals from adjacency matrix instead of diffusion matrix
-        
+
         embedding_vectors: np.array of shape [N, D]
             N: number of data points / samples
             D: number of feature dimensions of the neural representation
@@ -202,15 +202,15 @@ def adjacency_spectral_entropy(embedding_vectors: np.array,
             The bandwidth of Gaussian kernel (for computation of the affinity matrix)
             Can be adjusted per the dataset.
             Increase if the data points are very far away from each other.
-        
+
         anisotropic: bool
             Whether to use anisotropic normalization
             Default false
-        
+
         use_knn: bool
             Whether to use KNN for computing adjacency matrix (binarized)
             Default False, and the defualt is using Gaussian kernel for adjacency (non-binarized)
-        
+
         knn: int
             Number of neighbors for KNN adj matrix
 
@@ -237,7 +237,7 @@ def adjacency_spectral_entropy(embedding_vectors: np.array,
         rand_inds = np.array(
             random.sample(range(len(embedding_vectors)), k=max_N))
         embedding_vectors = embedding_vectors[rand_inds, :]
-    
+
     if eigval_save_path is not None and os.path.exists(eigval_save_path):
         if verbose:
             print('Loading pre-computed eigenvalues from %s' %
@@ -251,7 +251,7 @@ def adjacency_spectral_entropy(embedding_vectors: np.array,
         adj_matrix = None
 
         # Construct the distance matrix.
-        D = pairwise_distances(embedding_vectors)  
+        D = pairwise_distances(embedding_vectors)
         if use_knn != True:
             ''' Gaussian kernel adj '''
             G = (1 / (gaussian_kernel_sigma * np.sqrt(2 * np.pi))) * np.exp((-D**2) / (2 * gaussian_kernel_sigma**2))

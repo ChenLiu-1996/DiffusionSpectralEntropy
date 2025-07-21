@@ -1,7 +1,8 @@
 import numpy as np
-from dse import diffusion_spectral_entropy, adjacency_spectral_entropy
-from sklearn.cluster import SpectralClustering
 import random
+from sklearn.cluster import SpectralClustering
+
+from .dse import diffusion_spectral_entropy, adjacency_spectral_entropy
 
 
 def diffusion_spectral_mutual_information(
