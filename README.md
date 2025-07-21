@@ -3,9 +3,9 @@
 [ICMLW 2023, IEEE CISS 2024] DSE/DSMI
 </h1>
 
-<p align="center">
+<h2 align="center">
 <strong>Diffusion Spectral Entropy and Mutual Information</strong>
-</p>
+</h2>
 
 <div align="center">
 
