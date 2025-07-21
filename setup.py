@@ -5,7 +5,7 @@ with open('README.md') as f:
 
 setup(
     name='dse-dsmi',
-    version='1.0',
+    version='1.1',
     license='MIT',
     author='Chen Liu, Danqi Liao',
     author_email='chen.liu.cl2482@yale.edu',
