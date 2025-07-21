@@ -74,177 +74,177 @@ This is the **official** implementation of
     <details>
     <summary>Test script on DSE</summary>
 
-        ```python3
-        import os
-        import numpy as np
-        from dse_dsmi import diffusion_spectral_entropy, adjacency_spectral_entropy
+    ```python3
+    import os
+    import numpy as np
+    from dse_dsmi import diffusion_spectral_entropy, adjacency_spectral_entropy
 
 
-        if __name__ == '__main__':
-            print('Testing Diffusion Spectral Entropy.')
-            print('\n1st run, random vecs, without saving eigvals.')
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors)
-            print('DSE =', DSE)
+    if __name__ == '__main__':
+        print('Testing Diffusion Spectral Entropy.')
+        print('\n1st run, random vecs, without saving eigvals.')
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors)
+        print('DSE =', DSE)
 
-            print(
-                '\n2nd run, random vecs, saving eigvals (np.float16). May be slightly off due to float16 saving.'
-            )
-            tmp_path = './test_dse_eigval.npz'
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
-                                            eigval_save_path=tmp_path)
-            print('DSE =', DSE)
+        print(
+            '\n2nd run, random vecs, saving eigvals (np.float16). May be slightly off due to float16 saving.'
+        )
+        tmp_path = './test_dse_eigval.npz'
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+                                        eigval_save_path=tmp_path)
+        print('DSE =', DSE)
 
-            print(
-                '\n3rd run, loading eigvals from 2nd run. May be slightly off due to float16 saving.'
-            )
-            embedding_vectors = None  # does not matter, will be ignored anyways
-            DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
-                                            eigval_save_path=tmp_path)
-            print('DSE =', DSE)
-            os.remove(tmp_path)
+        print(
+            '\n3rd run, loading eigvals from 2nd run. May be slightly off due to float16 saving.'
+        )
+        embedding_vectors = None  # does not matter, will be ignored anyways
+        DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+                                        eigval_save_path=tmp_path)
+        print('DSE =', DSE)
+        os.remove(tmp_path)
 
-            print('\n4th run, random vecs, saving eigvals (np.float64).')
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
-                                            eigval_save_path=tmp_path,
-                                            eigval_save_precision=np.float64)
-            print('DSE =', DSE)
+        print('\n4th run, random vecs, saving eigvals (np.float64).')
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+                                        eigval_save_path=tmp_path,
+                                        eigval_save_precision=np.float64)
+        print('DSE =', DSE)
 
-            print('\n5th run, loading eigvals from 4th run. Shall be identical.')
-            embedding_vectors = None  # does not matter, will be ignored anyways
-            DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
-                                            eigval_save_path=tmp_path)
-            print('DSE =', DSE)
-            os.remove(tmp_path)
+        print('\n5th run, loading eigvals from 4th run. Shall be identical.')
+        embedding_vectors = None  # does not matter, will be ignored anyways
+        DSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+                                        eigval_save_path=tmp_path)
+        print('DSE =', DSE)
+        os.remove(tmp_path)
 
-            print('\n6th run, Classic Shannon Entropy.')
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            CSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
-                                            classic_shannon_entropy=True)
-            print('CSE =', CSE)
+        print('\n6th run, Classic Shannon Entropy.')
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        CSE = diffusion_spectral_entropy(embedding_vectors=embedding_vectors,
+                                        classic_shannon_entropy=True)
+        print('CSE =', CSE)
 
-            print(
-                '\n7th run, Entropy on diffusion matrix entries rather than eigenvalues.'
-            )
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            DSE_matrix_entry = diffusion_spectral_entropy(
-                embedding_vectors=embedding_vectors, matrix_entry_entropy=True)
-            print('DSE-matrix-entry =', DSE_matrix_entry)
+        print(
+            '\n7th run, Entropy on diffusion matrix entries rather than eigenvalues.'
+        )
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        DSE_matrix_entry = diffusion_spectral_entropy(
+            embedding_vectors=embedding_vectors, matrix_entry_entropy=True)
+        print('DSE-matrix-entry =', DSE_matrix_entry)
 
-            print(
-                '\n8th run, Entropy on KNN binarized adjacency matrix.'
-            )
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            knn_binarized_entropy = adjacency_spectral_entropy(
-                embedding_vectors=embedding_vectors, use_knn=True, knn=10, verbose=True)
-            print('KNN binarized adjacency matrix =', knn_binarized_entropy)
+        print(
+            '\n8th run, Entropy on KNN binarized adjacency matrix.'
+        )
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        knn_binarized_entropy = adjacency_spectral_entropy(
+            embedding_vectors=embedding_vectors, use_knn=True, knn=10, verbose=True)
+        print('KNN binarized adjacency matrix =', knn_binarized_entropy)
 
-            print(
-                '\n9th run, Entropy on Gaussian adjacency matrix.'
-            )
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            gaussian_adj_entropy = adjacency_spectral_entropy(
-                embedding_vectors=embedding_vectors, anisotropic=False, verbose=True)
-            print('KNN binarized adjacency matrix =', gaussian_adj_entropy)
+        print(
+            '\n9th run, Entropy on Gaussian adjacency matrix.'
+        )
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        gaussian_adj_entropy = adjacency_spectral_entropy(
+            embedding_vectors=embedding_vectors, anisotropic=False, verbose=True)
+        print('KNN binarized adjacency matrix =', gaussian_adj_entropy)
 
-            print(
-                '\n10th run, Entropy on Anisotropic Gaussian adjacency matrix.'
-            )
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            aniso_adj_entropy = adjacency_spectral_entropy(
-                embedding_vectors=embedding_vectors, anisotropic=True, verbose=True)
-            print('KNN binarized adjacency matrix =', aniso_adj_entropy)
-        ```
+        print(
+            '\n10th run, Entropy on Anisotropic Gaussian adjacency matrix.'
+        )
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        aniso_adj_entropy = adjacency_spectral_entropy(
+            embedding_vectors=embedding_vectors, anisotropic=True, verbose=True)
+        print('KNN binarized adjacency matrix =', aniso_adj_entropy)
+    ```
 
     </details>
 
     <details>
     <summary>Test script on DSE</summary>
 
-        ```python3
-        import numpy as np
-        from dse_dsmi import diffusion_spectral_mutual_information, adjacency_spectral_mutual_information
+    ```python3
+    import numpy as np
+    from dse_dsmi import diffusion_spectral_mutual_information, adjacency_spectral_mutual_information
 
 
-        if __name__ == '__main__':
-            print('Testing Diffusion Spectral Mutual Information.')
-            print('\n1st run. DSMI, Embeddings vs discrete class labels.')
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            class_labels = np.uint8(np.random.uniform(0, 11, (1000, 1)))
-            DSMI, _ = diffusion_spectral_mutual_information(
-                embedding_vectors=embedding_vectors, reference_vectors=class_labels)
-            print('DSMI =', DSMI)
+    if __name__ == '__main__':
+        print('Testing Diffusion Spectral Mutual Information.')
+        print('\n1st run. DSMI, Embeddings vs discrete class labels.')
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        class_labels = np.uint8(np.random.uniform(0, 11, (1000, 1)))
+        DSMI, _ = diffusion_spectral_mutual_information(
+            embedding_vectors=embedding_vectors, reference_vectors=class_labels)
+        print('DSMI =', DSMI)
 
-            print('\n2nd run. DSMI, Embeddings vs continuous scalars')
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            continuous_scalars = np.random.uniform(-1, 1, (1000, 1))
-            DSMI, _ = diffusion_spectral_mutual_information(
-                embedding_vectors=embedding_vectors,
-                reference_vectors=continuous_scalars)
-            print('DSMI =', DSMI)
+        print('\n2nd run. DSMI, Embeddings vs continuous scalars')
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        continuous_scalars = np.random.uniform(-1, 1, (1000, 1))
+        DSMI, _ = diffusion_spectral_mutual_information(
+            embedding_vectors=embedding_vectors,
+            reference_vectors=continuous_scalars)
+        print('DSMI =', DSMI)
 
-            print('\n3rd run. DSMI, Embeddings vs Input Image')
-            embedding_vectors = np.random.uniform(0, 1, (1000, 256))
-            input_image = np.random.uniform(-1, 1, (1000, 3, 32, 32))
-            input_image = input_image.reshape(input_image.shape[0], -1)
-            DSMI, _ = diffusion_spectral_mutual_information(
-                embedding_vectors=embedding_vectors, reference_vectors=input_image)
-            print('DSMI =', DSMI)
+        print('\n3rd run. DSMI, Embeddings vs Input Image')
+        embedding_vectors = np.random.uniform(0, 1, (1000, 256))
+        input_image = np.random.uniform(-1, 1, (1000, 3, 32, 32))
+        input_image = input_image.reshape(input_image.shape[0], -1)
+        DSMI, _ = diffusion_spectral_mutual_information(
+            embedding_vectors=embedding_vectors, reference_vectors=input_image)
+        print('DSMI =', DSMI)
 
-            print('\n4th run. DSMI, Classification dataset.')
-            from sklearn.datasets import make_classification
-            embedding_vectors, class_labels = make_classification(n_samples=1000,
-                                                                n_features=5)
-            DSMI, _ = diffusion_spectral_mutual_information(
-                embedding_vectors=embedding_vectors, reference_vectors=class_labels)
-            print('DSMI =', DSMI)
+        print('\n4th run. DSMI, Classification dataset.')
+        from sklearn.datasets import make_classification
+        embedding_vectors, class_labels = make_classification(n_samples=1000,
+                                                            n_features=5)
+        DSMI, _ = diffusion_spectral_mutual_information(
+            embedding_vectors=embedding_vectors, reference_vectors=class_labels)
+        print('DSMI =', DSMI)
 
-            print('\n5th run. CSMI, Classification dataset.')
-            embedding_vectors, class_labels = make_classification(n_samples=1000,
-                                                                n_features=5)
-            CSMI, _ = diffusion_spectral_mutual_information(
-                embedding_vectors=embedding_vectors,
-                reference_vectors=class_labels,
-                classic_shannon_entropy=True)
-            print('CSMI =', CSMI)
+        print('\n5th run. CSMI, Classification dataset.')
+        embedding_vectors, class_labels = make_classification(n_samples=1000,
+                                                            n_features=5)
+        CSMI, _ = diffusion_spectral_mutual_information(
+            embedding_vectors=embedding_vectors,
+            reference_vectors=class_labels,
+            classic_shannon_entropy=True)
+        print('CSMI =', CSMI)
 
-            print('\n6th run. DSMI-matrix-entry, Classification dataset.')
-            embedding_vectors, class_labels = make_classification(n_samples=1000,
-                                                                n_features=5)
-            DSMI_matrix_entry, _ = diffusion_spectral_mutual_information(
-                embedding_vectors=embedding_vectors,
-                reference_vectors=class_labels,
-                matrix_entry_entropy=True)
-            print('DSMI-matrix-entry =', DSMI_matrix_entry)
+        print('\n6th run. DSMI-matrix-entry, Classification dataset.')
+        embedding_vectors, class_labels = make_classification(n_samples=1000,
+                                                            n_features=5)
+        DSMI_matrix_entry, _ = diffusion_spectral_mutual_information(
+            embedding_vectors=embedding_vectors,
+            reference_vectors=class_labels,
+            matrix_entry_entropy=True)
+        print('DSMI-matrix-entry =', DSMI_matrix_entry)
 
-            print('\n7th run. ASMI-KNN, Classification dataset.')
-            embedding_vectors, class_labels = make_classification(n_samples=1000,
-                                                                n_features=5)
-            ASMI_knn, _ = adjacency_spectral_mutual_information(
-                embedding_vectors=embedding_vectors,
-                reference_vectors=class_labels,
-                use_knn=True)
-            print('ASMI-KNN =', ASMI_knn)
+        print('\n7th run. ASMI-KNN, Classification dataset.')
+        embedding_vectors, class_labels = make_classification(n_samples=1000,
+                                                            n_features=5)
+        ASMI_knn, _ = adjacency_spectral_mutual_information(
+            embedding_vectors=embedding_vectors,
+            reference_vectors=class_labels,
+            use_knn=True)
+        print('ASMI-KNN =', ASMI_knn)
 
-            print('\n7th run. ASMI-Gaussian, Classification dataset.')
-            embedding_vectors, class_labels = make_classification(n_samples=1000,
-                                                                n_features=5)
-            ASMI_gausadj, _ = adjacency_spectral_mutual_information(
-                embedding_vectors=embedding_vectors,
-                reference_vectors=class_labels)
-            print('ASMI-Gaussian-Adj =', ASMI_gausadj)
+        print('\n7th run. ASMI-Gaussian, Classification dataset.')
+        embedding_vectors, class_labels = make_classification(n_samples=1000,
+                                                            n_features=5)
+        ASMI_gausadj, _ = adjacency_spectral_mutual_information(
+            embedding_vectors=embedding_vectors,
+            reference_vectors=class_labels)
+        print('ASMI-Gaussian-Adj =', ASMI_gausadj)
 
-            print('\n8th run. ASMI-Gaussian-Anisotropic, Classification dataset.')
-            embedding_vectors, class_labels = make_classification(n_samples=1000,
-                                                                n_features=5)
-            ASMI_anisotropic, _ = adjacency_spectral_mutual_information(
-                embedding_vectors=embedding_vectors,
-                reference_vectors=class_labels,
-                anisotropic=True)
-            print('ASMI-Anisotropic-Adj =', ASMI_anisotropic)
-        ```
+        print('\n8th run. ASMI-Gaussian-Anisotropic, Classification dataset.')
+        embedding_vectors, class_labels = make_classification(n_samples=1000,
+                                                            n_features=5)
+        ASMI_anisotropic, _ = adjacency_spectral_mutual_information(
+            embedding_vectors=embedding_vectors,
+            reference_vectors=class_labels,
+            anisotropic=True)
+        print('ASMI-Anisotropic-Adj =', ASMI_anisotropic)
+    ```
 
     </details>
 
