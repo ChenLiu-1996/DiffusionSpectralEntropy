@@ -39,12 +39,6 @@ This is the **official** implementation of
 
 ## Citation
 ```
-@inproceedings{DSE2023,
-  title={Assessing Neural Network Representations During Training Using Noise-Resilient Diffusion Spectral Entropy},
-  author={Liao, Danqi and Liu, Chen and Christensen, Ben and Tong, Alexander and Huguet, Guillaume and Wolf, Guy and Nickel, Maximilian and Adelstein, Ian and Krishnaswamy, Smita},
-  booktitle={ICML 2023 Workshop on Topology, Algebra and Geometry in Machine Learning (TAG-ML)},
-  year={2023},
-}
 @inproceedings{DSE2024,
   title={Assessing neural network representations during training using noise-resilient diffusion spectral entropy},
   author={Liao, Danqi and Liu, Chen and Christensen, Benjamin W and Tong, Alexander and Huguet, Guillaume and Wolf, Guy and Nickel, Maximilian and Adelstein, Ian and Krishnaswamy, Smita},
