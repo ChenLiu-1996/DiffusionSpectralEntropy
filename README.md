@@ -247,15 +247,15 @@ This is the **official** implementation of
 Here we present the refactored and reorganized APIs for this project.
 
 ### Diffusion Spectral Entropy
-[Go to function](./dse/dse.py/#L10)
+[Go to function](./dse_dsmi/dse.py/#L10)
 ```
-dse > dse.py > diffusion_spectral_entropy
+dse_dsmi > dse.py > diffusion_spectral_entropy
 ```
 
 ### Diffusion Spectral Mutual Information
-[Go to function](./dse/dsmi.py/#L8)
+[Go to function](./dse_dsmi/dsmi.py/#L8)
 ```
-dse > dsmi.py > diffusion_spectral_mutual_information
+dse_dsmi > dsmi.py > diffusion_spectral_mutual_information
 ```
 
 ### Unit Tests for DSE and DSMI
